@@ -47,6 +47,11 @@ public class CompensationContext {
     String oldGlobalTxId = omegaContext.globalTxId();
     String oldLocalTxId= omegaContext.localTxId();
     try {
+    	// for auto-compensation By Gannalyo
+    	if ("public boolean org.apache.servicecomb.saga.omega.transaction.AutoCompensateService.executeAutoCompensateByLocalTxId(java.lang.String,java.lang.String)".equals(compensationMethod)) {
+    		contextInternal.compensationMethod.invoke(contextInternal.target, globalTxId, localTxId);
+    		return;
+    	}
       omegaContext.setGlobalTxId(globalTxId);
       omegaContext.setLocalTxId(localTxId);
       contextInternal.compensationMethod.invoke(contextInternal.target, payloads);

@@ -21,6 +21,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 
 import org.apache.servicecomb.saga.omega.context.CompensationContext;
+import org.apache.servicecomb.saga.omega.transaction.AutoCompensableConstants;
 import org.apache.servicecomb.saga.omega.transaction.OmegaException;
 import org.apache.servicecomb.saga.omega.transaction.annotations.Compensable;
 import org.slf4j.Logger;
@@ -42,7 +43,11 @@ class CompensableMethodCheckingCallback implements MethodCallback {
   @Override
   public void doWith(Method method) throws IllegalArgumentException {
     if (!method.isAnnotationPresent(Compensable.class)) {
-      return;
+    	// for auto-compensation By Gannalyo
+    	if (AutoCompensableConstants.AUTO_COMPENSABLE_METHOD.equals(method.toString())) {
+    		compensationContext.addCompensationContext(method, bean);
+    	}
+    	return;
     }
 
     String compensationMethod = method.getAnnotation(Compensable.class).compensationMethod();
