@@ -13,5 +13,9 @@ public @interface AutoCompensable {
 
 	int retryDelayInMilliseconds() default 0;
 
+	/**
+	 * unit seconds
+	 * @return
+	 */
 	int timeout() default 0;
 }

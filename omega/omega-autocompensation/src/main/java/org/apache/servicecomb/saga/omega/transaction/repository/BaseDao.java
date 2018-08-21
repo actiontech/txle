@@ -10,8 +10,10 @@ import javax.persistence.Query;
 import org.hibernate.SQLQuery;
 import org.hibernate.transform.Transformers;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
+@Transactional
 public class BaseDao implements IBaseDao {
 
 	@PersistenceContext
