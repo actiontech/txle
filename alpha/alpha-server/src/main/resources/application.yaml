@@ -19,8 +19,11 @@ server:
 
 alpha:
   server:
-    host: 0.0.0.0
+    host: localhost
     port: 8080
+spring:
+  profiles:
+    active: mysql
 
 ---
 spring:
@@ -36,11 +39,11 @@ alpha:
         
 ---
 spring:
-  profiles: prd
+  profiles: postgresql
   datasource:
-    username: saga
-    password: password
-    url: jdbc:postgresql://postgresql.servicecomb.io:5432/saga?useSSL=false
+    username: postgres
+    password: 123456
+    url: jdbc:postgresql://localhost:5432/saga?useSSL=false
     platform: postgresql
 #    continue-on-error: true
 
@@ -50,10 +53,13 @@ spring:
   datasource:
     username: saga
     password: password
-    url: jdbc:mysql://mysql.servicecomb.io:3306/saga?useSSL=false
+    url: jdbc:mysql://10.186.30.92:3308/saga?useSSL=false
+#    driver-class-name开启后居然报加载不到驱动错误？？？
+#    driver-class-name: com.mysql.jdbc.driver
     platform: mysql
     continue-on-error: true
   jpa:
     properties:
       eclipselink:
         ddl-generation: none
+    show-sql: false
