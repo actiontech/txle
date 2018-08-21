@@ -31,6 +31,8 @@ public class AutoCompensateDao extends BaseDao implements IAutoCompensateDao {
 		return query.executeUpdate() > 0;
 	}
 
+	@Modifying
+	@Transactional
 	@Override
 	public List<Map<String, Object>> execute(String sql, Object... params) {
 		return super.execute(sql, params);
