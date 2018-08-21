@@ -105,14 +105,15 @@ public class MySqlUpdateSqlParser extends AutoCompensateUpdateSqlParser {
 			StringBuffer setColumns = new StringBuffer();
 			for (SQLUpdateSetItem setItem : updateSetItemList) {
 				String column = setItem.getColumn().toString();
+				
+				if (columnNameType.get(column).startsWith("varchar") || "datetime".equalsIgnoreCase(columnNameType.get(column))) {
+					dataMap.put(column, "'" + dataMap.get(column) + "'");
+				}
+
 				if (setColumns.length() == 0) {
 					setColumns.append(column + " = " + dataMap.get(column));
 				} else {
 					setColumns.append("," + column + " = " + dataMap.get(column));
-				}
-				
-				if ("datetime".equalsIgnoreCase(columnNameType.get(column))) {
-					dataMap.put(column, "'" + dataMap.get(column) + "'");
 				}
 			}
 			
