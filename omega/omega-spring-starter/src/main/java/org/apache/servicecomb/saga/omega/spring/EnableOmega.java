@@ -22,13 +22,20 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.context.annotation.Import;
-
+import org.apache.servicecomb.saga.omega.transaction.AutoCompensableAspectConfig;
 import org.apache.servicecomb.saga.omega.transaction.spring.TransactionAspectConfig;
+import org.springframework.context.annotation.Import;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Import({OmegaSpringConfig.class, TransactionAspectConfig.class})
+@Import({OmegaSpringConfig.class, TransactionAspectConfig.class, AutoCompensableAspectConfig.class})
+
+//@EntityScan(basePackages = {"com.gannalyo.saga.user.entity"})
+//@EnableJpaRepositories(basePackages = {"com.gannalyo.saga.user.repository"})
+//@EntityScan(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository.entity"})
+//@EnableJpaRepositories(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository"})
+//@EntityScan(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository.entity", "com.gannalyo.saga.user.entity"})
+//@EnableJpaRepositories(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository", "com.gannalyo.saga.user.repository"})
 /**
  * Indicates create the OmegaContext and inject it into the interceptors
  * to pass the transactions id across the application.
