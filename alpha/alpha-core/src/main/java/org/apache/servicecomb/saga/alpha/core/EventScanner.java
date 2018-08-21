@@ -66,16 +66,21 @@ public class EventScanner implements Runnable {
 
   private void pollEvents() {
     scheduler.scheduleWithFixedDelay(
-        () -> {
-          updateTimeoutStatus();
-          findTimeoutEvents();
-          abortTimeoutEvents();
-          saveUncompensatedEventsToCommands();
-          compensate();
-          updateCompensatedCommands();
-          deleteDuplicateSagaEndedEvents();
-          updateTransactionStatus();
-        },
+				() -> {
+					try {
+						updateTimeoutStatus();
+						findTimeoutEvents();
+						abortTimeoutEvents();
+						saveUncompensatedEventsToCommands();
+						compensate();
+						updateCompensatedCommands();
+						deleteDuplicateSagaEndedEvents();
+						updateTransactionStatus();
+					} catch (Exception e) {
+						// to avoid stopping this scheduler in case of exception By Gannalyo
+						LOG.error("[Action Saga Error] EventScanner.pollEvents.scheduleWithFixedDelay run abortively.", e);
+					}
+				},
         0,
         eventPollingInterval,
         MILLISECONDS);
