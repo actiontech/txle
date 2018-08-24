@@ -40,14 +40,14 @@ public class AutoCompensableAspect {
 		try {
 			method = ((MethodSignature) joinPoint.getSignature()).getMethod();
 			String localTxId = context.newLocalTxId();
-			LOG.debug(AutoCompensableConstants.logDebugPrefixWithTime() + "Updated context [{}] for autoCompensable method [{}] ", context, method.toString());
+			LOG.debug(ActionConstants.logDebugPrefixWithTime() + "Updated context [{}] for autoCompensable method [{}] ", context, method.toString());
 
 			int retries = autoCompensable.retries();
 			AutoCompensableRecoveryPolicy recoveryPolicy = AutoCompensableRecoveryPolicyFactory.getRecoveryPolicy(retries);
 			
 			return recoveryPolicy.apply(joinPoint, autoCompensable, autoCompensableInterceptor, context, localTxId, retries, autoCompensateService);
 		} catch (Throwable e) {
-			LOG.error(AutoCompensableConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompenableAspect, context [{}], method [{}]", context,
+			LOG.error(ActionConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompenableAspect, context [{}], method [{}]", context,
 					method == null ? "" : method.toString(), e);
 			throw e;
 		}

@@ -3,13 +3,13 @@ package org.apache.servicecomb.saga.omega.transaction;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public final class AutoCompensableConstants {
+public final class ActionConstants {
 	public static final String LOG_PREFIX = "[Action Saga] ";
 	public static final String LOG_DEBUG_PREFIX = "[Action Saga Debug] ";
 	public static final String LOG_ERROR_PREFIX = "[Action Saga Error] ";
 	public static final String AUTO_COMPENSABLE_METHOD = "public boolean org.apache.servicecomb.saga.omega.transaction.AutoCompensateService.executeAutoCompensateByLocalTxId(java.lang.String,java.lang.String)";
 
-	private AutoCompensableConstants() {
+	private ActionConstants() {
 	}
 
 	public static String logPrefixWithTime() {
