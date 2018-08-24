@@ -17,7 +17,7 @@ import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.fastjson.JSON;
-import com.p6spy.engine.autocompensate.AutoCompensableConstants;
+import com.p6spy.engine.autocompensate.ActionConstants;
 
 public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 
@@ -47,7 +47,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 2.take conditions out
 			SQLExpr where = deleteStatement.getWhere();// select * ... by where ... ps: having, etc.
 			String whereSql = where.toString();// It doesn't matter, even though the 'where-sql' contains a line break.
-			LOG.debug(AutoCompensableConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
+			LOG.debug(ActionConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
 
 			// 3.take primary-key name
 			String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
@@ -55,7 +55,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 4.take the original data out and put the lock on data.
 			List<Map<String, Object>> originalData = selectOriginalData(delegate, deleteStatement, tableName, primaryKeyColumnName, whereSql);
 			if (originalData == null || originalData.isEmpty()) {
-				LOG.debug(AutoCompensableConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Saga_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
+				LOG.debug(ActionConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Saga_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
 				return true;
 			}
 			String originalDataJson = JSON.toJSONString(originalData);
@@ -68,14 +68,14 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 6.save saga_undo_log
 			return this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
 		} catch (SQLException e) {
-			LOG.error(AutoCompensableConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for delete sql.", e);
+			LOG.error(ActionConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for delete sql.", e);
 			throw e;
 		} finally {
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (SQLException e) {
-					LOG.error(AutoCompensableConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for delete SQL.", e);
+					LOG.error(ActionConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for delete SQL.", e);
 				}
 			}
 		}
@@ -116,7 +116,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 		PreparedStatement preparedStatement = null;
 		try {
 			String originalDataSql = String.format("SELECT * FROM %s WHERE %s FOR UPDATE", tableName, whereSql);// 'FOR UPDATE' is needed to lock data.
-			LOG.debug(AutoCompensableConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
+			LOG.debug(ActionConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
 			
 			preparedStatement = delegate.getConnection().prepareStatement(originalDataSql);
 			List<Map<String, Object>> originalDataList = new ArrayList<Map<String, Object>>();

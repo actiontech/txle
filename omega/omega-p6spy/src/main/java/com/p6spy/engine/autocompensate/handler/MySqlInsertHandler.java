@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
-import com.p6spy.engine.autocompensate.AutoCompensableConstants;
+import com.p6spy.engine.autocompensate.ActionConstants;
 
 public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 
@@ -41,20 +41,20 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			
 			// 3.take primary-key's value out
 			Object primaryKeyColumnValue = getGeneratedKey(delegate);
-			LOG.debug(AutoCompensableConstants.logDebugPrefixWithTime() + "The primary key info is [" + primaryKeyColumnName + " = " + primaryKeyColumnValue + "] to table [" + tableName + "].");
+			LOG.debug(ActionConstants.logDebugPrefixWithTime() + "The primary key info is [" + primaryKeyColumnName + " = " + primaryKeyColumnValue + "] to table [" + tableName + "].");
 
 			// 4.save saga_undo_log
 			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s", tableName, primaryKeyColumnName, primaryKeyColumnValue);
 			return this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
 		} catch (SQLException e) {
-			LOG.error(AutoCompensableConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for insert SQL.", e);
+			LOG.error(ActionConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for insert SQL.", e);
 			throw e;
 		} finally {
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (SQLException e) {
-					LOG.error(AutoCompensableConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for insert SQL.", e);
+					LOG.error(ActionConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for insert SQL.", e);
 				}
 			}
 		}
