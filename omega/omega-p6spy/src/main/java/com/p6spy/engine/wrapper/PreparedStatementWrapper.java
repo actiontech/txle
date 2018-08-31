@@ -38,8 +38,8 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
 
-import com.p6spy.engine.autocompensate.sqlparser.AutoCompensateSqlParser;
-import com.p6spy.engine.autocompensate.sqlparser.IAutoCompensateSqlParser;
+import com.p6spy.engine.autocompensate.handler.AutoCompensateHandler;
+import com.p6spy.engine.autocompensate.handler.IAutoCompensateHandler;
 import com.p6spy.engine.common.PreparedStatementInformation;
 import com.p6spy.engine.common.ResultSetInformation;
 import com.p6spy.engine.event.JdbcEventListener;
@@ -96,13 +96,13 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
       
 
       // before advise for executing SQL By Gannalyo.
-      IAutoCompensateSqlParser sqlParser = AutoCompensateSqlParser.newInstance();
-      sqlParser.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), true);
+      IAutoCompensateHandler autoCompensateHandler = AutoCompensateHandler.newInstance();
+      autoCompensateHandler.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), true);
       
       rowCount = delegate.executeUpdate();
       
       // after advise for executing SQL By Gannalyo.
-      sqlParser.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), false);
+      autoCompensateHandler.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), false);
 
       return rowCount;
     } catch (SQLException sqle) {

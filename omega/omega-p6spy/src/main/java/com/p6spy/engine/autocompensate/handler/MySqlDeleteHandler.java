@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +18,6 @@ import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.fastjson.JSON;
-import com.p6spy.engine.autocompensate.ActionConstants;
 
 public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 
@@ -47,7 +47,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 2.take conditions out
 			SQLExpr where = deleteStatement.getWhere();// select * ... by where ... ps: having, etc.
 			String whereSql = where.toString();// It doesn't matter, even though the 'where-sql' contains a line break.
-			LOG.debug(ActionConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
+			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
 
 			// 3.take primary-key name
 			String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
@@ -55,7 +55,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 4.take the original data out and put the lock on data.
 			List<Map<String, Object>> originalData = selectOriginalData(delegate, deleteStatement, tableName, primaryKeyColumnName, whereSql);
 			if (originalData == null || originalData.isEmpty()) {
-				LOG.debug(ActionConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Saga_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
+				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Saga_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
 				return true;
 			}
 			String originalDataJson = JSON.toJSONString(originalData);
@@ -68,14 +68,14 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 6.save saga_undo_log
 			return this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
 		} catch (SQLException e) {
-			LOG.error(ActionConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for delete sql.", e);
+			LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for delete sql.", e);
 			throw e;
 		} finally {
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (SQLException e) {
-					LOG.error(ActionConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for delete SQL.", e);
+					LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for delete SQL.", e);
 				}
 			}
 		}
@@ -85,6 +85,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 		Map<String, String> columnNameType = this.selectColumnNameType(delegate, tableName);
 		StringBuffer compensateSqls = new StringBuffer();
 		originalData.forEach(dataMap -> {
+			this.resetColumnValueByDBType(columnNameType, dataMap);
 			StringBuffer columns = new StringBuffer();
 			StringBuffer placeholder = new StringBuffer();
 			dataMap.keySet().forEach(key -> {
@@ -92,16 +93,12 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 					columns.append(key);
 					placeholder.append("%s");
 				} else {
-					columns.append("," + key);
-					placeholder.append(",%s");
-				}
-				// TODO Some special data type will be handled later, such as blob, binary, and the like.
-				if (columnNameType.get(key).startsWith("varchar") || "datetime".equalsIgnoreCase(columnNameType.get(key))) {
-					dataMap.put(key, "'" + dataMap.get(key) + "'");
+					columns.append(", " + key);
+					placeholder.append(", %s");
 				}
 			});
 			
-			String compensateSql = String.format("INSERT IGNORE INTO " + tableName + " (" + columns + ") VALUES (" + placeholder + ");", dataMap.values().toArray());
+			String compensateSql = String.format("INSERT IGNORE INTO " + tableName + " (" + columns + ") VALUES (" + placeholder + ") " + UtxConstants.ACTION_SQL + ";", dataMap.values().toArray());
 			if (compensateSqls.length() == 0) {
 				compensateSqls.append(compensateSql);
 			} else {
@@ -115,8 +112,8 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 	private List<Map<String, Object>> selectOriginalData(PreparedStatement delegate, MySqlDeleteStatement deleteStatement, String tableName, String primaryKeyColumnName, String whereSql) throws SQLException {
 		PreparedStatement preparedStatement = null;
 		try {
-			String originalDataSql = String.format("SELECT * FROM %s WHERE %s FOR UPDATE", tableName, whereSql);// 'FOR UPDATE' is needed to lock data.
-			LOG.debug(ActionConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
+			String originalDataSql = String.format("SELECT * FROM %s WHERE %s FOR UPDATE " + UtxConstants.ACTION_SQL, tableName, whereSql);// 'FOR UPDATE' is needed to lock data.
+			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
 			
 			preparedStatement = delegate.getConnection().prepareStatement(originalDataSql);
 			List<Map<String, Object>> originalDataList = new ArrayList<Map<String, Object>>();

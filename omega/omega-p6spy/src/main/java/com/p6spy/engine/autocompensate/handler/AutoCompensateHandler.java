@@ -7,7 +7,10 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.apache.servicecomb.saga.omega.transaction.AutoCompensableCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
@@ -16,6 +19,7 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
 
 public class AutoCompensateHandler implements IAutoCompensateHandler {
+	private static final Logger LOG = LoggerFactory.getLogger(AutoCompensateHandler.class);
 	
 	private static AutoCompensateHandler autoCompensateHandler = null;
 	
@@ -48,6 +52,16 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			AutoCompensateInsertHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server);
 		} else if (isBeforeNotice && sqlStatement instanceof MySqlDeleteStatement) {
 			AutoCompensateDeleteHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server);
+//		} else if (isBeforeNotice && sqlStatement instanceof MySqlSelectIntoStatement) {// The select SQL would never enter into this area.
+			// Nothing to do
+		} else if (isBeforeNotice) {
+			// TODO To define a switch which is named for 'CheckSpecialSQL', default is closed, means that just does record, if it's open, then program will throw an exception about current special SQL, just for auto-compensation.
+			boolean checkSpecialSql = false;
+			if (checkSpecialSql) {
+				throw new SQLException(UtxConstants.logErrorPrefixWithTime() + "Do not support sql [" + executeSql + "] to auto-compensation.");
+			} else {
+				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Do not support sql [{}] to auto-compensation, but it has been executed due to the switch is closed.", executeSql);
+			}
 		}
 	}
 	
@@ -55,10 +69,10 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		return false;
 	}
 
-	public String parsePrimaryKeyColumnName(PreparedStatement delegate, SQLStatement sqlStatement, String tableName) throws SQLException {
+	protected String parsePrimaryKeyColumnName(PreparedStatement delegate, SQLStatement sqlStatement, String tableName) throws SQLException {
 		String primaryKeyColumnName = "id";
 		// So far, didn't know how to get primary-key from Druid. So, use the original way. 
-		PreparedStatement ps = delegate.getConnection().prepareStatement("SHOW FULL COLUMNS FROM " + tableName);
+		PreparedStatement ps = delegate.getConnection().prepareStatement("SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL);
 		ResultSet columnResultSet = ps.executeQuery();
 		while (columnResultSet.next()) {
 			if ("PRI".equalsIgnoreCase(columnResultSet.getString("Key")) && primaryKeyColumnName.length() == 0) {
@@ -69,14 +83,46 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		return primaryKeyColumnName;
 	}
 	
-	public Map<String, String> selectColumnNameType(PreparedStatement delegate, String tableName) throws SQLException {
-		PreparedStatement prepareStatement = delegate.getConnection().prepareStatement("SHOW FULL COLUMNS FROM " + tableName);
+	protected Map<String, String> selectColumnNameType(PreparedStatement delegate, String tableName) throws SQLException {
+		PreparedStatement prepareStatement = delegate.getConnection().prepareStatement("SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL);
 		ResultSet resultSet = prepareStatement.executeQuery();
 		Map<String, String> columnNameType = new HashMap<>();
 		while (resultSet.next()) {
 			columnNameType.put(resultSet.getString(1), resultSet.getString(2));// column name and type
 		}
+		prepareStatement.close();
 		return columnNameType;
+	}
+
+	protected void resetColumnValueByDBType(Map<String, String> columnNameType, Map<String, Object> dataMap) {
+		for (String key : dataMap.keySet()) {
+			// TODO support all of column type.
+			String type = columnNameType.get(key);
+			if (type == null && key.startsWith("n_c_v_")) {
+				type = columnNameType.get(key.substring(6));
+			}
+			if (type.startsWith("varchar") || "datetime".equalsIgnoreCase(type)) {
+				dataMap.put(key, "'" + dataMap.get(key) + "'");
+			}
+		}
+	}
+
+	protected String constructWhereSqlForCompensation(Map<String, Object> dataMap) throws SQLException {
+		StringBuffer whereSqlForCompensation = new StringBuffer();
+		for (String key : dataMap.keySet()) {
+			if (!key.startsWith("n_c_v_")) {
+				Object value = dataMap.get(key);
+				if (value == null) {
+					value = dataMap.get("n_c_v_" + key);
+				}
+				if (whereSqlForCompensation.length() == 0) {
+					whereSqlForCompensation.append(key + " = " + value);
+				} else {
+					whereSqlForCompensation.append(" and " + key + " = " + value);
+				}
+			}
+		}
+		return whereSqlForCompensation.toString();
 	}
 	
 	/**
@@ -98,7 +144,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		Timestamp currentTime = new Timestamp(System.currentTimeMillis());
 		PreparedStatement preparedStatement = null;
 		try {
-			String sql = "insert into saga_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			String sql = "insert into saga_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)" + UtxConstants.ACTION_SQL;
 			preparedStatement = delegate.getConnection().prepareStatement(sql);
 			preparedStatement.setString(index++, AutoCompensableCache.getGlobalTxIdByCurThreadId());
 			preparedStatement.setString(index++, localTxId);
