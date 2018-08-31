@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 
 import javax.transaction.InvalidTransactionException;
 
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.annotations.AutoCompensable;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -29,9 +30,9 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 			AutoCompensableInterceptor interceptor, OmegaContext context, String parentTxId, int retries, IAutoCompensateService autoCompensateService)
 			throws Throwable {
 		Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
-		LOG.debug(ActionConstants.logDebugPrefixWithTime() + "Intercepting autoCompensable method {} with context {}", method.toString(), context);
+		LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Intercepting autoCompensable method {} with context {}", method.toString(), context);
 
-		String compensationSignature = ActionConstants.AUTO_COMPENSABLE_METHOD;
+		String compensationSignature = AutoCompensableConstants.AUTO_COMPENSABLE_METHOD;
 
 		// String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
 		String retrySignature = "";
@@ -42,7 +43,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 				retrySignature, retries, joinPoint.getArgs());
 		if (response.aborted()) {
 			context.setLocalTxId(parentTxId);
-			throw new InvalidTransactionException(ActionConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId
+			throw new InvalidTransactionException(UtxConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId
 					+ " because global transaction " + context.globalTxId() + " has already aborted.");
 		}
 
@@ -55,7 +56,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 				// To execute business logic.
 				result = joinPoint.proceed();
 			} catch (Exception e) {
-				LOG.error(ActionConstants.LOG_ERROR_PREFIX + "Fail to proceed business, context {}, method {}", context, method.toString(), e);
+				LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to proceed business, context {}, method {}", context, method.toString(), e);
 				throw e;
 			}
 			

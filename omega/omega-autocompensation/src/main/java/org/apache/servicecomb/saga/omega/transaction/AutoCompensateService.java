@@ -5,6 +5,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.omega.rmi.accidentplatform.IAccidentPlatformService;
 import org.apache.servicecomb.saga.omega.transaction.repository.AutoCompensateEntityRepository;
 import org.apache.servicecomb.saga.omega.transaction.repository.IAutoCompensateDao;
 import org.apache.servicecomb.saga.omega.transaction.repository.entity.SagaUndoLogEntity;
@@ -26,6 +28,9 @@ public class AutoCompensateService implements IAutoCompensateService {
 	
 	@Autowired
 	private IAutoCompensateDao autoCompensateDao;
+	
+	@Autowired
+	IAccidentPlatformService accidentPlatformService;
 
 	private AutoCompensateEntityRepository autoCompensateRepository;
 	
@@ -50,7 +55,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 			compensateSqlList.forEach(sql -> compensateSql.append(sql));
 			originalInfoList.forEach(sql -> originalInfoSql.append(sql));
 			
-			LOG.debug(ActionConstants.logDebugPrefixWithTime() + "To save SagaUndoLogEntity：globalTxId = {}, localTxId = {}, executeSql = {}, compensateSql = {}, server = {}", globalTxId, localTxId, executeSql, compensateSql, server);
+			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "To save SagaUndoLogEntity：globalTxId = {}, localTxId = {}, executeSql = {}, compensateSql = {}, server = {}", globalTxId, localTxId, executeSql, compensateSql, server);
 			
 			Date currentDateTime = new Date();
 			SagaUndoLogEntity sagaUndoLogEntity = new SagaUndoLogEntity(globalTxId, localTxId, executeSql.toString(), compensateSql.toString(), originalInfoSql.toString(), 0, server, currentDateTime, currentDateTime);
@@ -59,7 +64,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 				autoCompensableInfo = sagaUndoLogEntity.entityToString();
 			}
 		} catch (Exception e) {
-			LOG.error(ActionConstants.LOG_ERROR_PREFIX + "Fail to save auto-compensable info, SagaUndoLogEntity[{}].", autoCompensableInfo, e);
+			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to save auto-compensable info, SagaUndoLogEntity[{}].", autoCompensableInfo, e);
 			throw e;
 		}
 		return result;
@@ -75,19 +80,23 @@ public class AutoCompensateService implements IAutoCompensateService {
 				try {
 					String[] compensateSqlArr = entity.getCompensatesql().split(";\n");
 					for (String compensateSql : compensateSqlArr) {
+						// TODO 依据条件查出新数据，采用probuf编码，与编码好的老数据进行对比，如果相等则继续执行，如果不等，则报差错平台，查询新数据时要先锁上数据避免查询完更新前被修改
 						boolean tempResult = autoCompensateDao.executeAutoCompensateSql(compensateSql);
 						if (tempResult) {
 							result.incrementAndGet();
-							LOG.debug(ActionConstants.logDebugPrefixWithTime() + "Success to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
+							LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Success to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 						} else {
-							LOG.error(ActionConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
-							throw new RuntimeException(ActionConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
+							// TODO 报差错平台，其余的是否继续执行？？？ TODO 手动补偿时，也需报差错平台
+							accidentPlatformService.test("localTxId = " + localTxId);
+							LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
+							throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
 						}
 					}
 				} catch (Exception e) {
-					LOG.error(ActionConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompensable SQL, UndoLog [{}]", entity.entityToString(), e);
+					LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompensable SQL, UndoLog [{}]", entity.entityToString(), e);
 				}
 			});
+			// TODO to update compensation status in saga_undo_log.
 		}
 		return result.get() > 0;
 	}

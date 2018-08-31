@@ -30,17 +30,5 @@ public class AutoCompensateUpdateHandler extends AutoCompensateHandler {
 		
 		return false;
 	}
-	
-	@Override
-	public String parsePrimaryKeyColumnName(PreparedStatement delegate, SQLStatement sqlStatement,
-			String tableName) throws SQLException {
-		return super.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
-	}
-	
-	@Override
-	public boolean saveSagaUndoLog(PreparedStatement delegate, String localTxId, String executeSql,
-			String compensateSql, String originalDataJson, String server) throws SQLException {
-		return super.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
-	}
 
 }

@@ -8,6 +8,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
 
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
@@ -27,7 +28,7 @@ public class AutoCompensateDao extends BaseDao implements IAutoCompensateDao {
 	@Transactional
 	@Override
 	public boolean executeAutoCompensateSql(String autoCompensateSql) {
-		Query query = entityManager.createNativeQuery(autoCompensateSql);
+		Query query = entityManager.createNativeQuery(autoCompensateSql + UtxConstants.ACTION_SQL);
 		return query.executeUpdate() > 0;
 	}
 
@@ -35,7 +36,7 @@ public class AutoCompensateDao extends BaseDao implements IAutoCompensateDao {
 	@Transactional
 	@Override
 	public List<Map<String, Object>> execute(String sql, Object... params) {
-		return super.execute(sql, params);
+		return super.execute(sql + UtxConstants.ACTION_SQL, params);
 	}
 
 }
