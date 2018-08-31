@@ -44,6 +44,14 @@
     </dependency>
     <dependency>
       <groupId>org.apache.servicecomb.saga</groupId>
+      <artifactId>omega-rmi</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.servicecomb.saga</groupId>
+      <artifactId>omega-rmi</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.servicecomb.saga</groupId>
       <artifactId>omega-p6spy</artifactId>
     </dependency>
     <dependency>
