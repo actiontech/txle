@@ -1,14 +1,15 @@
-package com.p6spy.engine.autocompensate;
+package org.apache.servicecomb.saga.omega.context;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public final class ActionConstants {
-	public static final String LOG_PREFIX = "[Action Saga] ";
-	public static final String LOG_DEBUG_PREFIX = "[Action Saga Debug] ";
-	public static final String LOG_ERROR_PREFIX = "[Action Saga Error] ";
+public final class UtxConstants {
+	public static final String LOG_PREFIX = "[utx info] ";
+	public static final String LOG_DEBUG_PREFIX = "[utx debug] ";
+	public static final String LOG_ERROR_PREFIX = "[utx error] ";
+	public static final String ACTION_SQL = " /**utx_sql**/";
 
-	private ActionConstants() {
+	private UtxConstants() {
 	}
 
 	public static String logPrefixWithTime() {
