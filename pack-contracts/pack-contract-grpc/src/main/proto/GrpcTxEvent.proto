@@ -36,6 +36,8 @@ message GrpcServiceConfig {
 
 message GrpcAck {
   bool aborted = 1;
+  // TODO indicating the status of global transaction is suspended.
+  bool paused = 2;
 }
 
 message GrpcTxEvent {

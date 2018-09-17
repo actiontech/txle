@@ -41,6 +41,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
   private static final GrpcAck ALLOW = GrpcAck.newBuilder().setAborted(false).build();
   private static final GrpcAck REJECT = GrpcAck.newBuilder().setAborted(true).build();
+  private static final GrpcAck PAUSED = GrpcAck.newBuilder().setAborted(false).setPaused(true).build();
 
   private final TxConsistentService txConsistentService;
 
@@ -75,7 +76,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
   @Override
   public void onTxEvent(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
-    boolean ok = txConsistentService.handle(new TxEvent(
+    int result = txConsistentService.handleSupportTxPause(new TxEvent(
         message.getServiceName(),
         message.getInstanceId(),
         new Date(),
@@ -90,7 +91,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         message.getPayloads().toByteArray()
     ));
 
-    responseObserver.onNext(ok ? ALLOW : REJECT);
+    responseObserver.onNext(result == 0 ? PAUSED : result > 0 ? ALLOW : REJECT);
     responseObserver.onCompleted();
   }
 }
