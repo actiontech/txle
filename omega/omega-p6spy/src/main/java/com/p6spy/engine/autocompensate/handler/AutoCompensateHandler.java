@@ -40,7 +40,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		if (localTxId == null || localTxId.length() == 0) {
 			return;
 		}
-		String server = "";
+		String server = "";// TODO
 		
 		// To parse SQL by SQLParser tools from Druid.
 		MySqlStatementParser parser = new MySqlStatementParser(executeSql);
@@ -112,7 +112,8 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		for (String key : dataMap.keySet()) {
 			if (!key.startsWith("n_c_v_")) {
 				Object value = dataMap.get(key);
-				if (value == null) {
+//				if (value == null) {
+				if (dataMap.keySet().contains("n_c_v_" + key)) {
 					value = dataMap.get("n_c_v_" + key);
 				}
 				if (whereSqlForCompensation.length() == 0) {

@@ -85,6 +85,16 @@ public class TxConsistentServiceTest {
     @Override
     public void deleteDuplicateEvents(String type) {
     }
+
+	@Override
+	public TxEvent findOne(long id) {
+		return null;
+	}
+	
+	@Override
+	public List<TxEvent> selectPausedAndContinueEvent(String globalTxId) {
+		return null;
+	}
   };
 
   private final String globalTxId = UUID.randomUUID().toString();

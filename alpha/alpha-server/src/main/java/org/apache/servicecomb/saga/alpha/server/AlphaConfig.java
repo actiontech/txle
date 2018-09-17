@@ -36,6 +36,7 @@ import org.apache.servicecomb.saga.alpha.core.PushBackOmegaCallback;
 import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.TxTimeoutRepository;
+import org.apache.servicecomb.saga.alpha.server.restapi.UtxRestApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
@@ -110,6 +111,10 @@ class AlphaConfig {
       Map<String, Map<String, OmegaCallback>> omegaCallbacks) {
     return new GrpcStartable(serverConfig,
         new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks));
+  }
+  
+  public UtxRestApi utxRestApi(TxConsistentService txConsistentService) {
+	  return new UtxRestApi(txConsistentService);
   }
 
   @PostConstruct

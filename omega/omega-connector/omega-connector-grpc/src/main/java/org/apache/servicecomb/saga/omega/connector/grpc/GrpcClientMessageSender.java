@@ -92,7 +92,19 @@ public class GrpcClientMessageSender implements MessageSender {
   @Override
   public AlphaResponse send(TxEvent event) {
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
-    return new AlphaResponse(grpcAck.getAborted());
+    // TODO any hidden trouble about current logic???
+    // If transaction is paused, then Client will retry.
+    try {Thread.sleep(10 * 1000);} catch (InterruptedException e) {}
+	while (grpcAck.getPaused()) {
+		// TODO default 60s, support to configure in the future.
+		try {Thread.sleep(10 * 1000);} catch (InterruptedException e) {}
+		grpcAck = blockingEventService.onTxEvent(convertEvent(event));
+		if (!grpcAck.getPaused()) {
+			break;
+		}
+	}
+    
+    return new AlphaResponse(grpcAck.getAborted(), grpcAck.getPaused());// To append the pause status for global transaction By Gannalyo
   }
 
   private GrpcTxEvent convertEvent(TxEvent event) {

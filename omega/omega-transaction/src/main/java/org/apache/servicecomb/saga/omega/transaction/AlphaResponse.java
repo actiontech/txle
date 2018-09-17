@@ -19,12 +19,24 @@ package org.apache.servicecomb.saga.omega.transaction;
 
 public class AlphaResponse {
   private final boolean aborted;
+  private final boolean paused;// The paused status for global transaction By Gannalyo
 
   public AlphaResponse(boolean aborted) {
     this.aborted = aborted;
+	  this.paused = false;
+  }
+  
+  public AlphaResponse(boolean aborted, boolean paused) {
+	  this.aborted = aborted;
+	  this.paused = paused;
   }
 
   public boolean aborted() {
     return aborted;
   }
+
+  public boolean paused() {
+	  return paused;
+  }
+  
 }

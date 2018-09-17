@@ -73,4 +73,15 @@ class SpringTxEventRepository implements TxEventRepository {
   public void deleteDuplicateEvents(String type) {
     eventRepo.deleteByType(type);
   }
+
+	@Override
+	public TxEvent findOne(long id) {
+		return eventRepo.findOne(id);
+	}
+
+	@Override
+	public List<TxEvent> selectPausedAndContinueEvent(String globalTxId) {
+		return eventRepo.selectPausedAndContinueEvent(globalTxId);
+	}
+	
 }

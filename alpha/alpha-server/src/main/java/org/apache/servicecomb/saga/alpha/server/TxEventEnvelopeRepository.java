@@ -123,4 +123,8 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + " GROUP BY t1.globalTxId"
       + ")")
   void deleteByType(String type);
+  
+  @Query(value = "SELECT T FROM TxEvent T WHERE T.type IN ('SagaPausedEvent', 'SagaContinuedEvent', 'SagaAutoContinuedEvent') AND T.globalTxId = ?1 ORDER BY T.surrogateId DESC")
+  List<TxEvent> selectPausedAndContinueEvent(String globalTxId);
+  
 }
