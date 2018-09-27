@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly
+	xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+	<id>package</id>
+	<formats>
+		<!--压缩文件类型：zip、tar、tar.gz/tgz、tar.bz2/tbz2、jar、dir、war -->
+		<format>tar.gz</format>
+	</formats>
+	<includeBaseDirectory>true</includeBaseDirectory>
+	<moduleSets>
+		<moduleSet>
+			<!-- Enable access to all projects in the current multimodule build! -->
+			<useAllReactorProjects>true</useAllReactorProjects>
+		</moduleSet>
+	</moduleSets>
+	<fileSets>
+		<!-- 需要包含的文件与输出的路径 -->
+		<fileSet>
+			<directory>alpha/alpha-server/src/main/resources</directory>
+			<outputDirectory>/conf</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<outputDirectory>/log</outputDirectory>
+		</fileSet>
+	</fileSets>
+	<files>
+		<!-- 打包时把start.bat和start.sh文件放在bin目录 -->
+		<file>
+			<source>start.sh</source>
+			<outputDirectory>/bin</outputDirectory>
+		</file>
+		<file>
+			<source>README_ZH.md</source>
+		</file>
+		<file>
+			<source>README.md</source>
+		</file>
+		<file>
+			<source>LICENSE</source>
+		</file>
+		<file>
+			<source>NOTICE</source>
+		</file>
+		<file>
+			<source>alpha/alpha-server/target/saga/alpha-server-${version}-exec.jar</source>
+			<outputDirectory>/lib</outputDirectory>
+		</file>
+		<!-- omega基础jar包 -->
+		<file>
+			<source>omega/omega-spring-starter/target/omega-spring-starter-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-spring-tx/target/omega-spring-tx-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-transaction/target/omega-transaction-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-connector/omega-connector-grpc/target/omega-connector-grpc-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-context/target/omega-context-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-format/target/omega-format-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		
+		<!-- omega common和grpc jar包 -->
+		<file>
+			<source>pack-common/target/pack-common-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>pack-contracts/pack-contract-grpc/target/pack-contract-grpc-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		
+		<!-- omega 自动补偿、sql拦截、对外api jar包 -->
+		<file>
+			<source>omega/omega-autocompensation/target/omega-autocompensation-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-p6spy/target/omega-p6spy-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-rmi/target/omega-rmi-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		
+		<!-- omega 四种通信 jar包 -->
+		<file>
+			<source>omega/omega-transport/omega-transport-dubbo/target/omega-transport-dubbo-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-transport/omega-transport-feign/target/omega-transport-feign-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-transport/omega-transport-resttemplate/target/omega-transport-resttemplate-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+		<file>
+			<source>omega/omega-transport/omega-transport-servicecomb/target/omega-transport-servicecomb-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
+	</files>
+	<dependencySets>
+		<dependencySet>
+			<!-- 存放依赖位置，即压缩包下的根目录下的lib文件夹中 -->
+			<outputDirectory>/lib</outputDirectory>
+			<scope>runtime</scope>
+		</dependencySet>
+	</dependencySets>
+</assembly>
