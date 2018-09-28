@@ -17,8 +17,8 @@
 
 CREATE TABLE IF NOT EXISTS TxEvent (
   surrogateId bigint NOT NULL AUTO_INCREMENT,
-  serviceName varchar(36) NOT NULL,
-  instanceId varchar(36) NOT NULL,
+  serviceName varchar(100) NOT NULL,
+  instanceId varchar(100) NOT NULL,
   creationTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   globalTxId varchar(36) NOT NULL,
   localTxId varchar(36) NOT NULL,
