@@ -9,43 +9,24 @@
 		<format>tar.gz</format>
 	</formats>
 	<includeBaseDirectory>true</includeBaseDirectory>
-	<moduleSets>
-		<moduleSet>
-			<!-- Enable access to all projects in the current multimodule build! -->
-			<useAllReactorProjects>true</useAllReactorProjects>
-		</moduleSet>
-	</moduleSets>
 	<fileSets>
 		<!-- 需要包含的文件与输出的路径 -->
 		<fileSet>
-			<directory>alpha/alpha-server/src/main/resources</directory>
-			<outputDirectory>/conf</outputDirectory>
-		</fileSet>
-		<fileSet>
-			<outputDirectory>/log</outputDirectory>
+			<!-- alpha打包文件信息 -->
+			<directory>alpha/target/alpha-${version}</directory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<outputDirectory>/</outputDirectory>
 		</fileSet>
 	</fileSets>
 	<files>
-		<!-- 打包时把start.bat和start.sh文件放在bin目录 -->
-		<file>
-			<source>start.sh</source>
-			<outputDirectory>/bin</outputDirectory>
-		</file>
-		<file>
-			<source>README_ZH.md</source>
-		</file>
-		<file>
-			<source>README.md</source>
-		</file>
+		<!-- 打包时把LICENSE和NOTICE文件放在根目录 -->
 		<file>
 			<source>LICENSE</source>
 		</file>
 		<file>
 			<source>NOTICE</source>
-		</file>
-		<file>
-			<source>alpha/alpha-server/target/saga/alpha-server-${version}-exec.jar</source>
-			<outputDirectory>/lib</outputDirectory>
 		</file>
 		<!-- omega基础jar包 -->
 		<file>
@@ -72,7 +53,7 @@
 			<source>omega/omega-format/target/omega-format-${version}.jar</source>
 			<outputDirectory>/client</outputDirectory>
 		</file>
-		
+
 		<!-- omega common和grpc jar包 -->
 		<file>
 			<source>pack-common/target/pack-common-${version}.jar</source>
@@ -82,7 +63,7 @@
 			<source>pack-contracts/pack-contract-grpc/target/pack-contract-grpc-${version}.jar</source>
 			<outputDirectory>/client</outputDirectory>
 		</file>
-		
+
 		<!-- omega 自动补偿、sql拦截、对外api jar包 -->
 		<file>
 			<source>omega/omega-autocompensation/target/omega-autocompensation-${version}.jar</source>
@@ -96,7 +77,7 @@
 			<source>omega/omega-rmi/target/omega-rmi-${version}.jar</source>
 			<outputDirectory>/client</outputDirectory>
 		</file>
-		
+
 		<!-- omega 四种通信 jar包 -->
 		<file>
 			<source>omega/omega-transport/omega-transport-dubbo/target/omega-transport-dubbo-${version}.jar</source>
@@ -115,11 +96,4 @@
 			<outputDirectory>/client</outputDirectory>
 		</file>
 	</files>
-	<dependencySets>
-		<dependencySet>
-			<!-- 存放依赖位置，即压缩包下的根目录下的lib文件夹中 -->
-			<outputDirectory>/lib</outputDirectory>
-			<scope>runtime</scope>
-		</dependencySet>
-	</dependencySets>
 </assembly>

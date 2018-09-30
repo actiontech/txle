@@ -121,7 +121,7 @@ public class UtxRestApi {
 		List<TxEvent> endedTransactions = eventRepository.findTransactions(txEvent.globalTxId(),
 				EventType.SagaEndedEvent.name());
 		if (endedTransactions != null && !endedTransactions.isEmpty()) {
-//			return "Fail to " + operationDesc + " - current transaction was already over, globalTxId [" + globalTxId + "].";
+			return "Fail to " + operationDesc + " - current transaction was already over, globalTxId [" + globalTxId + "].";
 		}
 
 		String eventTypeName = null;

@@ -158,7 +158,8 @@
     <plugins>
       <!-- mixin plugin configurations declared in another pom,
       just like importing dependencies managed in another pom -->
-      <plugin>
+      <!-- 禁用saga原打包方式，原打包会在target/saga目录下生成可执行的jar包 -->
+      <!--<plugin>
         <groupId>com.github.odavid.maven.plugins</groupId>
         <artifactId>mixin-maven-plugin</artifactId>
       </plugin>
@@ -169,6 +170,28 @@
       <plugin>
         <groupId>com.ethlo.persistence.tools</groupId>
         <artifactId>eclipselink-maven-plugin</artifactId>
+      </plugin>-->
+
+      <!-- 使用assembly插件打可运行jar和tar.gz包 -->
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <!-- 不添加assembly的id到打包后的文件名称中 -->
+          <appendAssemblyId>false</appendAssemblyId>
+          <descriptors>
+            <!-- assembly.xml主要包含内容：打包后的文件格式、都包含哪些文件、不同文件的目录(如bin、lib、conf、README.md)、权限等 -->
+            <descriptor>src/main/assembly/assembly.xml</descriptor>
+          </descriptors>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

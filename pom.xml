@@ -904,6 +904,7 @@
 					<plugin>
 						<artifactId>maven-assembly-plugin</artifactId>
 						<configuration>
+							<finalName>utx_${version}</finalName>
 							<!-- 不添加assembly的id到打包后的文件名称中 -->
 							<appendAssemblyId>false</appendAssemblyId>
 							<descriptors>
