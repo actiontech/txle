@@ -118,7 +118,9 @@ public interface TxEventRepository {
    * @param type event type
    */
   void deleteDuplicateEvents(String type);
-  
+
+  Iterable<TxEvent> findAll();
+
   TxEvent findOne(long id);
   
   List<TxEvent> selectPausedAndContinueEvent(String globalTxId);

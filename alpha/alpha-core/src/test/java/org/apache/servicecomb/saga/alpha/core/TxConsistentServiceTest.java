@@ -86,7 +86,12 @@ public class TxConsistentServiceTest {
     public void deleteDuplicateEvents(String type) {
     }
 
-	@Override
+    @Override
+    public Iterable<TxEvent> findAll() {
+      return null;
+    }
+
+    @Override
 	public TxEvent findOne(long id) {
 		return null;
 	}

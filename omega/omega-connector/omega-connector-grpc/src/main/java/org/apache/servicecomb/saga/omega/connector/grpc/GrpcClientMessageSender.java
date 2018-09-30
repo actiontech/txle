@@ -94,7 +94,7 @@ public class GrpcClientMessageSender implements MessageSender {
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
     // TODO any hidden trouble about current logic???
     // If transaction is paused, then Client will retry.
-    try {Thread.sleep(10 * 1000);} catch (InterruptedException e) {}
+//    try {Thread.sleep(10 * 1000);} catch (InterruptedException e) {}
 	while (grpcAck.getPaused()) {
 		// TODO default 60s, support to configure in the future.
 		try {Thread.sleep(10 * 1000);} catch (InterruptedException e) {}

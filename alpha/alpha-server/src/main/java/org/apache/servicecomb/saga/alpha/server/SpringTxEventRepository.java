@@ -74,7 +74,12 @@ class SpringTxEventRepository implements TxEventRepository {
     eventRepo.deleteByType(type);
   }
 
-	@Override
+  @Override
+  public Iterable<TxEvent> findAll() {
+    return eventRepo.findAll();
+  }
+
+  @Override
 	public TxEvent findOne(long id) {
 		return eventRepo.findOne(id);
 	}
