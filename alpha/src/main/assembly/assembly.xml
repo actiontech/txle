@@ -13,6 +13,10 @@
 		<!-- 需要包含的文件与输出的路径 -->
 		<fileSet>
 			<directory>alpha-server/src/main/resources</directory>
+			<excludes>
+				<exclude>*.sql</exclude>
+				<exclude>ssl.properties</exclude>
+			</excludes>
 			<outputDirectory>/conf</outputDirectory>
 		</fileSet>
 		<fileSet>
@@ -27,6 +31,7 @@
 		<!-- 打包时把start.bat和start.sh文件放在bin目录 -->
 		<file>
 			<source>start.sh</source>
+			<fileMode>0755</fileMode>
 			<outputDirectory>/bin</outputDirectory>
 		</file>
 		<file>
