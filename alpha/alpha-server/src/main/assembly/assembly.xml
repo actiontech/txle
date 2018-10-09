@@ -9,6 +9,28 @@
 		<format>dir</format>
 	</formats>
 	<includeBaseDirectory>false</includeBaseDirectory>
+	<fileSets>
+		<!-- 需要包含的文件与输出的路径 -->
+		<fileSet>
+			<directory>src/main/resources</directory>
+			<excludes>
+				<exclude>*.sql</exclude>
+				<exclude>ssl.properties</exclude>
+			</excludes>
+			<outputDirectory>/conf</outputDirectory>
+		</fileSet>
+	</fileSets>
+	<files>
+		<!-- 打包时把start.bat和start.sh文件放在bin目录 -->
+		<file>
+			<source>start.sh</source>
+			<fileMode>0755</fileMode>
+			<outputDirectory>/bin</outputDirectory>
+		</file>
+		<file>
+			<source>README.md</source>
+		</file>
+	</files>
 	<dependencySets>
 		<dependencySet>
 			<!-- 存放依赖位置，即压缩包下的根目录下的lib文件夹中 -->
