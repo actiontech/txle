@@ -10,12 +10,10 @@ MAIN_CLASS=org.apache.servicecomb.saga.alpha.server.AlphaApplication
 
 # cd `dirname $0`
 BIN_DIR=`pwd`
-echo $BIN_DIR
 
 cd ..
 DEPLOY_DIR=`pwd`
 
-echo $DEPLOY_DIR
 CONF_DIR=$DEPLOY_DIR/conf
 LOG_DIR=$DEPLOY_DIR/log
 LIB_DIR=$DEPLOY_DIR/lib
