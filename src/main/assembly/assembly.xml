@@ -13,7 +13,7 @@
 		<!-- 需要包含的文件与输出的路径 -->
 		<fileSet>
 			<!-- alpha打包文件信息 -->
-			<directory>alpha/target/alpha-${version}</directory>
+			<directory>alpha/alpha-server/target/alpha-server-${version}</directory>
 			<includes>
 				<include>**</include>
 			</includes>
