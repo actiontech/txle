@@ -45,31 +45,6 @@
           <reuseForks>false</reuseForks>
         </configuration>
       </plugin>
-
-      <!-- 使用assembly插件打可运行jar和tar.gz包 -->
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <finalName>alpha-${version}</finalName>
-          <!-- 不添加assembly的id到打包后的文件名称中 -->
-          <appendAssemblyId>false</appendAssemblyId>
-          <descriptors>
-            <!-- assembly.xml主要包含内容：打包后的文件格式、都包含哪些文件、不同文件的目录(如bin、lib、conf、README.md)、权限等 -->
-            <descriptor>src/main/assembly/assembly.xml</descriptor>
-          </descriptors>
-        </configuration>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <!-- 此句很重要，意思是子模块是否也执行父工程配置的assembly打包，原注释：Whether any configuration should be propagated to child POMs. -->
-            <inherited>false</inherited>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 </project>
