@@ -18,7 +18,7 @@
 
 <Configuration status="WARN" monitorInterval="30">
   <Properties>
-    <Property name="instance">utx</Property>
+    <Property name="instance">stdout</Property>
     <Property name="log.dir">log</Property>
   </Properties>
   <Appenders>
@@ -26,7 +26,7 @@
       <PatternLayout pattern="%highlight{[ %p ] [%date{yyyy-MM-dd HH:mm:ss.SSS}][%thread][%level][%class][%line]:%message%n}"/>
     </Console>
 
-    <RollingRandomAccessFile name="infoLog" fileName="${log.dir}/${instance}-info.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-info-%d{yyyy-MM-dd}-%i.log.gz" append="true">
+    <RollingRandomAccessFile name="infoLog" fileName="${log.dir}/${instance}.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-info-%d{yyyy-MM-dd}-%i.log.gz" append="true">
       <PatternLayout pattern="[%date{yyyy-MM-dd HH:mm:ss.SSS}][%thread][%level][%class][%line]:%message%n"/>
       <Filters>
         <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="NEUTRAL"/>
@@ -38,7 +38,7 @@
       <DefaultRolloverStrategy max="20"/>
     </RollingRandomAccessFile>
 
-    <RollingRandomAccessFile name="warnLog" fileName="${log.dir}/${instance}-warn.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-warn-%d{yyyy-MM-dd}-%i.log.gz" append="true">
+    <RollingRandomAccessFile name="warnLog" fileName="${log.dir}/${instance}.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-warn-%d{yyyy-MM-dd}-%i.log.gz" append="true">
       <Filters>
         <ThresholdFilter level="error" onMatch="DENY" onMismatch="NEUTRAL"/>
         <ThresholdFilter level="warn" onMatch="ACCEPT" onMismatch="DENY"/>
@@ -50,7 +50,7 @@
       </Policies>
     </RollingRandomAccessFile>
 
-    <RollingRandomAccessFile name="errorLog" fileName="${log.dir}/${instance}-error.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-error-%d{yyyy-MM-dd}-%i.log.gz" append="true">
+    <RollingRandomAccessFile name="errorLog" fileName="${log.dir}/${instance}.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-error-%d{yyyy-MM-dd}-%i.log.gz" append="true">
       <Filters>
         <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
       </Filters>
