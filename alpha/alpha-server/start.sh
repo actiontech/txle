@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ $# -lt 1 ];
+then
+  echo "USAGE: $0 [start|stop|restart] [--port serverport] [--config-dir config dir] [--log log name]"
+  exit 1
+fi
 
 # Java_HOME
 JAVA_HOME=$(which java)
@@ -8,54 +13,76 @@ echo $JAVA_HOME
 # main class
 MAIN_CLASS=org.apache.servicecomb.saga.alpha.server.AlphaApplication
 
-# cd `dirname $0`
 BIN_DIR=`pwd`
 
 cd ..
 DEPLOY_DIR=`pwd`
 
-CONF_DIR=$DEPLOY_DIR/conf
-LOG_DIR=$DEPLOY_DIR/log
-LIB_DIR=$DEPLOY_DIR/lib
-
 SERVER_NAME=Utx
+LIB_DIR=$DEPLOY_DIR/lib
+CONF_DIR=$DEPLOY_DIR/conf
+LOG_FILE="$DEPLOY_DIR/log/stdout.log"
+SERVER_PORT=""
 
-STDOUT_FILE=$LOG_DIR/stdout.log
+for p_name in $@; do
+    val=`echo "$p_name" | sed -e 's;^--[^=]*=;;'`
+    case $p_name in
+        --config-dir=*) CONF_DIR=$val ;;
+        --log=*) LOG_FILE=$val ;;
+        --debug) P_DEBUG="true" ;;
+        --port=*) SERVER_PORT="-Dserver.port=$val" ;;
+    esac
+done
 
-LOG_BACK="-Dlogback.configurationFile=conf/logback.xml"
+UTXPIDFILE=$CONF_DIR/utx_server.pid
 
-param1=$1
-echo $param1
+#. "$CONF_DIR/server.cfg"
+#SERVER_PORT=""
+#LOG_FILE="$DEPLOY_DIR/log/stdout.log"
+#
+#if [ -n "$port" ]; then
+#    SERVER_PORT="-Dserver.port=$port"
+#fi
+#if [ -n "$log_url" ]; then
+#    LOG_FILE="$log_url"
+#fi
 
-param2=$2
-echo $param2
 
 start() {
-    PIDS=`ps --no-heading -C java -f --width 1000 | grep "$CONF_DIR" | awk '{print $param2}'`
-    if [ -n "$PIDS" ]; then
+    if [ ! -f "$UTXPIDFILE" ]; then
+	touch "$UTXPIDFILE"
+    else
 	echo "warning: $SERVER_NAME server has been started!"
-	echo "PID: $PIDS"
+	echo "PID: `cat "$UTXPIDFILE"`"
 	exit 1
     fi
 
-    if [ ! -d $LOG_DIR ]; then
-	mkdir $LOG_DIR
+    if [ ! -f $LOG_FILE ]; then
+	mkdir -p $LOG_FILE
+	rmdir $LOG_FILE
+	touch $LOG_FILE
     fi
 
     # like: /dir/a.jar:/dir/b.jar...
     LIB_JARS=`ls $LIB_DIR |grep .jar |awk '{print "'$LIB_DIR'/"$0}' |tr "\n" ":"`
-
-    for xml in $DEPLOY_DIR/*.xml
+    for xml in $CONF_DIR/*.xml
 	do	LIB_JARS=$LIB_JARS:$xml
     done
-
-    for env in $DEPLOY_DIR/*.properties
+    for env in $CONF_DIR/*.properties
 	do	LIB_JARS=$LIB_JARS:$env
     done
 
+    if [ -n "$P_CONFIG" ]; then
+	LIB_JARS=$LIB_JARS:$P_CONFIG
+    else
+	for yml in $CONF_DIR/*.yaml
+		do     LIB_JARS=$LIB_JARS:$yml
+	done
+    fi
+
     JAVA_OPTS=" -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true "
     JAVA_DEBUG_OPTS=""
-    if [ "$param2" = "debug" ]; then
+    if [ "$P_DEBUG" = "true" ]; then
 	JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=n "
     fi
 
@@ -63,60 +90,48 @@ start() {
 
     JAVA_MEM_OPTS=" -server -Xmx2g -Xms2g -Xmn256m -XX:PermSize=128m  -XX:+DisableExplicitGC -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:LargePageSizeInBytes=128m -XX:+UseFastAccessorMethods -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70 "
 
+    echo -e "Starting the $SERVER_NAME server...."
     echo "JAVA_MEM_OPTS=$JAVA_MEM_OPTS"
-    echo -e "Starting the $SERVER_NAME server....\c"
 
-    nohup java $JAVA_OPTS $JAVA_MEM_OPTS $LOG_BACK -classpath $DEPLOY_DIR:$LIB_DIR:$CONF_DIR:$LIB_JARS $MAIN_CLASS > /dev/null 2>>$STDOUT_FILE &
+    nohup java $JAVA_OPTS $JAVA_MEM_OPTS $SERVER_PORT -classpath $DEPLOY_DIR:$LIB_DIR:$CONF_DIR:$LIB_JARS $MAIN_CLASS > /dev/null 2>>$LOG_FILE &
     
-
-    COUNT=0
-    while [ $COUNT -lt 1 ]; do
-	echo -e ".\c"
-	sleep 1
-
-	COUNT=`ps  --no-heading -C java -f --width 1000 | grep "$DEPLOY_DIR" | awk '{print $param2}' | wc -l`
-
-	if [ $COUNT -gt 0 ]; then
-		break
-	fi
-    done
+    if [ $? -eq 0 ]; then
+	echo $! > "$UTXPIDFILE"
+    fi
 
     echo "Start successfully!"
-    PIDS=`ps  --no-heading -C java -f --width 1000 | grep "$DEPLOY_DIR" | awk '{print $param2}'`
-    echo "PID: $PIDS"
+    echo "PID: `cat "$UTXPIDFILE"`"
 }
 
 
 stop(){
-    PIDS=`ps --no-heading -C java -f --width 1000 | grep "$CONF_DIR" |awk '{print $param2}'`
-    if [ -z "$PIDS" ]; then
+    if [ ! -f "$UTXPIDFILE" ]; then
 	echo "ERROR: The $SERVER_NAME has not been started!"
+	exit 0
     fi
 
-    echo -e "Stopping the $SERVER_NAME ....\c"
-    for PID in $PIDS ; do
-	kill $PID > /dev/null 2>&1
+    PID=`cat "$UTXPIDFILE"`
+
+    echo -e "Stopping the $SERVER_NAME server ....\c"
+    kill "$PID" > /dev/null 2>&1
+    rm "$UTXPIDFILE"
+
+    while :
+    do
+	echo -e "."
+	PID_EXIST=`ps --no-heading -p $PID`
+	if [ -n "$PID_EXIST" ]; then
+		break
+	fi
+	sleep 1
     done
 
-    COUNT=0
-    while [ $COUNT -lt 1 ]; do
-	echo -e ".\c"
-	sleep 1
-	COUNT=1
-	for PID in $PIDS ; do
-		PID_EXIST=`ps --no-heading -p $PID`
-		if [ -n "$PID_EXIST" ]; then
-			COUNT=0
-			break
-		fi
-	done
-    done
     echo "stop OK!"
-    echo "PID: $PIDS"
+    echo "PID: $PID"
 }
 
 
-case $param1 in
+case $1 in
 	start)
 		start;
 	;;
@@ -137,6 +152,3 @@ case $param1 in
 	;;
 esac
 exit 0
-
-
-
