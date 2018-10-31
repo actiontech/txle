@@ -15,16 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.servicecomb.saga.alpha.server;
+package org.apache.servicecomb.saga.alpha.core;
 
-import io.prometheus.client.spring.boot.EnablePrometheusEndpoint;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@EnablePrometheusEndpoint
-@SpringBootApplication
-public class AlphaApplication {
-  public static void main(String[] args) {
-    SpringApplication.run(AlphaApplication.class, args);
-  }
+public class TxEventExtension {
+    private long totalTransaction;
+    private long totalFailedTransaction;
+    private long totalRollbackedTransaction;
+    private long totalRetriedTransaction;
+    private long totalTimeoutTransaction;
 }
