@@ -87,6 +87,16 @@ public class TxConsistentServiceTest {
     }
 
     @Override
+    public void deleteDuplicateEventsByTypeAndSurrogateIds(String type, List<Long> maxSurrogateIdList) {
+
+    }
+
+    @Override
+    public List<Long> getMaxSurrogateIdGroupByGlobalTxIdByType(String type) {
+      return null;
+    }
+
+    @Override
     public Iterable<TxEvent> findAll() {
       return null;
     }
@@ -100,6 +110,36 @@ public class TxConsistentServiceTest {
 	public List<TxEvent> selectPausedAndContinueEvent(String globalTxId) {
 		return null;
 	}
+
+    @Override
+    public long count() {
+      return 0;
+    }
+
+    @Override
+    public long totalTransaction() {
+      return 0;
+    }
+
+    @Override
+    public long totalFailedTransaction() {
+      return 0;
+    }
+
+    @Override
+    public long totalRollbackedTransaction() {
+      return 0;
+    }
+
+    @Override
+    public long totalRetriedTransaction() {
+      return 0;
+    }
+
+    @Override
+    public long totalTimeoutTransaction() {
+      return 0;
+    }
   };
 
   private final String globalTxId = UUID.randomUUID().toString();

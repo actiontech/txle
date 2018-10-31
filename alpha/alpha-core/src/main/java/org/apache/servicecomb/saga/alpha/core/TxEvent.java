@@ -30,7 +30,7 @@ import javax.persistence.Transient;
 
 @Entity
 @Table(name = "TxEvent")
-public class TxEvent {
+public class TxEvent extends TxEventExtension {
   @Transient
   public static final long MAX_TIMESTAMP = 253402214400000L; // 9999-12-31 00:00:00
 

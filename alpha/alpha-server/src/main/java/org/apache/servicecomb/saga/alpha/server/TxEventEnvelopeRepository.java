@@ -19,6 +19,7 @@ package org.apache.servicecomb.saga.alpha.server;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.transaction.Transactional;
 
@@ -123,8 +124,33 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + " GROUP BY t1.globalTxId"
       + ")")
   void deleteByType(String type);
-  
+
+  @Transactional
+  @Modifying(clearAutomatically = true)
+  @Query("DELETE FROM TxEvent t WHERE t.type = ?1 AND t.surrogateId NOT IN ?2")
+  void deleteDuplicateEventsByTypeAndSurrogateIds(String type, List<Long> maxSurrogateIdList);
+
+  @Query("SELECT MAX(t1.surrogateId) FROM TxEvent t1 WHERE t1.type = ?1 GROUP BY t1.globalTxId")
+  List<Long> getMaxSurrogateIdGroupByGlobalTxIdByType(String type);
+
   @Query(value = "SELECT T FROM TxEvent T WHERE T.type IN ('SagaPausedEvent', 'SagaContinuedEvent', 'SagaAutoContinuedEvent') AND T.globalTxId = ?1 ORDER BY T.surrogateId DESC")
   List<TxEvent> selectPausedAndContinueEvent(String globalTxId);
-  
+
+  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T", nativeQuery = true)
+  long totalTransaction();
+
+  // TODO fix query sql
+  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T", nativeQuery = true)
+  long totalFailedTransaction();
+
+  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T WHERE T.type = 'TxCompensatedEvent'", nativeQuery = true)
+  long totalRollbackedTransaction();
+
+  @Query(value = "select count(distinct T.globalTxId) from TxEvent T, (SELECT localTxId from TxEvent WHERE type = 'TxStartedEvent' GROUP BY localTxId having count(1) > 1) T1 WHERE T.localTxId = T1.localTxId", nativeQuery = true)
+  long totalRetriedTransaction();
+
+  // TODO fix query sql
+  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T", nativeQuery = true)
+  long totalTimeoutTransaction();
+
 }

@@ -119,10 +119,22 @@ public interface TxEventRepository {
    */
   void deleteDuplicateEvents(String type);
 
+  void deleteDuplicateEventsByTypeAndSurrogateIds(String type, List<Long> maxSurrogateIdList);
+
+  List<Long> getMaxSurrogateIdGroupByGlobalTxIdByType(String type);
+
   Iterable<TxEvent> findAll();
 
   TxEvent findOne(long id);
-  
+
   List<TxEvent> selectPausedAndContinueEvent(String globalTxId);
-  
+
+  long count();
+
+  long totalTransaction();
+  long totalFailedTransaction();
+  long totalRollbackedTransaction();
+  long totalRetriedTransaction();
+  long totalTimeoutTransaction();
+
 }

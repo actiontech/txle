@@ -75,6 +75,16 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
+  public void deleteDuplicateEventsByTypeAndSurrogateIds(String type, List<Long> maxSurrogateIdList) {
+    eventRepo.deleteDuplicateEventsByTypeAndSurrogateIds(type, maxSurrogateIdList);
+  }
+
+  @Override
+  public List<Long> getMaxSurrogateIdGroupByGlobalTxIdByType(String type) {
+    return eventRepo.getMaxSurrogateIdGroupByGlobalTxIdByType(type);
+  }
+
+  @Override
   public Iterable<TxEvent> findAll() {
     return eventRepo.findAll();
   }
@@ -88,5 +98,35 @@ class SpringTxEventRepository implements TxEventRepository {
 	public List<TxEvent> selectPausedAndContinueEvent(String globalTxId) {
 		return eventRepo.selectPausedAndContinueEvent(globalTxId);
 	}
-	
+
+  @Override
+  public long count() {
+    return eventRepo.count();
+  }
+
+  @Override
+  public long totalTransaction() {
+    return eventRepo.totalTransaction();
+  }
+
+  @Override
+  public long totalFailedTransaction() {
+    return eventRepo.totalFailedTransaction();
+  }
+
+  @Override
+  public long totalRollbackedTransaction() {
+    return eventRepo.totalRollbackedTransaction();
+  }
+
+  @Override
+  public long totalRetriedTransaction() {
+    return eventRepo.totalRetriedTransaction();
+  }
+
+  @Override
+  public long totalTimeoutTransaction() {
+    return eventRepo.totalTimeoutTransaction();
+  }
+
 }

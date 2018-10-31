@@ -17,19 +17,19 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
-import static org.apache.servicecomb.saga.common.EventType.SagaEndedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxAbortedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxEndedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
-
-import java.lang.invoke.MethodHandles;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.invoke.MethodHandles;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
+import static org.apache.servicecomb.saga.common.EventType.*;
 
 public class EventScanner implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -68,7 +68,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
 				() -> {
 					try {
-						updateTimeoutStatus();
+                        updateTimeoutStatus();
 						findTimeoutEvents();
 						abortTimeoutEvents();
 						saveUncompensatedEventsToCommands();
@@ -118,7 +118,11 @@ public class EventScanner implements Runnable {
 
   private void deleteDuplicateSagaEndedEvents() {
     try {
-      eventRepository.deleteDuplicateEvents(SagaEndedEvent.name());
+      List<Long> maxSurrogateIdList = eventRepository.getMaxSurrogateIdGroupByGlobalTxIdByType(SagaEndedEvent.name());
+      if (maxSurrogateIdList != null && !maxSurrogateIdList.isEmpty()) {
+        eventRepository.deleteDuplicateEventsByTypeAndSurrogateIds(SagaEndedEvent.name(), maxSurrogateIdList);
+      }
+//      eventRepository.deleteDuplicateEvents(SagaEndedEvent.name());
     } catch (Exception e) {
       LOG.warn("Failed to delete duplicate event", e);
     }
