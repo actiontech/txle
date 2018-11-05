@@ -153,4 +153,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T", nativeQuery = true)
   long totalTimeoutTransaction();
 
+  @Query(value = "SELECT count(1) FROM (SELECT count(1) FROM TxEvent T WHERE T.retries > 0 AND T.globalTxId = ?1 GROUP BY T.localTxId HAVING count(1) > 1) T1", nativeQuery = true)
+  long checkIsRetiredEvent(String globalTxId);
+
 }

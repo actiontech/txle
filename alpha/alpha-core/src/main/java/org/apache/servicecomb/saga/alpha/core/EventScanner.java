@@ -138,7 +138,11 @@ public class EventScanner implements Runnable {
     timeoutRepository.findFirstTimeout().forEach(timeout -> {
       LOG.info("Found timeout event {} to abort", timeout);
 
-      eventRepository.save(toTxAbortedEvent(timeout));
+      TxEvent event = toTxAbortedEvent(timeout);
+      eventRepository.save(event);
+
+      boolean isRetried = eventRepository.checkIsRetiredEvent(event.type());
+      UtxMetrics.countTxNumber(event, true, isRetried);
 
       if (timeout.type().equals(TxStartedEvent.name())) {
         eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
