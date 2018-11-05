@@ -140,6 +140,11 @@ public class TxConsistentServiceTest {
     public long totalTimeoutTransaction() {
       return 0;
     }
+
+    @Override
+    public boolean checkIsRetiredEvent(String globalTxId) {
+      return false;
+    }
   };
 
   private final String globalTxId = UUID.randomUUID().toString();

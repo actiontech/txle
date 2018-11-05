@@ -7,10 +7,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.servicecomb.saga.alpha.core.AdditionalEventType;
-import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
-import org.apache.servicecomb.saga.alpha.core.TxEvent;
-import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
+import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.common.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,7 +153,9 @@ public class UtxRestApi {
 				break;
 		}
 
-		eventRepository.save(new TxEvent(ip_port, ip_port, globalTxId, txEvent.localTxId(), txEvent.parentTxId(), eventTypeName, "", pausePeriod, "", 0, null));
+		TxEvent event = new TxEvent(ip_port, ip_port, globalTxId, txEvent.localTxId(), txEvent.parentTxId(), eventTypeName, "", pausePeriod, "", 0, null);
+		eventRepository.save(event);
+		UtxMetrics.countTxNumber(event, false, false);
 
 		return "ok";
 	}

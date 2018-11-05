@@ -137,4 +137,6 @@ public interface TxEventRepository {
   long totalRetriedTransaction();
   long totalTimeoutTransaction();
 
+  boolean checkIsRetiredEvent(String globalTxId);
+
 }

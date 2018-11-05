@@ -129,4 +129,9 @@ class SpringTxEventRepository implements TxEventRepository {
     return eventRepo.totalTimeoutTransaction();
   }
 
+  @Override
+  public boolean checkIsRetiredEvent(String globalTxId) {
+    return eventRepo.checkIsRetiredEvent(globalTxId) > 0;
+  }
+
 }

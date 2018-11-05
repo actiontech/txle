@@ -56,6 +56,8 @@ public class TxConsistentService {
 	  if (types.contains(event.type()) && isGlobalTxAborted(event)) {
 		  LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted",
 				  event.type(), event.globalTxId());
+		  boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
+		  UtxMetrics.countTxNumber(event, false, isRetried);
 		  return -1;
 	  }
 
@@ -66,6 +68,8 @@ public class TxConsistentService {
 	  boolean isPaused = isGlobalTxPaused(event.globalTxId());
 	  if (!isPaused) {
 		  eventRepository.save(event);
+		  boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
+		  UtxMetrics.countTxNumber(event, false, isRetried);
 		  return 1;
 	  }
 	  

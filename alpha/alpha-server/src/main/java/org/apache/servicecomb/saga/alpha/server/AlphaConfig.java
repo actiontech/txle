@@ -36,7 +36,7 @@ import org.apache.servicecomb.saga.alpha.core.PushBackOmegaCallback;
 import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.TxTimeoutRepository;
-import org.apache.servicecomb.saga.alpha.server.restapi.UtxMetrics;
+import org.apache.servicecomb.saga.alpha.core.UtxMetrics;
 import org.apache.servicecomb.saga.alpha.server.restapi.UtxRestApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -118,6 +118,7 @@ class AlphaConfig {
 	  return new UtxRestApi(txConsistentService);
   }
 
+  @Bean
   public UtxMetrics utxMetrics(TxEventRepository eventRepository) {
     return new UtxMetrics(eventRepository);
   }
