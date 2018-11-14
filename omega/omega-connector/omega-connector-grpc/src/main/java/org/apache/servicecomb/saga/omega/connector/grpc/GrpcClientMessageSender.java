@@ -21,6 +21,8 @@
 package org.apache.servicecomb.saga.omega.connector.grpc;
 
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender.ErrorHandlerFactory;
+import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
+import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
 import org.apache.servicecomb.saga.omega.transaction.AlphaResponse;
 import org.apache.servicecomb.saga.omega.transaction.MessageDeserializer;
@@ -91,6 +93,15 @@ public class GrpcClientMessageSender implements MessageSender {
 
   @Override
   public AlphaResponse send(TxEvent event) {
+    try {
+      // To set serviceName to OmegaContextServiceConfig.
+      OmegaContextServiceConfig context = CurrentThreadOmegaContext.getContextFromCurThread();
+      if (context != null) {
+        context.setServiceName(serviceConfig.getServiceName());
+        context.setInstanceId(serviceConfig.getInstanceId());
+      }
+    } catch (Exception e) {}
+
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
     // TODO any hidden trouble about current logic???
     // If transaction is paused, then Client will retry.
@@ -122,6 +133,7 @@ public class GrpcClientMessageSender implements MessageSender {
         .setCompensationMethod(event.compensationMethod())
         .setRetryMethod(event.retryMethod() == null ? "" : event.retryMethod())
         .setRetries(event.retries())
+        .setCategory(event.category())
         .setPayloads(payloads);
 
     return builder.build();

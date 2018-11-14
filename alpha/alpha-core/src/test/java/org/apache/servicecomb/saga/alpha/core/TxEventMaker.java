@@ -32,6 +32,7 @@ class TxEventMaker {
         UUID.randomUUID().toString(),
         TxStartedEvent.name(),
         TxEventMaker.class.getCanonicalName(),
+        "",
         uniquify("blah").getBytes());
   }
 }

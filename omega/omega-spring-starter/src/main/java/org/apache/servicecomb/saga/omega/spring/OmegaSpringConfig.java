@@ -17,6 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.spring;
 
+import io.prometheus.client.exporter.HTTPServer;
 import org.apache.servicecomb.saga.omega.connector.grpc.AlphaClusterConfig;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender;
 import org.apache.servicecomb.saga.omega.context.*;
@@ -24,16 +25,23 @@ import org.apache.servicecomb.saga.omega.format.KryoMessageFormat;
 import org.apache.servicecomb.saga.omega.format.MessageFormat;
 import org.apache.servicecomb.saga.omega.transaction.MessageHandler;
 import org.apache.servicecomb.saga.omega.transaction.MessageSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 @Configuration
 class OmegaSpringConfig {
+  private static final Logger LOG = LoggerFactory.getLogger(OmegaSpringConfig.class);
+
+  @Value("${prometheus.metrics.port:-1}")
+  private String promMetricsPort;
 
   @Bean(name = {"omegaUniqueIdGenerator"})
   IdGenerator<String> idGenerator() {
@@ -42,6 +50,17 @@ class OmegaSpringConfig {
 
   @Bean
   OmegaContext omegaContext(@Qualifier("omegaUniqueIdGenerator") IdGenerator<String> idGenerator) {
+    try {
+      if (promMetricsPort != null && promMetricsPort.length() > 0) {
+        int metricsPort = Integer.parseInt(promMetricsPort);
+        if (metricsPort > 0) {
+          // Initialize Prometheus's Metrics Server.
+          new HTTPServer(metricsPort);// To establish the metrics server immediately without checking the port status.
+        }
+      }
+    } catch (IOException e) {
+      LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Initialize utx sql metrics server exception, please check the port " + promMetricsPort + ". " + e);
+    }
     return new OmegaContext(idGenerator);
   }
 

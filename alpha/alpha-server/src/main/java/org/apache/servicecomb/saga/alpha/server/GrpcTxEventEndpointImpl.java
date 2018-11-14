@@ -88,6 +88,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         message.getTimeout(),
         message.getRetryMethod(),
         message.getRetries(),
+        message.getCategory(),
         message.getPayloads().toByteArray()
     ));
 

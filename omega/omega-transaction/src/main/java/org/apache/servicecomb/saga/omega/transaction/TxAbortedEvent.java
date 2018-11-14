@@ -31,6 +31,11 @@ public class TxAbortedEvent extends TxEvent {
         stackTrace(throwable));
   }
 
+  public TxAbortedEvent(String globalTxId, String localTxId, String parentTxId, String compensationMethod, String category, Throwable throwable) {
+    super(EventType.TxAbortedEvent, globalTxId, localTxId, parentTxId, compensationMethod, 0, "", 0, category,
+        stackTrace(throwable));
+  }
+
   private static String stackTrace(Throwable e) {
     StringWriter writer = new StringWriter();
     e.printStackTrace(new PrintWriter(writer));

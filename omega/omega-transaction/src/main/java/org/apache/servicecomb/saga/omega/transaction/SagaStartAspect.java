@@ -44,7 +44,7 @@ public class SagaStartAspect {
 
   @Around("execution(@org.apache.servicecomb.saga.omega.context.annotations.SagaStart * *(..)) && @annotation(sagaStart)")
   Object advise(ProceedingJoinPoint joinPoint, SagaStart sagaStart) throws Throwable {
-    initializeOmegaContext();
+    initializeOmegaContext(sagaStart);
     Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
 
     sagaStartAnnotationProcessor.preIntercept(context.globalTxId(), method.toString(), sagaStart.timeout(), "", 0);
@@ -69,7 +69,8 @@ public class SagaStartAspect {
     }
   }
 
-  private void initializeOmegaContext() {
+  private void initializeOmegaContext(SagaStart sagaStart) {
     context.setLocalTxId(context.newGlobalTxId());
+    context.setCategory(sagaStart.category());
   }
 }

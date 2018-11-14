@@ -20,6 +20,7 @@ package org.apache.servicecomb.saga.omega.transport.resttemplate;
 
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_ID_KEY;
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.LOCAL_TX_ID_KEY;
+import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_CATEGORY_KEY;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
@@ -48,12 +49,15 @@ class TransactionClientHttpRequestInterceptor implements ClientHttpRequestInterc
     if (omegaContext!= null && omegaContext.globalTxId() != null) {
       request.getHeaders().add(GLOBAL_TX_ID_KEY, omegaContext.globalTxId());
       request.getHeaders().add(LOCAL_TX_ID_KEY, omegaContext.localTxId());
+      request.getHeaders().add(GLOBAL_TX_CATEGORY_KEY, omegaContext.category());
 
       LOG.debug("Added {} {} and {} {} to request header",
           GLOBAL_TX_ID_KEY,
           omegaContext.globalTxId(),
           LOCAL_TX_ID_KEY,
-          omegaContext.localTxId());
+          omegaContext.localTxId(),
+          GLOBAL_TX_CATEGORY_KEY,
+          omegaContext.category());
     }
     return execution.execute(request, body);
   }

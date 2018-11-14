@@ -23,4 +23,8 @@ public class TxEndedEvent extends TxEvent {
   public TxEndedEvent(String globalTxId, String localTxId, String parentTxId, String compensationMethod) {
     super(EventType.TxEndedEvent, globalTxId, localTxId, parentTxId, compensationMethod, 0, "", 0);
   }
+
+  public TxEndedEvent(String globalTxId, String localTxId, String parentTxId, String compensationMethod, String category) {
+    super(EventType.TxEndedEvent, globalTxId, localTxId, parentTxId, compensationMethod, 0, "", 0, category);
+  }
 }

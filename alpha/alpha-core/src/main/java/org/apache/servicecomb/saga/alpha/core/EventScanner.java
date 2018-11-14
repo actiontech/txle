@@ -86,6 +86,7 @@ public class EventScanner implements Runnable {
   private void findTimeoutEvents() {
     eventRepository.findTimeoutEvents()
         .forEach(event -> {
+          CurrentThreadContext.put(event.globalTxId(), event);
           LOG.info("Found timeout event {}", event);
           timeoutRepository.save(txTimeoutOf(event));
         });
@@ -98,6 +99,7 @@ public class EventScanner implements Runnable {
   private void saveUncompensatedEventsToCommands() {
     eventRepository.findFirstUncompensatedEventByIdGreaterThan(nextEndedEventId, TxEndedEvent.name())
         .forEach(event -> {
+          CurrentThreadContext.put(event.globalTxId(), event);
           LOG.info("Found uncompensated event {}", event);
           nextEndedEventId = event.id();
           commandRepository.saveCompensationCommands(event.globalTxId());
@@ -107,6 +109,7 @@ public class EventScanner implements Runnable {
   private void updateCompensatedCommands() {
     eventRepository.findFirstCompensatedEventByIdGreaterThan(nextCompensatedEventId)
         .ifPresent(event -> {
+          CurrentThreadContext.put(event.globalTxId(), event);
           LOG.info("Found compensated event {}", event);
           nextCompensatedEventId = event.id();
           updateCompensationStatus(event);
@@ -131,6 +134,8 @@ public class EventScanner implements Runnable {
         event.globalTxId(),
         event.localTxId());
 
+    CurrentThreadContext.put(event.globalTxId(), event);
+
     markSagaEnded(event);
   }
 
@@ -139,6 +144,7 @@ public class EventScanner implements Runnable {
       LOG.info("Found timeout event {} to abort", timeout);
 
       TxEvent event = toTxAbortedEvent(timeout);
+      CurrentThreadContext.put(event.globalTxId(), event);
       eventRepository.save(event);
 
       boolean isRetried = eventRepository.checkIsRetiredEvent(event.type());
@@ -156,12 +162,14 @@ public class EventScanner implements Runnable {
   }
 
   private void markSagaEnded(TxEvent event) {
+    CurrentThreadContext.put(event.globalTxId(), event);
     if (commandRepository.findUncompletedCommands(event.globalTxId()).isEmpty()) {
       markGlobalTxEndWithEvent(event);
     }
   }
 
   private void markGlobalTxEndWithEvent(TxEvent event) {
+    CurrentThreadContext.put(event.globalTxId(), event);
     eventRepository.save(toSagaEndedEvent(event));
     LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
   }
@@ -179,6 +187,7 @@ public class EventScanner implements Runnable {
         timeout.parentTxId(),
         TxAbortedEvent.name(),
         "",
+        "",
         ("Transaction timeout").getBytes());
   }
 
@@ -191,6 +200,7 @@ public class EventScanner implements Runnable {
         null,
         SagaEndedEvent.name(),
         "",
+        event.category(),
         EMPTY_PAYLOAD);
   }
 
@@ -214,6 +224,7 @@ public class EventScanner implements Runnable {
         command.parentTxId(),
         TxStartedEvent.name(),
         command.compensationMethod(),
+        command.category(),
         command.payloads()
     );
   }
@@ -228,7 +239,8 @@ public class EventScanner implements Runnable {
         event.parentTxId(),
         event.type(),
         event.expiryTime(),
-        NEW.name()
+        NEW.name(),
+        event.category()
     );
   }
 }

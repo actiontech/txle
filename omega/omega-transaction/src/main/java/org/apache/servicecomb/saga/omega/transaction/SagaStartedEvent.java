@@ -24,4 +24,8 @@ public class SagaStartedEvent extends TxEvent {
     // use "" instead of null as compensationMethod requires not null in sql
     super(EventType.SagaStartedEvent, globalTxId, localTxId, null, "", timeout, "", 0);
   }
+  public SagaStartedEvent(String globalTxId, String localTxId, int timeout, String category) {
+    // use "" to instead of null, as compensationMethod could not be null in sql
+    super(EventType.SagaStartedEvent, globalTxId, localTxId, null, "", timeout, "", 0, category);
+  }
 }

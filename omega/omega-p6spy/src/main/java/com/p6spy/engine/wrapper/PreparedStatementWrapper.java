@@ -17,32 +17,19 @@
  */
 package com.p6spy.engine.wrapper;
 
-import java.io.InputStream;
-import java.io.Reader;
-import java.math.BigDecimal;
-import java.net.URL;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.Date;
-import java.sql.NClob;
-import java.sql.ParameterMetaData;
-import java.sql.PreparedStatement;
-import java.sql.Ref;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.RowId;
-import java.sql.SQLException;
-import java.sql.SQLXML;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.Calendar;
-
 import com.p6spy.engine.autocompensate.handler.AutoCompensateHandler;
 import com.p6spy.engine.autocompensate.handler.IAutoCompensateHandler;
 import com.p6spy.engine.common.PreparedStatementInformation;
 import com.p6spy.engine.common.ResultSetInformation;
 import com.p6spy.engine.event.JdbcEventListener;
+import com.p6spy.engine.monitor.UtxSqlMetrics;
+
+import java.io.InputStream;
+import java.io.Reader;
+import java.math.BigDecimal;
+import java.net.URL;
+import java.sql.*;
+import java.util.Calendar;
 
 /**
  * This implementation wraps a {@link PreparedStatement}  and notifies a {@link JdbcEventListener}
@@ -93,14 +80,19 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
     int rowCount = 0;
     try {
       eventListener.onBeforeExecuteUpdate(statementInformation);
-      
 
       // before advise for executing SQL By Gannalyo.
       IAutoCompensateHandler autoCompensateHandler = AutoCompensateHandler.newInstance();
       autoCompensateHandler.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), true);
-      
+
+      // start to mark duration for business sql By Gannalyo.
+      UtxSqlMetrics.startMarkSQLDurationAndCount(statementInformation.getSqlWithValues(), true);
+
       rowCount = delegate.executeUpdate();
-      
+
+      // end mark duration for business sql By Gannalyo.
+      UtxSqlMetrics.endMarkSQLDuration();
+
       // after advise for executing SQL By Gannalyo.
       autoCompensateHandler.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), false);
 

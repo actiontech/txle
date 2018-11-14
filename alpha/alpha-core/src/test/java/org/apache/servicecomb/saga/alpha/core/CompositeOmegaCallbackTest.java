@@ -164,6 +164,7 @@ public class CompositeOmegaCallbackTest {
         UUID.randomUUID().toString(),
         eventType.name(),
         getClass().getCanonicalName(),
+        "",
         uniquify("blah").getBytes());
   }
 }

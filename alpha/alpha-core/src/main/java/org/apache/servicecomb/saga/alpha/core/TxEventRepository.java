@@ -131,12 +131,6 @@ public interface TxEventRepository {
 
   long count();
 
-  long totalTransaction();
-  long totalFailedTransaction();
-  long totalRollbackedTransaction();
-  long totalRetriedTransaction();
-  long totalTimeoutTransaction();
-
   boolean checkIsRetiredEvent(String globalTxId);
 
 }

@@ -507,6 +507,7 @@ public class AlphaIntegrationTest {
         parentTxId,
         TxAbortedEvent.name(),
         compensationMethod,
+        "",
         payload.getBytes());
   }
 

@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.p6spy.engine.monitor.UtxSqlMetrics;
 import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +55,16 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			// 5.save saga_undo_log
 //			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + UtxConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
 			String compensateSql = constructCompensateSql(delegate, insertStatement, tableName, newDataList);
-			return this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
+
+			// start to mark duration for business sql By Gannalyo.
+			UtxSqlMetrics.startMarkSQLDurationAndCount(compensateSql, false);
+
+			boolean result = this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
+
+			// end mark duration for maintaining sql By Gannalyo.
+			UtxSqlMetrics.endMarkSQLDuration();
+
+			return  result;
 		} catch (SQLException e) {
 			LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for insert SQL.", e);
 			throw e;
@@ -113,8 +123,16 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 		try {
 			String sql = String.format("SELECT * FROM %s T WHERE T.%s = %s", tableName, primaryKeyName, primaryKeyValue);
 //			dataResultSet = delegate.getResultSet();// it's result is null.
+
+			// start to mark duration for business sql By Gannalyo.
+			UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+
 			preparedStatement = delegate.getConnection().prepareStatement(sql);
 			dataResultSet = preparedStatement.executeQuery();
+
+			// end mark duration for maintaining sql By Gannalyo.
+			UtxSqlMetrics.endMarkSQLDuration();
+
 			List<Map<String, Object>> newDataList = new ArrayList<>();
 			while (dataResultSet.next()) {
 				Map<String, Object> dataMap = new HashMap<String, Object>();

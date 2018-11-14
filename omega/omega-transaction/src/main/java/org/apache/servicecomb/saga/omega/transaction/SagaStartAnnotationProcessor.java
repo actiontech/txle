@@ -35,7 +35,7 @@ class SagaStartAnnotationProcessor implements EventAwareInterceptor {
   public AlphaResponse preIntercept(String parentTxId, String compensationMethod, int timeout, String retriesMethod,
       int retries, Object... message) {
     try {
-      return sender.send(new SagaStartedEvent(omegaContext.globalTxId(), omegaContext.localTxId(), timeout));
+      return sender.send(new SagaStartedEvent(omegaContext.globalTxId(), omegaContext.localTxId(), timeout, omegaContext.category()));
     } catch (OmegaException e) {
       throw new TransactionalException(e.getMessage(), e.getCause());
     }
@@ -43,7 +43,7 @@ class SagaStartAnnotationProcessor implements EventAwareInterceptor {
 
   @Override
   public void postIntercept(String parentTxId, String compensationMethod) {
-    AlphaResponse response = sender.send(new SagaEndedEvent(omegaContext.globalTxId(), omegaContext.localTxId()));
+    AlphaResponse response = sender.send(new SagaEndedEvent(omegaContext.globalTxId(), omegaContext.localTxId(), omegaContext.category()));
     if (response.aborted()) {
       throw new OmegaException("transaction " + parentTxId + " is aborted");
     }
@@ -52,6 +52,6 @@ class SagaStartAnnotationProcessor implements EventAwareInterceptor {
   @Override
   public void onError(String parentTxId, String compensationMethod, Throwable throwable) {
     String globalTxId = omegaContext.globalTxId();
-    sender.send(new TxAbortedEvent(globalTxId, omegaContext.localTxId(), null, compensationMethod, throwable));
+    sender.send(new TxAbortedEvent(globalTxId, omegaContext.localTxId(), null, compensationMethod, omegaContext.category(), throwable));
   }
 }

@@ -67,7 +67,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 
   @Query("SELECT DISTINCT new org.apache.servicecomb.saga.alpha.core.TxEvent("
       + "t.serviceName, t.instanceId, t.globalTxId, t.localTxId, t.parentTxId, "
-      + "t.type, t.compensationMethod, t.payloads "
+      + "t.type, t.compensationMethod, t.category, t.payloads "
       + ") FROM TxEvent t "
       + "WHERE t.globalTxId = ?1 AND t.type = ?2 "
       + "  AND ( SELECT MIN(t1.retries) FROM TxEvent t1 "
@@ -113,6 +113,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + "ORDER BY t.surrogateId ASC")
   List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId, Pageable pageable);
 
+  @Query()
   Optional<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId);
 
   @Transactional
@@ -135,23 +136,6 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 
   @Query(value = "SELECT T FROM TxEvent T WHERE T.type IN ('SagaPausedEvent', 'SagaContinuedEvent', 'SagaAutoContinuedEvent') AND T.globalTxId = ?1 ORDER BY T.surrogateId DESC")
   List<TxEvent> selectPausedAndContinueEvent(String globalTxId);
-
-  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T", nativeQuery = true)
-  long totalTransaction();
-
-  // TODO fix query sql
-  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T", nativeQuery = true)
-  long totalFailedTransaction();
-
-  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T WHERE T.type = 'TxCompensatedEvent'", nativeQuery = true)
-  long totalRollbackedTransaction();
-
-  @Query(value = "select count(distinct T.globalTxId) from TxEvent T, (SELECT localTxId from TxEvent WHERE type = 'TxStartedEvent' GROUP BY localTxId having count(1) > 1) T1 WHERE T.localTxId = T1.localTxId", nativeQuery = true)
-  long totalRetriedTransaction();
-
-  // TODO fix query sql
-  @Query(value = "SELECT count(distinct T.globalTxId) from TxEvent T", nativeQuery = true)
-  long totalTimeoutTransaction();
 
   @Query(value = "SELECT count(1) FROM (SELECT count(1) FROM TxEvent T WHERE T.retries > 0 AND T.globalTxId = ?1 GROUP BY T.localTxId HAVING count(1) > 1) T1", nativeQuery = true)
   long checkIsRetiredEvent(String globalTxId);

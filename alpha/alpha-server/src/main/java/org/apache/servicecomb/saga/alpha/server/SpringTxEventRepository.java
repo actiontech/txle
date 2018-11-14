@@ -105,31 +105,6 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public long totalTransaction() {
-    return eventRepo.totalTransaction();
-  }
-
-  @Override
-  public long totalFailedTransaction() {
-    return eventRepo.totalFailedTransaction();
-  }
-
-  @Override
-  public long totalRollbackedTransaction() {
-    return eventRepo.totalRollbackedTransaction();
-  }
-
-  @Override
-  public long totalRetriedTransaction() {
-    return eventRepo.totalRetriedTransaction();
-  }
-
-  @Override
-  public long totalTimeoutTransaction() {
-    return eventRepo.totalTimeoutTransaction();
-  }
-
-  @Override
   public boolean checkIsRetiredEvent(String globalTxId) {
     return eventRepo.checkIsRetiredEvent(globalTxId) > 0;
   }
