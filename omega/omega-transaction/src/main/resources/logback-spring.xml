@@ -2,7 +2,7 @@
 <configuration debug="false" scan="false"
 	scanPeriod="60 seconds">
 	<!--定义日志文件的存储地址 勿在 LogBack 的配置中使用相对路径 -->
-	<property name="LOG_HOME" value="F:/log/saga" />
+	<property name="LOG_HOME" value="D:/Workspace_utx/log" />
 	<!-- 控制台输出 -->
 	<appender name="STDOUT"
 		class="ch.qos.logback.core.ConsoleAppender">
@@ -18,7 +18,7 @@
 		<rollingPolicy
 			class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<!--日志文件输出的文件名 -->
-			<FileNamePattern>${LOG_HOME}/saga-client.log.%d{yyyy-MM-dd}.log
+			<FileNamePattern>${LOG_HOME}/omega-transaction.log.%d{yyyy-MM-dd}.log
 			</FileNamePattern>
 			<!--日志文件保留天数 -->
 			<MaxHistory>30</MaxHistory>

@@ -17,31 +17,18 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-
-import org.apache.servicecomb.saga.alpha.core.CommandRepository;
-import org.apache.servicecomb.saga.alpha.core.CompositeOmegaCallback;
-import org.apache.servicecomb.saga.alpha.core.EventScanner;
-import org.apache.servicecomb.saga.alpha.core.OmegaCallback;
-import org.apache.servicecomb.saga.alpha.core.PendingTaskRunner;
-import org.apache.servicecomb.saga.alpha.core.PushBackOmegaCallback;
-import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
-import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
-import org.apache.servicecomb.saga.alpha.core.TxTimeoutRepository;
+import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.UtxMetrics;
 import org.apache.servicecomb.saga.alpha.server.restapi.UtxRestApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.util.Map;
+import java.util.concurrent.*;
 
 @EntityScan(basePackages = "org.apache.servicecomb.saga.alpha")
 @Configuration
@@ -51,6 +38,9 @@ class AlphaConfig {
 
   @Value("${alpha.compensation.retry.delay:3000}")
   private int delay;
+
+  @Value("${prometheus.metrics.port:-1}")
+  private String promMetricsPort;
 
   @Bean
   Map<String, Map<String, OmegaCallback>> omegaCallbacks() {
@@ -119,8 +109,8 @@ class AlphaConfig {
   }
 
   @Bean
-  public UtxMetrics utxMetrics(TxEventRepository eventRepository) {
-    return new UtxMetrics(eventRepository);
+  public UtxMetrics utxMetrics() {
+    return new UtxMetrics(promMetricsPort);
   }
 
   @PostConstruct

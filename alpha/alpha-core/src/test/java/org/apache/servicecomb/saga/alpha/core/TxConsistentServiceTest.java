@@ -117,31 +117,6 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public long totalTransaction() {
-      return 0;
-    }
-
-    @Override
-    public long totalFailedTransaction() {
-      return 0;
-    }
-
-    @Override
-    public long totalRollbackedTransaction() {
-      return 0;
-    }
-
-    @Override
-    public long totalRetriedTransaction() {
-      return 0;
-    }
-
-    @Override
-    public long totalTimeoutTransaction() {
-      return 0;
-    }
-
-    @Override
     public boolean checkIsRetiredEvent(String globalTxId) {
       return false;
     }
@@ -206,7 +181,7 @@ public class TxConsistentServiceTest {
   }
 
   private TxEvent newEvent(EventType eventType) {
-    return new TxEvent(serviceName, instanceId, globalTxId, localTxId, parentTxId, eventType.name(), compensationMethod,
+    return new TxEvent(serviceName, instanceId, globalTxId, localTxId, parentTxId, eventType.name(), compensationMethod, "",
         payloads);
   }
 
@@ -218,6 +193,7 @@ public class TxConsistentServiceTest {
         UUID.randomUUID().toString(),
         eventType.name(),
         compensationMethod,
+        "",
         payloads);
   }
 }

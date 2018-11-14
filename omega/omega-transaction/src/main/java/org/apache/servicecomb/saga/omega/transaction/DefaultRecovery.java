@@ -22,7 +22,9 @@ import java.lang.reflect.Method;
 
 import javax.transaction.InvalidTransactionException;
 
+import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
+import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.transaction.annotations.Compensable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -56,6 +58,10 @@ public class DefaultRecovery implements RecoveryPolicy {
 
     String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
 
+    // Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
+    CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context));
+    System.err.println("1111111111111111111    " + Thread.currentThread().getId() + " = " + context.globalTxId());
+
     AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
         retrySignature, retries, joinPoint.getArgs());
     if (response.aborted()) {
@@ -67,6 +73,9 @@ public class DefaultRecovery implements RecoveryPolicy {
 
     try {
       Object result = joinPoint.proceed();
+
+      CurrentThreadOmegaContext.clearCache();
+
       interceptor.postIntercept(parentTxId, compensationSignature);
 
       return result;

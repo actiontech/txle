@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   payloads blob,
   retries int(11) NOT NULL DEFAULT '0',
   retryMethod varchar(256) DEFAULT NULL,
+  category varchar(36) NOT NULL,
   PRIMARY KEY (surrogateId),
   INDEX saga_events_index (surrogateId, globalTxId, localTxId, type, expiryTime),
   INDEX saga_global_tx_index (globalTxId)
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS Command (
   status varchar(12),
   lastModified datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   version bigint NOT NULL,
+  category varchar(36) NOT NULL,
   PRIMARY KEY (surrogateId),
   INDEX saga_commands_index (surrogateId, eventId, globalTxId, localTxId, status)
 ) DEFAULT CHARSET=utf8;
@@ -63,6 +65,7 @@ CREATE TABLE IF NOT EXISTS TxTimeout (
   expiryTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status varchar(12),
   version bigint NOT NULL,
+  category varchar(36) NOT NULL,
   PRIMARY KEY (surrogateId),
   INDEX saga_timeouts_index (surrogateId, expiryTime, globalTxId, localTxId, status)
 ) DEFAULT CHARSET=utf8;

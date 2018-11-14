@@ -35,6 +35,8 @@ public class TxEvent {
   private final String retryMethod;
   private final int retries;
 
+  private final String category;
+
   public TxEvent(EventType type, String globalTxId, String localTxId, String parentTxId, String compensationMethod,
       int timeout, String retryMethod, int retries, Object... payloads) {
     this.timestamp = System.currentTimeMillis();
@@ -46,6 +48,22 @@ public class TxEvent {
     this.timeout = timeout;
     this.retryMethod = retryMethod;
     this.retries = retries;
+    this.category = "";
+    this.payloads = payloads;
+  }
+
+  public TxEvent(EventType type, String globalTxId, String localTxId, String parentTxId, String compensationMethod,
+                 int timeout, String retryMethod, int retries, String category, Object... payloads) {
+    this.timestamp = System.currentTimeMillis();
+    this.type = type;
+    this.globalTxId = globalTxId;
+    this.localTxId = localTxId;
+    this.parentTxId = parentTxId;
+    this.compensationMethod = compensationMethod;
+    this.timeout = timeout;
+    this.retryMethod = retryMethod;
+    this.retries = retries;
+    this.category = category;
     this.payloads = payloads;
   }
 
@@ -89,6 +107,10 @@ public class TxEvent {
     return retries;
   }
 
+  public String category() {
+    return category;
+  }
+
   @Override
   public String toString() {
     return type.name() + "{" +
@@ -98,6 +120,7 @@ public class TxEvent {
         ", compensationMethod='" + compensationMethod + '\'' +
         ", timeout=" + timeout +
         ", retryMethod='" + retryMethod + '\'' +
+        ", category='" + category + '\'' +
         ", retries=" + retries +
         ", payloads=" + Arrays.toString(payloads) +
         '}';

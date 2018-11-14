@@ -22,6 +22,7 @@ package org.apache.servicecomb.saga.omega.transport.resttemplate;
 
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_ID_KEY;
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.LOCAL_TX_ID_KEY;
+import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_CATEGORY_KEY;
 
 import java.lang.invoke.MethodHandles;
 
@@ -53,6 +54,7 @@ class TransactionHandlerInterceptor implements HandlerInterceptor {
       } else {
         omegaContext.setGlobalTxId(globalTxId);
         omegaContext.setLocalTxId(request.getHeader(LOCAL_TX_ID_KEY));
+        omegaContext.setCategory(request.getHeader(GLOBAL_TX_CATEGORY_KEY));
       }
     }
     return true;

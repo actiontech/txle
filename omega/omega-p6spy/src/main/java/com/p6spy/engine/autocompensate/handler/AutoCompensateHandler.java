@@ -1,5 +1,16 @@
 package com.p6spy.engine.autocompensate.handler;
 
+import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
+import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
+import com.p6spy.engine.monitor.UtxSqlMetrics;
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -7,22 +18,11 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
-import org.apache.servicecomb.saga.omega.transaction.AutoCompensableCache;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.alibaba.druid.sql.ast.SQLStatement;
-import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
-import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
-import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
-import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
-
 public class AutoCompensateHandler implements IAutoCompensateHandler {
 	private static final Logger LOG = LoggerFactory.getLogger(AutoCompensateHandler.class);
-	
+
 	private static AutoCompensateHandler autoCompensateHandler = null;
-	
+
 	public static AutoCompensateHandler newInstance() {
 		if (autoCompensateHandler == null) {
 			synchronized(AutoCompensateHandler.class) {
@@ -36,11 +36,12 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 
 	@Override
 	public void saveAutoCompensationInfo(PreparedStatement delegate, String executeSql, boolean isBeforeNotice) throws SQLException {
-		String localTxId = AutoCompensableCache.getLocalTxIdByCurThreadId();
+		String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
+		System.err.println("3333333333333333333    " + Thread.currentThread().getId() + " = " + CurrentThreadOmegaContext.getGlobalTxIdFromCurThread());
 		if (localTxId == null || localTxId.length() == 0) {
 			return;
 		}
-		String server = "";// TODO
+		String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();
 		
 		// To parse SQL by SQLParser tools from Druid.
 		MySqlStatementParser parser = new MySqlStatementParser(executeSql);
@@ -69,11 +70,39 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		return false;
 	}
 
+	protected Map<String, String> selectColumnNameType(PreparedStatement delegate, String tableName) throws SQLException {
+		String sql = "SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL;
+
+		// start to mark duration for maintaining sql By Gannalyo.
+		UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+
+		PreparedStatement prepareStatement = delegate.getConnection().prepareStatement(sql);
+		ResultSet resultSet = prepareStatement.executeQuery();
+
+		// end mark duration for maintaining sql By Gannalyo.
+		UtxSqlMetrics.endMarkSQLDuration();
+
+		Map<String, String> columnNameType = new HashMap<>();
+		while (resultSet.next()) {
+			columnNameType.put(resultSet.getString(1), resultSet.getString(2));// column name and type
+		}
+		prepareStatement.close();
+		return columnNameType;
+	}
+
 	protected String parsePrimaryKeyColumnName(PreparedStatement delegate, SQLStatement sqlStatement, String tableName) throws SQLException {
-		String primaryKeyColumnName = "id";
-		// So far, didn't know how to get primary-key from Druid. So, use the original way. 
-		PreparedStatement ps = delegate.getConnection().prepareStatement("SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL);
+		String primaryKeyColumnName = "id", sql = "SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL;
+
+		// start to mark duration for maintaining sql By Gannalyo.
+		UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+
+		// So far, didn't know how to get primary-key from Druid. So, use the original way.
+		PreparedStatement ps = delegate.getConnection().prepareStatement(sql);
 		ResultSet columnResultSet = ps.executeQuery();
+
+		// end mark duration for maintaining sql By Gannalyo.
+		UtxSqlMetrics.endMarkSQLDuration();
+
 		while (columnResultSet.next()) {
 			if ("PRI".equalsIgnoreCase(columnResultSet.getString("Key")) && primaryKeyColumnName.length() == 0) {
 				primaryKeyColumnName = columnResultSet.getString("Field");
@@ -81,17 +110,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			}
 		}
 		return primaryKeyColumnName;
-	}
-	
-	protected Map<String, String> selectColumnNameType(PreparedStatement delegate, String tableName) throws SQLException {
-		PreparedStatement prepareStatement = delegate.getConnection().prepareStatement("SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL);
-		ResultSet resultSet = prepareStatement.executeQuery();
-		Map<String, String> columnNameType = new HashMap<>();
-		while (resultSet.next()) {
-			columnNameType.put(resultSet.getString(1), resultSet.getString(2));// column name and type
-		}
-		prepareStatement.close();
-		return columnNameType;
 	}
 
 	protected void resetColumnValueByDBType(Map<String, String> columnNameType, Map<String, Object> dataMap) {
@@ -129,14 +147,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 	/**
 	 * To save auto-compensation info to data table 'saga_undo_log'.
 	 * 
-	 * @param preparedStatement
-	 * @param connection
-	 * @param localTxId
-	 * @param executeSql
-	 * @param compensateSql
-	 * @param originalDataJson
-	 * @param server
-	 * @throws SQLException
 	 * @author Gannalyo
 	 * @since 2018-08-08
 	 */
@@ -147,7 +157,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		try {
 			String sql = "insert into saga_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)" + UtxConstants.ACTION_SQL;
 			preparedStatement = delegate.getConnection().prepareStatement(sql);
-			preparedStatement.setString(index++, AutoCompensableCache.getGlobalTxIdByCurThreadId());
+			preparedStatement.setString(index++, CurrentThreadOmegaContext.getGlobalTxIdFromCurThread());
 			preparedStatement.setString(index++, localTxId);
 			preparedStatement.setString(index++, executeSql);
 			preparedStatement.setString(index++, compensateSql);
@@ -156,7 +166,16 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			preparedStatement.setString(index++, server);
 			preparedStatement.setTimestamp(index++, currentTime);
 			preparedStatement.setTimestamp(index++, currentTime);
-			return preparedStatement.executeUpdate() > 0;
+
+			// start to mark duration for maintaining sql By Gannalyo.
+			UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+
+			boolean result = preparedStatement.executeUpdate() > 0;
+
+			// end mark duration for maintaining sql By Gannalyo.
+			UtxSqlMetrics.endMarkSQLDuration();
+
+			return result;
 		} finally {
 			if (preparedStatement != null) {
 				preparedStatement.close();

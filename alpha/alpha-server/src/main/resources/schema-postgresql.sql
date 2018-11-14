@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   expiryTime timestamp(6) NOT NULL,
   retryMethod varchar(256) NOT NULL,
   retries int NOT NULL DEFAULT 0,
+  category varchar(36) NOT NULL,
   payloads bytea
 );
 
@@ -47,7 +48,8 @@ CREATE TABLE IF NOT EXISTS Command (
   payloads bytea,
   status varchar(12),
   lastModified timestamp(6) NOT NULL DEFAULT CURRENT_DATE,
-  version bigint NOT NULL
+  version bigint NOT NULL,
+  category varchar(36) NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS saga_commands_index ON Command (surrogateId, eventId, globalTxId, localTxId, status);
@@ -64,7 +66,8 @@ CREATE TABLE IF NOT EXISTS TxTimeout (
   type varchar(50) NOT NULL,
   expiryTime TIMESTAMP NOT NULL,
   status varchar(12),
-  version bigint NOT NULL
+  version bigint NOT NULL,
+  category varchar(36) NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS saga_timeouts_index ON TxTimeout (surrogateId, expiryTime, globalTxId, localTxId, status);

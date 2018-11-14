@@ -49,6 +49,7 @@ public class TxEvent extends TxEventExtension {
   private Date expiryTime;
   private String retryMethod;
   private int retries;
+  private String category;
   private byte[] payloads;
 
   private TxEvent() {
@@ -67,6 +68,7 @@ public class TxEvent extends TxEventExtension {
         event.expiryTime,
         event.retryMethod,
         event.retries,
+        event.category,
         event.payloads);
   }
 
@@ -78,9 +80,10 @@ public class TxEvent extends TxEventExtension {
       String parentTxId,
       String type,
       String compensationMethod,
+      String category,
       byte[] payloads) {
     this(serviceName, instanceId, new Date(), globalTxId, localTxId, parentTxId, type, compensationMethod, 0, "", 0,
-        payloads);
+        category, payloads);
   }
 
   public TxEvent(
@@ -94,9 +97,10 @@ public class TxEvent extends TxEventExtension {
       int timeout,
       String retryMethod,
       int retries,
+      String category,
       byte[] payloads) {
     this(-1L, serviceName, instanceId, new Date(), globalTxId, localTxId, parentTxId, type, compensationMethod, timeout,
-        retryMethod, retries, payloads);
+        retryMethod, retries, category, payloads);
   }
 
   public TxEvent(
@@ -111,9 +115,10 @@ public class TxEvent extends TxEventExtension {
       int timeout,
       String retryMethod,
       int retries,
+      String category,
       byte[] payloads) {
     this(-1L, serviceName, instanceId, creationTime, globalTxId, localTxId, parentTxId, type, compensationMethod,
-        timeout, retryMethod, retries, payloads);
+        timeout, retryMethod, retries, category, payloads);
   }
 
   TxEvent(Long surrogateId,
@@ -128,12 +133,14 @@ public class TxEvent extends TxEventExtension {
       int timeout,
       String retryMethod,
       int retries,
+      String category,
       byte[] payloads) {
     this(surrogateId, serviceName, instanceId, creationTime, globalTxId, localTxId, parentTxId, type,
         compensationMethod,
         timeout == 0 ? new Date(MAX_TIMESTAMP) : new Date(creationTime.getTime() + SECONDS.toMillis(timeout)),
         retryMethod,
         retries,
+        category,
         payloads);
   }
 
@@ -149,6 +156,7 @@ public class TxEvent extends TxEventExtension {
       Date expiryTime,
       String retryMethod,
       int retries,
+      String category,
       byte[] payloads) {
     this.surrogateId = surrogateId;
     this.serviceName = serviceName;
@@ -162,6 +170,7 @@ public class TxEvent extends TxEventExtension {
     this.expiryTime = expiryTime;
     this.retryMethod = retryMethod;
     this.retries = retries;
+    this.category = category;
     this.payloads = payloads;
   }
 
@@ -217,6 +226,10 @@ public class TxEvent extends TxEventExtension {
     return retries;
   }
 
+  public String category() {
+    return category;
+  }
+
   @Override
   public String toString() {
     return "TxEvent{" +
@@ -231,6 +244,7 @@ public class TxEvent extends TxEventExtension {
         ", compensationMethod='" + compensationMethod + '\'' +
         ", expiryTime=" + expiryTime +
         ", retryMethod='" + retryMethod + '\'' +
+        ", category='" + category + '\'' +
         ", retries=" + retries +
         '}';
   }

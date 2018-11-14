@@ -153,7 +153,7 @@ public class UtxRestApi {
 				break;
 		}
 
-		TxEvent event = new TxEvent(ip_port, ip_port, globalTxId, txEvent.localTxId(), txEvent.parentTxId(), eventTypeName, "", pausePeriod, "", 0, null);
+		TxEvent event = new TxEvent(ip_port, ip_port, globalTxId, txEvent.localTxId(), txEvent.parentTxId(), eventTypeName, "", pausePeriod, "", 0, txEvent.category(), null);
 		eventRepository.save(event);
 		UtxMetrics.countTxNumber(event, false, false);
 

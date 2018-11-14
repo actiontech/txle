@@ -23,4 +23,8 @@ public class SagaEndedEvent extends TxEvent {
   SagaEndedEvent(String globalTxId, String localTxId) {
     super(EventType.SagaEndedEvent, globalTxId, localTxId, null, "", 0, "", 0);
   }
+
+  SagaEndedEvent(String globalTxId, String localTxId, String category) {
+    super(EventType.SagaEndedEvent, globalTxId, localTxId, null, "", 0, "", 0, category);
+  }
 }

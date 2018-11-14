@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.p6spy.engine.monitor.UtxSqlMetrics;
 import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,10 +115,17 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 		try {
 			String originalDataSql = String.format("SELECT * FROM %s WHERE %s FOR UPDATE " + UtxConstants.ACTION_SQL, tableName, whereSql);// 'FOR UPDATE' is needed to lock data.
 			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
-			
+
+			// start to mark duration for business sql By Gannalyo.
+			UtxSqlMetrics.startMarkSQLDurationAndCount(originalDataSql, false);
+
 			preparedStatement = delegate.getConnection().prepareStatement(originalDataSql);
 			List<Map<String, Object>> originalDataList = new ArrayList<Map<String, Object>>();
 			ResultSet dataResultSet = preparedStatement.executeQuery();
+
+			// end mark duration for maintaining sql By Gannalyo.
+			UtxSqlMetrics.endMarkSQLDuration();
+
 			while (dataResultSet.next()) {
 				Map<String, Object> dataMap = new HashMap<String, Object>();
 				ResultSetMetaData metaData = dataResultSet.getMetaData();

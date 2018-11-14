@@ -73,6 +73,7 @@ public class AlphaEventControllerTest {
         UUID.randomUUID().toString(),
         TxStartedEvent.name(),
         this.getClass().getCanonicalName(),
+        "",
         uniquify("blah").getBytes());
   }
 }

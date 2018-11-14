@@ -52,7 +52,8 @@ message GrpcTxEvent {
   string instanceId = 9;
   int32 timeout = 10;
   int32 retries = 11;
-  string retryMethod = 12;
+  string category = 12;
+  string retryMethod = 13;
 }
 
 message GrpcCompensateCommand {

@@ -47,6 +47,7 @@ public class Command {
   private String status;
 
   private Date lastModified;
+  private String category;
 
   @Version
   private long version;
@@ -61,6 +62,7 @@ public class Command {
       String localTxId,
       String parentTxId,
       String compensationMethod,
+      String category,
       byte[] payloads,
       String status) {
 
@@ -71,6 +73,7 @@ public class Command {
     this.localTxId = localTxId;
     this.parentTxId = parentTxId;
     this.compensationMethod = compensationMethod;
+    this.category = category;
     this.payloads = payloads;
     this.status = status;
     this.lastModified = new Date();
@@ -83,9 +86,10 @@ public class Command {
       String localTxId,
       String parentTxId,
       String compensationMethod,
+      String category,
       byte[] payloads) {
 
-    this(id, serviceName, instanceId, globalTxId, localTxId, parentTxId, compensationMethod, payloads, NEW.name());
+    this(id, serviceName, instanceId, globalTxId, localTxId, parentTxId, compensationMethod, category, payloads, NEW.name());
   }
 
   public Command(TxEvent event) {
@@ -96,6 +100,7 @@ public class Command {
         event.localTxId(),
         event.parentTxId(),
         event.compensationMethod(),
+        event.category(),
         event.payloads());
   }
 
@@ -135,6 +140,10 @@ public class Command {
     return surrogateId;
   }
 
+  String category() {
+    return category;
+  }
+
   @Override
   public String toString() {
     return "Command{" +
@@ -145,6 +154,7 @@ public class Command {
         ", localTxId='" + localTxId + '\'' +
         ", parentTxId='" + parentTxId + '\'' +
         ", compensationMethod='" + compensationMethod + '\'' +
+        ", category='" + category + '\'' +
         '}';
   }
 }

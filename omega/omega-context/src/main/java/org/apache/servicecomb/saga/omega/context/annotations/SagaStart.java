@@ -37,4 +37,6 @@ public @interface SagaStart {
    * @return
    */
   int timeout() default 0;
+
+  String category() default "";
 }

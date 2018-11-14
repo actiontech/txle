@@ -5,6 +5,8 @@ import java.lang.reflect.Method;
 
 import javax.transaction.InvalidTransactionException;
 
+import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
+import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.annotations.AutoCompensable;
@@ -39,6 +41,9 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 		
 		String localTxId = context.localTxId();
 
+		// Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
+		CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context));
+
 		AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
 				retrySignature, retries, joinPoint.getArgs());
 		if (response.aborted()) {
@@ -48,9 +53,6 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 		}
 
 		try {
-			// Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
-			AutoCompensableCache.putThreadGlobalLocalTxId(Thread.currentThread().getId(), context.globalTxId(), localTxId);
-
 			Object result = null;
 			try {
 				// To execute business logic.
@@ -60,7 +62,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 				throw e;
 			}
 			
-			AutoCompensableCache.clearCache(localTxId);
+			CurrentThreadOmegaContext.clearCache();
 			
 			// To submit the TxEndedEvent.
 			interceptor.postIntercept(parentTxId, compensationSignature);

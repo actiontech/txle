@@ -42,6 +42,7 @@ public class TxTimeout {
   private String type;
   private Date expiryTime;
   private String status;
+  private String category;
 
   @Version
   private long version;
@@ -50,7 +51,7 @@ public class TxTimeout {
   }
 
   TxTimeout(long eventId, String serviceName, String instanceId, String globalTxId, String localTxId,
-      String parentTxId, String type, Date expiryTime, String status) {
+      String parentTxId, String type, Date expiryTime, String status, String category) {
     this.eventId = eventId;
     this.serviceName = serviceName;
     this.instanceId = instanceId;
@@ -60,6 +61,7 @@ public class TxTimeout {
     this.type = type;
     this.expiryTime = expiryTime;
     this.status = status;
+    this.category = category;
   }
 
   public String serviceName() {
@@ -94,6 +96,10 @@ public class TxTimeout {
     return status;
   }
 
+  public String category() {
+    return category;
+  }
+
   @Override
   public String toString() {
     return "TxTimeout{" +
@@ -105,6 +111,7 @@ public class TxTimeout {
         ", parentTxId='" + parentTxId + '\'' +
         ", type='" + type + '\'' +
         ", expiryTime=" + expiryTime +
+        ", category=" + category +
         ", status=" + status +
         '}';
   }

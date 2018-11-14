@@ -26,4 +26,10 @@ public class TxStartedEvent extends TxEvent {
     super(EventType.TxStartedEvent, globalTxId, localTxId, parentTxId, compensationMethod, timeout, retryMethod,
         retries, payloads);
   }
+
+  public TxStartedEvent(String globalTxId, String localTxId, String parentTxId, String compensationMethod,
+      int timeout, String retryMethod, int retries, String category, Object... payloads) {
+    super(EventType.TxStartedEvent, globalTxId, localTxId, parentTxId, compensationMethod, timeout, retryMethod,
+        retries, category, payloads);
+  }
 }

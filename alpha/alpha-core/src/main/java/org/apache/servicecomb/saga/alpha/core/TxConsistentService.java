@@ -17,17 +17,15 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
-import static org.apache.servicecomb.saga.common.EventType.SagaEndedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxAbortedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.servicecomb.saga.common.EventType.*;
 
 public class TxConsistentService {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -41,40 +39,55 @@ public class TxConsistentService {
   }
 
   public boolean handle(TxEvent event) {
-    if (types.contains(event.type()) && isGlobalTxAborted(event)) {
-      LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted",
-          event.type(), event.globalTxId());
-      return false;
-    }
-
-	eventRepository.save(event);
-
-    return true;
-  }
-  
-  public int handleSupportTxPause(TxEvent event) {
+	  UtxMetrics.startMarkTxDuration(event);// start duration.
 	  if (types.contains(event.type()) && isGlobalTxAborted(event)) {
 		  LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted",
 				  event.type(), event.globalTxId());
-		  boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
-		  UtxMetrics.countTxNumber(event, false, isRetried);
-		  return -1;
+		  UtxMetrics.endMarkTxDuration(event);// end duration.
+		  return false;
 	  }
+
+	  eventRepository.save(event);
+	  UtxMetrics.endMarkTxDuration(event);// end duration.
+
+	  return true;
+  }
+
+	/**
+	 * handle the event. support transaction pause/continue/auto-continue.
+	 *
+	 * @author Gannalyo
+	 */
+	public int handleSupportTxPause(TxEvent event) {
+		UtxMetrics.startMarkTxDuration(event);// start duration.
+		UtxMetrics.countChildTxNumber(event);// child transaction count
+		if (types.contains(event.type()) && isGlobalTxAborted(event)) {
+			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", event.type(), event.globalTxId());
+			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
+			UtxMetrics.countTxNumber(event, false, isRetried);
+			UtxMetrics.endMarkTxDuration(event);// end duration.
+			return -1;
+		}
 
 		/**
 		 * To save event only when the status of the global transaction is not paused.
 		 * If not, return to client immediately, and client will do something, like sending again.
 		 */
-	  boolean isPaused = isGlobalTxPaused(event.globalTxId());
-	  if (!isPaused) {
-		  eventRepository.save(event);
-		  boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
-		  UtxMetrics.countTxNumber(event, false, isRetried);
-		  return 1;
-	  }
-	  
-	  return 0;
-  }
+		boolean isPaused = isGlobalTxPaused(event.globalTxId());
+		if (!isPaused) {
+			CurrentThreadContext.put(event.globalTxId(), event);
+			eventRepository.save(event);
+
+			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
+			UtxMetrics.countTxNumber(event, false, isRetried);
+			UtxMetrics.endMarkTxDuration(event);// end duration.
+			return 1;
+		}
+
+		UtxMetrics.endMarkTxDuration(event);// end duration.
+
+		return 0;
+	}
 
   private boolean isGlobalTxAborted(TxEvent event) {
     return !eventRepository.findTransactions(event.globalTxId(), TxAbortedEvent.name()).isEmpty();
@@ -95,7 +108,7 @@ public class TxConsistentService {
 								// was due, create the event 'SagaAutoContinueEvent' to make event to continue running.
 								eventRepository.save(new TxEvent(event.serviceName(),
 										event.instanceId(), event.globalTxId(), event.localTxId(), event.parentTxId(),
-										AdditionalEventType.SagaAutoContinuedEvent.name(), "", 0, "", 0, event.payloads()));
+										AdditionalEventType.SagaAutoContinuedEvent.name(), "", 0, "", 0, event.category(), event.payloads()));
 								isPaused = false;
 							} catch (Exception e) {
 								isPaused = true;
