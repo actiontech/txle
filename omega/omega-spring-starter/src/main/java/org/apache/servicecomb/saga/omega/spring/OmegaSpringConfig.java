@@ -40,7 +40,7 @@ import java.util.Arrays;
 class OmegaSpringConfig {
   private static final Logger LOG = LoggerFactory.getLogger(OmegaSpringConfig.class);
 
-  @Value("${prometheus.metrics.port:-1}")
+  @Value("${prometheus.metrics.port:8098}")
   private String promMetricsPort;
 
   @Bean(name = {"omegaUniqueIdGenerator"})
@@ -51,12 +51,11 @@ class OmegaSpringConfig {
   @Bean
   OmegaContext omegaContext(@Qualifier("omegaUniqueIdGenerator") IdGenerator<String> idGenerator) {
     try {
-      if (promMetricsPort != null && promMetricsPort.length() > 0) {
-        int metricsPort = Integer.parseInt(promMetricsPort);
-        if (metricsPort > 0) {
-          // Initialize Prometheus's Metrics Server.
-          new HTTPServer(metricsPort);// To establish the metrics server immediately without checking the port status.
-        }
+      // Default port logic: the default port 8098 if it's null. If not null, use the config value.
+      int metricsPort = Integer.parseInt(promMetricsPort);
+      if (metricsPort > 0) {
+        // Initialize Prometheus's Metrics Server.
+        new HTTPServer(metricsPort);// To establish the metrics server immediately without checking the port status.
       }
     } catch (IOException e) {
       LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Initialize utx sql metrics server exception, please check the port " + promMetricsPort + ". " + e);

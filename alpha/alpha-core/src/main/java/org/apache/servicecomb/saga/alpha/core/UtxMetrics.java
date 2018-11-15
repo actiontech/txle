@@ -75,6 +75,7 @@ public class UtxMetrics extends Collector {
     public UtxMetrics(String promMetricsPort) {
         try {
             DefaultExports.initialize();
+            // Default port logic: the default port 8099 has been configured in application.yaml, thus if it's not 8099, then indicate that someone edited it automatically.
             if (promMetricsPort != null && promMetricsPort.length() > 0) {
                 int metricsPort = Integer.parseInt(promMetricsPort);
                 if (metricsPort > 0) {
