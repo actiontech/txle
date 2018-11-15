@@ -48,7 +48,6 @@ public class UtxSqlMetrics extends Collector {
 
     public static void startMarkSQLDurationAndCount(String sql, boolean isBizSql) {
         OmegaContextServiceConfig context = CurrentThreadOmegaContext.getContextFromCurThread();
-        System.err.println("2222222222222222222    " + Thread.currentThread().getId() + " = " + context.globalTxId());
         String serviceName = "", category = "";
         if (isBizSql && context != null) {
             serviceName = handleStringNullValue(context.serviceName());
