@@ -28,6 +28,7 @@ public class RecoveryPolicyFactory {
    * If retries == -1, it will use the forward recovery and retry forever until interrupted.
    */
   static RecoveryPolicy getRecoveryPolicy(int retries) {
-    return retries != 0 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
+    // To fix the below expression, to return FORWARD_RECOVERY instance when the retries' value is more then zero only. Avoiding the negative number. By Gannalyo
+    return retries > 0 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
   }
 }

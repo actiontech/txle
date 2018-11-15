@@ -60,7 +60,6 @@ public class DefaultRecovery implements RecoveryPolicy {
 
     // Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
     CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context));
-    System.err.println("1111111111111111111    " + Thread.currentThread().getId() + " = " + context.globalTxId());
 
     AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
         retrySignature, retries, joinPoint.getArgs());

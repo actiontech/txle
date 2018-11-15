@@ -37,7 +37,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 	@Override
 	public void saveAutoCompensationInfo(PreparedStatement delegate, String executeSql, boolean isBeforeNotice) throws SQLException {
 		String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
-		System.err.println("3333333333333333333    " + Thread.currentThread().getId() + " = " + CurrentThreadOmegaContext.getGlobalTxIdFromCurThread());
 		if (localTxId == null || localTxId.length() == 0) {
 			return;
 		}
