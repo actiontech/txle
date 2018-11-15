@@ -28,6 +28,6 @@ public class AutoCompensableRecoveryPolicyFactory {
    * If retries == -1, it will use the forward recovery and retry forever until interrupted.
    */
   static AutoCompensableRecoveryPolicy getRecoveryPolicy(int retries) {
-    return retries != 0 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
+    return retries > 0 || retries == -1 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
   }
 }
