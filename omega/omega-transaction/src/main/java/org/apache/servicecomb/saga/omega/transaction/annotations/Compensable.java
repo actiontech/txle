@@ -37,6 +37,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Compensable {
 
+  /**
+   * 0 or less -1, never retry
+   * -1, retry forever
+   * >0, retry for retries number.
+   * @return
+   * @author Gannalyo
+   */
   int retries() default 0;
 
   /**

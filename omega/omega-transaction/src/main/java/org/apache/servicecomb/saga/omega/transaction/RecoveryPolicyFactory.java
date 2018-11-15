@@ -29,6 +29,6 @@ public class RecoveryPolicyFactory {
    */
   static RecoveryPolicy getRecoveryPolicy(int retries) {
     // To fix the below expression, to return FORWARD_RECOVERY instance when the retries' value is more then zero only. Avoiding the negative number. By Gannalyo
-    return retries > 0 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
+    return retries > 0 || retries == -1 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
   }
 }
