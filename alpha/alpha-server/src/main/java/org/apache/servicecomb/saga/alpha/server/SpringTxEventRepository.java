@@ -19,6 +19,7 @@ package org.apache.servicecomb.saga.alpha.server;
 
 import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,7 +47,8 @@ class SpringTxEventRepository implements TxEventRepository {
 
   @Override
   public List<TxEvent> findTimeoutEvents() {
-    return eventRepo.findTimeoutEvents(SINGLE_TX_EVENT_REQUEST);
+//    return eventRepo.findTimeoutEvents(SINGLE_TX_EVENT_REQUEST);
+    return eventRepo.findTimeoutEvents(SINGLE_TX_EVENT_REQUEST, new Date());
   }
 
   @Override

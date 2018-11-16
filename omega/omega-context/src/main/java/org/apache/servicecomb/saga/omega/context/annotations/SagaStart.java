@@ -32,7 +32,7 @@ public @interface SagaStart {
 
   /**
    * Saga timeout, in seconds. <br>
-   * Default value is 0, which means never timeout.
+   * Default value is 0, which means never timeout. It means also never timeout if value is negative number. By Gannalyo.
    *
    * @return
    */

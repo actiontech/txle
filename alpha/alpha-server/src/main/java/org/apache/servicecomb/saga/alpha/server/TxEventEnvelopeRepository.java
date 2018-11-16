@@ -17,6 +17,7 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -58,6 +59,16 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + "    AND t1.type != t.type"
       + ")")
   List<TxEvent> findTimeoutEvents(Pageable pageable);
+
+  @Query("SELECT t FROM TxEvent t "
+      + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
+      + "  AND t.expiryTime < ?1 AND NOT EXISTS( "
+      + "  SELECT t1.globalTxId FROM TxEvent t1 "
+      + "  WHERE t1.globalTxId = t.globalTxId "
+      + "    AND t1.localTxId = t.localTxId "
+      + "    AND t1.type != t.type"
+      + ")")
+  List<TxEvent> findTimeoutEvents(Pageable pageable, Date currentDateTime);
 
   @Query("SELECT t FROM TxEvent t "
       + "WHERE t.globalTxId = ?1 "

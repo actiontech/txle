@@ -17,6 +17,7 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.LockModeType;
@@ -49,6 +50,13 @@ interface TxTimeoutEntityRepository extends CrudRepository<TxTimeout, Long> {
       + "  AND t.expiryTime < CURRENT_TIMESTAMP "
       + "ORDER BY t.expiryTime ASC")
   List<TxTimeout> findFirstTimeoutTxOrderByExpireTimeAsc(Pageable pageable);
+
+  @Lock(LockModeType.OPTIMISTIC)
+  @Query("SELECT t FROM TxTimeout AS t "
+      + "WHERE t.status = 'NEW' "
+      + "  AND t.expiryTime < ?1 "
+      + "ORDER BY t.expiryTime ASC")
+  List<TxTimeout> findFirstTimeoutTxOrderByExpireTimeAsc(Pageable pageable, Date currentDateTime);
 
   @Transactional
   @Modifying(clearAutomatically = true)

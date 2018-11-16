@@ -20,6 +20,7 @@ package org.apache.servicecomb.saga.alpha.server;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.PENDING;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Date;
 import java.util.List;
 
 import javax.transaction.Transactional;
@@ -56,7 +57,7 @@ public class SpringTxTimeoutRepository implements TxTimeoutRepository {
   @Transactional
   @Override
   public List<TxTimeout> findFirstTimeout() {
-    List<TxTimeout> timeoutEvents = timeoutRepo.findFirstTimeoutTxOrderByExpireTimeAsc(new PageRequest(0, 1));
+    List<TxTimeout> timeoutEvents = timeoutRepo.findFirstTimeoutTxOrderByExpireTimeAsc(new PageRequest(0, 1), new Date());
     timeoutEvents.forEach(event -> timeoutRepo
         .updateStatusByGlobalTxIdAndLocalTxId(PENDING.name(), event.globalTxId(), event.localTxId()));
     return timeoutEvents;

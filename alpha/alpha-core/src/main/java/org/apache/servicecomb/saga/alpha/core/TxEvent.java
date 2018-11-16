@@ -137,7 +137,7 @@ public class TxEvent extends TxEventExtension {
       byte[] payloads) {
     this(surrogateId, serviceName, instanceId, creationTime, globalTxId, localTxId, parentTxId, type,
         compensationMethod,
-        timeout == 0 ? new Date(MAX_TIMESTAMP) : new Date(creationTime.getTime() + SECONDS.toMillis(timeout)),
+        timeout <= 0 ? new Date(MAX_TIMESTAMP) : new Date(creationTime.getTime() + SECONDS.toMillis(timeout)),
         retryMethod,
         retries,
         category,
