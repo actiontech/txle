@@ -55,7 +55,9 @@ class CompensableMethodCheckingCallback implements MethodCallback {
     try {
       compensationContext.addCompensationContext(method, bean);
 
-      if (!compensationMethod.isEmpty()) {
+      if (compensationMethod.isEmpty()) {
+        throw new OmegaException("Compensation method is empty in " + bean.getClass().getCanonicalName());
+      } else if (!compensationMethod.isEmpty()) {
         Method signature = bean.getClass().getDeclaredMethod(compensationMethod, method.getParameterTypes());
         compensationContext.addCompensationContext(signature, bean);
         LOG.debug("Found compensation method [{}] in {}", compensationMethod, bean.getClass().getCanonicalName());
