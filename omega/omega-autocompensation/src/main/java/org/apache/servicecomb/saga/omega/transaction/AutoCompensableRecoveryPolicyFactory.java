@@ -25,9 +25,9 @@ public class AutoCompensableRecoveryPolicyFactory {
   /**
    * If retries == 0, use the default recovery to execute only once.
    * If retries > 0, it will use the forward recovery and retry the given times at most.
-   * If retries == -1, it will use the forward recovery and retry forever until interrupted.
+   * If retries < 0, it will use the forward recovery and retry forever until interrupted.
    */
   static AutoCompensableRecoveryPolicy getRecoveryPolicy(int retries) {
-    return retries > 0 || retries == -1 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
+    return retries != 0 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
   }
 }

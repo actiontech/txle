@@ -13,9 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ForwardRecovery is used to execute business logic with the given retries
- * times. If retries is above 0, it will retry the given times at most. If
- * retries == -1, it will retry forever until interrupted.
+ * ForwardRecovery is used to execute business logic with the given retries times.
+ * If retries == 0, use the default recovery to execute only once.
+ * If retries > 0, it will use the forward recovery and retry the given times at most.
+ * If retries < 0, it will use the forward recovery and retry forever until interrupted.
  */
 public class AutoCompensableForwardRecovery extends AutoCompensableRecovery {
 	private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -37,16 +38,13 @@ public class AutoCompensableForwardRecovery extends AutoCompensableRecovery {
 						throw throwable;
 					}
 
-					if (remains == -1) {// -1, retry forever
-						continue;
-					} else {
-						remains -= 1;
-						if (remains < 0 ) {
-							LOG.error(
-									"Retried sub tx failed maximum times, global tx id: {}, local tx id: {}, method: {}, retried times: {}",
-									context.globalTxId(), context.localTxId(), method.toString(), retries);
-							throw throwable;
-						}
+					if (remains > 0) {
+						remains--;
+					} else if (remains == 0 ) {
+						LOG.error(
+								"Retried sub tx failed maximum times, global tx id: {}, local tx id: {}, method: {}, retried times: {}",
+								context.globalTxId(), context.localTxId(), method.toString(), retries);
+						throw throwable;
 					}
 
 					LOG.warn("Retrying sub tx failed, global tx id: {}, local tx id: {}, method: {}, remains: {}",
