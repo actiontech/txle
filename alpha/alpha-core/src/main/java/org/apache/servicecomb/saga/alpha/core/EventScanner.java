@@ -187,7 +187,7 @@ public class EventScanner implements Runnable {
         timeout.parentTxId(),
         TxAbortedEvent.name(),
         "",
-        "",
+        timeout.category(),
         ("Transaction timeout").getBytes());
   }
 
