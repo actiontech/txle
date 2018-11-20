@@ -48,7 +48,7 @@ public class AutoCompensableAspect {
 			
 			return recoveryPolicy.apply(joinPoint, autoCompensable, autoCompensableInterceptor, context, localTxId, retries, autoCompensateService);
 		} catch (Throwable e) {
-			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompenableAspect, context [{}], method [{}]", context,
+			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompensableAspect, context [{}], method [{}]", context,
 					method == null ? "" : method.toString(), e);
 			throw e;
 		}

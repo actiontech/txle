@@ -51,12 +51,9 @@ spring:
 spring:
   profiles: mysql
   datasource:
-    username: saga
-    password: password
-    url: jdbc:mysql://10.186.30.92:3308/saga?useSSL=false
-#    username: root
-#    password: 123456
-#    url: jdbc:mysql://10.186.18.109:3306/db1 ?useSSL=false
+    username: root
+    password: 123456
+    url: jdbc:mysql://10.186.61.3:3306/utx?useSSL=false
 #    driver-class-name    it'll get an error if open it, and don't know why so far.
 #    driver-class-name: com.mysql.jdbc.driver
     platform: mysql
