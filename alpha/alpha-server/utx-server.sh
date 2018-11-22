@@ -13,9 +13,12 @@ echo $JAVA_HOME
 # main class
 MAIN_CLASS=org.apache.servicecomb.saga.alpha.server.AlphaApplication
 
-BIN_DIR=`pwd`
+# Getting current file path. It is compatible to execute even if this file is not its path.
+BIN_DIR=$(cd `dirname $0`; pwd)
 
+cd $BIN_DIR
 cd ..
+
 DEPLOY_DIR=`pwd`
 
 SERVER_NAME=Utx
@@ -47,14 +50,20 @@ UTXPIDFILE=$CONF_DIR/utx_server.pid
 #    LOG_FILE="$log_url"
 #fi
 
-
 start() {
     if [ ! -f "$UTXPIDFILE" ]; then
 	touch "$UTXPIDFILE"
     else
-	echo "warning: $SERVER_NAME server has been started!"
-	echo "PID: `cat "$UTXPIDFILE"`"
-	exit 1
+	PID=`cat "$UTXPIDFILE"`
+	SERVER_STATUS=`ps -ef|grep -w "$PID" |grep -v "grep" |wc -l`
+	if [ $SERVER_STATUS -gt 0 ]; then
+		echo "warning: $SERVER_NAME server has been started!"
+		echo "PID: $PID"
+		exit 1
+	else
+		# PIDFILE is existent, but it is not alive.
+		rm "$UTXPIDFILE"
+	fi
     fi
 
     if [ ! -f $LOG_FILE ]; then
@@ -111,8 +120,19 @@ stop(){
     fi
 
     PID=`cat "$UTXPIDFILE"`
+    SERVER_STATUS=`ps -ef|grep -w "$PID" |grep -v "grep" |wc -l`
+    if [ $SERVER_STATUS -eq 0 ]; then
+	# PIDFILE is existent, but it is not alive.
+	rm "$UTXPIDFILE"
+	echo "ERROR: The $SERVER_NAME has not been started!"
+	exit 0
+    fi
 
     echo -e "Stopping the $SERVER_NAME server ....\c"
+
+    # stop service in systemd
+    systemctl stop utx.service
+
     kill "$PID" > /dev/null 2>&1
     rm "$UTXPIDFILE"
 
