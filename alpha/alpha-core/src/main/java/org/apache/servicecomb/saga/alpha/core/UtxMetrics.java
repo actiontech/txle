@@ -53,7 +53,7 @@ public class UtxMetrics extends Collector {
     private static final Gauge UTX_SQL_TIME_SECONDS_TOTAL = buildGaugeForSql("utx_sql_time_seconds_total", "Total seconds spent executing sql.");
     private static final Counter UTX_SQL_TOTAL = buildCounterForSql("utx_sql_total", "SQL total number.");
 
-    private static boolean isEnableMonitor = false;// if the property 'prometheus.metrics.port' has a valid value, then it is true. true: enable monitor, false: disable monitor
+    private static boolean isEnableMonitor = false;// if the property 'utx.prometheus.metrics.port' has a valid value, then it is true. true: enable monitor, false: disable monitor
 
     private static Counter buildCounter(String name, String help) {
 //        return Counter.build(name, help).labelNames(labelNames).register();// got an error in using the labelNames variable case.
