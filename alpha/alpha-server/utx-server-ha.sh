@@ -57,9 +57,9 @@ start(){
 
 
 
-	systemctl daemon-reload
-
 	cd /usr/lib/systemd/system
+
+	systemctl daemon-reload
 
 	systemctl start utx
 
@@ -72,6 +72,8 @@ stop(){
 
 	# stop service in systemd
 	systemctl stop utx.service
+
+	echo "Successfully to stop server."
 }
 
 
