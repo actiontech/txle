@@ -13,7 +13,7 @@ echo $JAVA_HOME
 # main class
 MAIN_CLASS=org.apache.servicecomb.saga.alpha.server.AlphaApplication
 
-# Getting current file path. It is compatible to execute even if this file is not its path.
+# Getting current file path. It is compatible to execute even if this file is not its path. 
 BIN_DIR=$(cd `dirname $0`; pwd)
 
 cd $BIN_DIR
