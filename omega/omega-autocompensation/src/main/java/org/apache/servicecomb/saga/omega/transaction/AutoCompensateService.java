@@ -87,7 +87,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 							LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Success to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 						} else {
 							// TODO 报差错平台，其余的是否继续执行？？？ TODO 手动补偿时，也需报差错平台
-							accidentPlatformService.test("localTxId = " + localTxId);
+							accidentPlatformService.reportMsgToAccidentPlatform("localTxId = " + localTxId);
 							LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 							throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
 						}
