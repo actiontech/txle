@@ -8,5 +8,5 @@ package org.apache.servicecomb.saga.omega.rmi.accidentplatform;
  */
 public interface IAccidentPlatformService {
 	// Information to accident platform. 
-	public boolean test(String msg);
+	public boolean reportMsgToAccidentPlatform(String msg);
 }

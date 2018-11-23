@@ -9,10 +9,14 @@ import org.springframework.stereotype.Service;
 public class AccidentPlatformService implements IAccidentPlatformService {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(AccidentPlatformService.class);
+	private String accidentPlatformAddress;
 
+	public AccidentPlatformService(String accidentPlatformAddress) {
+		this.accidentPlatformAddress = accidentPlatformAddress;
+	}
 	@Override
-	public boolean test(String msg) {
-		LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Message [" + msg + "] will send to Accident Platform.");
+	public boolean reportMsgToAccidentPlatform(String msg) {
+		LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Message [" + msg + "] will send to Accident Platform [" + this.accidentPlatformAddress + "].");
 		return false;
 	}
 	

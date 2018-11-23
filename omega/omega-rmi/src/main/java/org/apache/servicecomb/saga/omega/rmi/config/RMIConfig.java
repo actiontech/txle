@@ -2,6 +2,7 @@ package org.apache.servicecomb.saga.omega.rmi.config;
 
 import org.apache.servicecomb.saga.omega.rmi.accidentplatform.AccidentPlatformService;
 import org.apache.servicecomb.saga.omega.rmi.accidentplatform.IAccidentPlatformService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
@@ -16,9 +17,12 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @EnableAspectJAutoProxy
 public class RMIConfig {
 
+	@Value("${utx.accident.platform.address:\"\"}")
+	private String accidentPlatformAddress;
+
 	@Bean
 	IAccidentPlatformService accidentPlatformService() {
-		return new AccidentPlatformService();
+		return new AccidentPlatformService(accidentPlatformAddress);
 	}
 
 }
