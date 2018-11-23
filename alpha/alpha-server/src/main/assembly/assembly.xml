@@ -21,9 +21,14 @@
 		</fileSet>
 	</fileSets>
 	<files>
-		<!-- 打包时把start.bat和utx-server.sh文件放在bin目录 -->
+		<!-- 打包时把utx-server.sh和utx-server-ha.sh文件放在bin目录 -->
 		<file>
 			<source>utx-server.sh</source>
+			<fileMode>0755</fileMode>
+			<outputDirectory>/bin</outputDirectory>
+		</file>
+		<file>
+			<source>utx-server-ha.sh</source>
 			<fileMode>0755</fileMode>
 			<outputDirectory>/bin</outputDirectory>
 		</file>
