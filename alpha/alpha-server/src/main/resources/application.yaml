@@ -74,6 +74,7 @@ spring:
 #    proxy-target-class: org.springframework.data.jpa.repository.JpaRepository
 
 # config port for prometheus' metrics server. By Gannalyo
-prometheus:
-  metrics:
-    port: 8099
+utx:
+  prometheus:
+    metrics:
+      port: 8099

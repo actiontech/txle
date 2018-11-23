@@ -39,7 +39,7 @@ class AlphaConfig {
   @Value("${alpha.compensation.retry.delay:3000}")
   private int delay;
 
-  @Value("${prometheus.metrics.port:-1}")
+  @Value("${utx.prometheus.metrics.port:-1}")
   private String promMetricsPort;
 
   @Bean

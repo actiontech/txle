@@ -3,11 +3,14 @@ package com.p6spy.engine.monitor;
 import io.prometheus.client.Collector;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
+import io.prometheus.client.exporter.HTTPServer;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,6 +32,19 @@ public class UtxSqlMetrics extends Collector {
     private static final ThreadLocal<Gauge.Timer> gaugeTimer = new ThreadLocal<>();
 
     private static final Counter UTX_SQL_TOTAL = buildCounter("utx_sql_total", "SQL total number.");
+
+    public UtxSqlMetrics(String promMetricsPort) {
+        try {
+            // Default port logic: the default port 8098 if it's null. If not null, use the config value.
+            int metricsPort = Integer.parseInt(promMetricsPort);
+            if (metricsPort > 0) {
+                // Initialize Prometheus's Metrics Server.
+                new HTTPServer(metricsPort);// To establish the metrics server immediately without checking the port status.
+            }
+        } catch (IOException e) {
+            LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Initialize utx sql metrics server exception, please check the port " + promMetricsPort + ". " + e);
+        }
+    }
 
     private static Gauge buildGauge(String name, String help) {
         return Gauge.build(name, help).labelNames("bizsql", "business", "category").register();
