@@ -1,5 +1,5 @@
 PROJECT_NAME  = utx
-VERSION       = 0.3.0
+VERSION       = 0.3.0-SNAPSHOT
 DOCKER        := $(shell which docker)
 DOCKER_IMAGE  := docker-registry:5000/maven:3.6.0-jdk-8
 
