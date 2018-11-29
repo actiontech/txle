@@ -27,7 +27,8 @@ public class UtxMetrics extends Collector {
     // ps: Support cluster mode, in the cluster cases, to distinguish every instance by labelNames. Please view the prometheus.yml
     // Such as: utx_transaction_total{instance=~"utx8099",job=~"utx"} or utx_transaction_total{instance=~"utx8099",job=~"utx"}, summary is: sum(utx_transaction_total{job=~"utx"})
     private static final Counter UTX_TRANSACTION_TOTAL = buildCounter("utx_transaction_total", "Total number of transactions.");
-    private static final Counter UTX_TRANSACTION_FAILED_TOTAL = buildCounter("utx_transaction_failed_total", "Total number of retried transactions.");
+    private static final Counter UTX_TRANSACTION_SUCCESSFUL_TOTAL = buildCounter("utx_transaction_successful_total", "Total number of successful transactions.");
+    private static final Counter UTX_TRANSACTION_FAILED_TOTAL = buildCounter("utx_transaction_failed_total", "Total number of failed transactions.");
     private static final Counter UTX_TRANSACTION_ROLLBACKED_TOTAL = buildCounter("utx_transaction_rollbacked_total", "Total number of rollbacked transactions.");
     private static final Counter UTX_TRANSACTION_RETRIED_TOTAL = buildCounter("utx_transaction_retried_total", "Total number of retried transactions..");
     private static final Counter UTX_TRANSACTION_TIMEOUT_TOTAL = buildCounter("utx_transaction_timeout_total", "Total number of timeout transactions.");
@@ -113,8 +114,10 @@ public class UtxMetrics extends Collector {
                 eventTypesOfCurrentTx.add(type);
                 globalTxIdAndTypes.put(event.globalTxId(), eventTypesOfCurrentTx);
 
-                if (SagaEndedEvent.name().equals(type)) {
+                if (SagaStartedEvent.name().equals(type)) {
                     UTX_TRANSACTION_TOTAL.labels(serviceName, category).inc();// ps: it would not appear in the metrics page if didn't set the labels' values.
+                } else if (SagaEndedEvent.name().equals(type)) {
+                    UTX_TRANSACTION_SUCCESSFUL_TOTAL.labels(serviceName, category).inc();
                     globalTxIdAndTypes.remove(event.globalTxId());
                     return;
                 } else if (TxAbortedEvent.name().equals(type)) {
