@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.transaction.InvalidTransactionException;
@@ -91,6 +92,11 @@ public class ForwardRecoveryTest {
     public AlphaResponse send(TxEvent event) {
       messages.add(event);
       return new AlphaResponse(false);
+    }
+
+    @Override
+    public Set<String> send(Set<String> localTxIdSet) {
+      return null;
     }
   };
 

@@ -17,6 +17,8 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
+import java.util.Set;
+
 public interface MessageSender {
   void onConnected();
 
@@ -27,4 +29,6 @@ public interface MessageSender {
   String target();
 
   AlphaResponse send(TxEvent event);
+
+  Set<String> send(Set<String> localTxIdSet);
 }

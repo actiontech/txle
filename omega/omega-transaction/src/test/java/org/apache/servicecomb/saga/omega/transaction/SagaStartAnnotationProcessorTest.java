@@ -28,6 +28,7 @@ import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.transaction.TransactionalException;
@@ -67,6 +68,11 @@ public class SagaStartAnnotationProcessorTest {
     public AlphaResponse send(TxEvent event) {
       messages.add(event);
       return new AlphaResponse(false);
+    }
+
+    @Override
+    public Set<String> send(Set<String> localTxIdSet) {
+      return null;
     }
   };
 

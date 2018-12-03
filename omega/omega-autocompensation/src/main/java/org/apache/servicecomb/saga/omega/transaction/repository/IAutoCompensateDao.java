@@ -1,5 +1,6 @@
 package org.apache.servicecomb.saga.omega.transaction.repository;
 
+import javax.sql.DataSource;
 import java.util.List;
 import java.util.Map;
 
@@ -10,7 +11,7 @@ import java.util.Map;
  * @author Gannalyo
  * @since 201807-30
  */
-public interface IAutoCompensateDao  extends IBaseDao {
+public interface IAutoCompensateDao {
 
 	/**
 	 * To execute the dynamic auto-compensation SQL.
@@ -20,9 +21,10 @@ public interface IAutoCompensateDao  extends IBaseDao {
 	 * @author Gannalyo
 	 * @since 201807-30
 	 */
-	public boolean executeAutoCompensateSql(String autoCompensateSql);
+	boolean executeAutoCompensateSql(String autoCompensateSql);
 
-	@Override
-	public List<Map<String, Object>> execute(String sql, Object... params);
-	
+	List<Map<String, Object>> execute(String sql, Object... params);
+
+	void setDataSource(DataSource dataSource);
+
 }

@@ -27,10 +27,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import javax.transaction.InvalidTransactionException;
 
@@ -92,6 +89,11 @@ public class DefaultRecoveryTest {
     public AlphaResponse send(TxEvent event) {
       messages.add(event);
       return new AlphaResponse(false);
+    }
+
+    @Override
+    public Set<String> send(Set<String> localTxIdSet) {
+      return null;
     }
   };
 

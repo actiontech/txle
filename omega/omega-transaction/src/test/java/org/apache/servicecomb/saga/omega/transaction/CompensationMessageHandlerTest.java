@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.omega.context.CompensationContext;
@@ -58,6 +59,11 @@ public class CompensationMessageHandlerTest {
     public AlphaResponse send(TxEvent event) {
       events.add(event);
       return new AlphaResponse(false);
+    }
+
+    @Override
+    public Set<String> send(Set<String> localTxIdSet) {
+      return null;
     }
   };
 

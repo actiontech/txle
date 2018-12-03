@@ -8,6 +8,7 @@ public final class UtxConstants {
 	public static final String LOG_DEBUG_PREFIX = "[utx debug] ";
 	public static final String LOG_ERROR_PREFIX = "[utx error] ";
 	public static final String ACTION_SQL = " /**utx_sql**/";
+	public static final String SPECIAL_KEY = "UTX-SPECIAL-KEY";// Usage in org.apache.servicecomb.saga.alpha.server.GrpcTxEventEndpointImpl.onTxEvent
 
 	private UtxConstants() {
 	}

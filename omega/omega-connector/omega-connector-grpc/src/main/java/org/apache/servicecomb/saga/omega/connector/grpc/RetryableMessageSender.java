@@ -19,6 +19,7 @@ package org.apache.servicecomb.saga.omega.connector.grpc;
 
 import static org.apache.servicecomb.saga.common.EventType.SagaStartedEvent;
 
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.servicecomb.saga.omega.transaction.AlphaResponse;
@@ -63,5 +64,10 @@ public class RetryableMessageSender implements MessageSender {
     } catch (InterruptedException e) {
       throw new OmegaException("Failed to send event " + event + " due to interruption", e);
     }
+  }
+
+  @Override
+  public Set<String> send(Set<String> localTxIdSet) {
+    return null;
   }
 }

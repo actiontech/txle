@@ -19,6 +19,8 @@ package org.apache.servicecomb.saga.alpha.core;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
 import org.apache.servicecomb.saga.common.EventType;
 
 /**
@@ -132,5 +134,7 @@ public interface TxEventRepository {
   long count();
 
   boolean checkIsRetiredEvent(String globalTxId);
+
+  Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
 }

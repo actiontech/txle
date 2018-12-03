@@ -2,7 +2,6 @@ package org.apache.servicecomb.saga.omega.transaction;
 
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.repository.AutoCompensateDao;
-import org.apache.servicecomb.saga.omega.transaction.repository.AutoCompensateEntityRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
@@ -19,8 +18,8 @@ import org.springframework.core.annotation.Order;
 public class AutoCompensableAspectConfig {
 
 	@Bean
-	AutoCompensateService autoCompensateService(AutoCompensateEntityRepository autoCompensateRepository) {
-		return new AutoCompensateService(autoCompensateRepository);
+	AutoCompensateService autoCompensateService() {
+		return new AutoCompensateService();
 	}
 
 	@Bean
@@ -34,4 +33,9 @@ public class AutoCompensableAspectConfig {
 			AutoCompensateService autoCompensateService) {
 		return new AutoCompensableAspect(sender, context, autoCompensateService);
 	}
+
+    @Bean
+    ApplicationContextUtil applicationContextUtil() {
+        return new ApplicationContextUtil();
+    }
 }

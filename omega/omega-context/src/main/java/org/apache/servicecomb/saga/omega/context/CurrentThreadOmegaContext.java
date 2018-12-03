@@ -1,10 +1,5 @@
 package org.apache.servicecomb.saga.omega.context;
 
-import org.apache.servicecomb.saga.omega.context.OmegaContext;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * A cache tool for compensation.
  *

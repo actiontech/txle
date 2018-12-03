@@ -22,10 +22,17 @@ package org.apache.servicecomb.saga.alpha.server;
 
 import static java.util.Collections.emptyMap;
 
-import java.util.Date;
-import java.util.Map;
+import java.io.ByteArrayInputStream;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.pool.KryoFactory;
+import com.esotericsoftware.kryo.pool.KryoPool;
+import com.google.protobuf.ByteString;
 import org.apache.servicecomb.saga.alpha.core.OmegaCallback;
 import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
@@ -42,6 +49,8 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
   private static final GrpcAck ALLOW = GrpcAck.newBuilder().setAborted(false).build();
   private static final GrpcAck REJECT = GrpcAck.newBuilder().setAborted(true).build();
   private static final GrpcAck PAUSED = GrpcAck.newBuilder().setAborted(false).setPaused(true).build();
+
+  private final KryoPool pool = new KryoPool.Builder(() -> new Kryo()).softReferences().build();
 
   private final TxConsistentService txConsistentService;
 
@@ -76,6 +85,11 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
   @Override
   public void onTxEvent(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
+    if ("UTX-SPECIAL-KEY".equals(message.getCategory())) {
+      fetchLocalTxIdOfEndedGlobalTx(message, responseObserver);
+      return;
+    }
+
     int result = txConsistentService.handleSupportTxPause(new TxEvent(
         message.getServiceName(),
         message.getInstanceId(),
@@ -94,5 +108,45 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
     responseObserver.onNext(result == 0 ? PAUSED : result > 0 ? ALLOW : REJECT);
     responseObserver.onCompleted();
+  }
+
+  private void fetchLocalTxIdOfEndedGlobalTx(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
+    ByteString payloads = null;
+    try {
+      // Reasons for using the Kryo serialization tool are: 1.Do not change the TxEvent's structure. 2.To decrease data size for saving I/O. 3.Kryo has a high-performance computing power.
+      // Disadvantages for using Kryo: Have to do serialize and deserialize, their processes will cost any performance, but just a little (very fast), and it is more cheap than I/O.
+      Object[] payloadArr = deserialize(message.getPayloads().toByteArray());
+      Set<String> localTxIdSet = new HashSet<>();
+      for (int i = 0; i < payloadArr.length; i++) {
+        localTxIdSet.add(payloadArr[i].toString());
+      }
+      Set<String> localTxIdOfEndedGlobalTx = txConsistentService.fetchLocalTxIdOfEndedGlobalTx(localTxIdSet);
+      payloads = ByteString.copyFrom(serialize(localTxIdOfEndedGlobalTx.toArray()));
+    } catch (Exception e) {
+    } finally {
+      // message.toBuilder().setPayloads(payloads);// Could not set payloads to the original object.
+      responseObserver.onNext(GrpcAck.newBuilder().setAborted(false).setLocalTxIds(payloads).build());
+      responseObserver.onCompleted();
+    }
+  }
+
+  private byte[] serialize(Object[] objects) {
+    Output output = new Output(4096, -1);
+    Kryo kryo = pool.borrow();
+    kryo.writeObjectOrNull(output, objects, Object[].class);
+    pool.release(kryo);
+    return output.toBytes();
+  }
+
+  private Object[] deserialize(byte[] message) {
+    try {
+      Input input = new Input(new ByteArrayInputStream(message));
+      Kryo kryo = pool.borrow();
+      Object[] objects = kryo.readObjectOrNull(input, Object[].class);
+      pool.release(kryo);
+      return objects;
+    } catch (KryoException e) {
+      throw new RuntimeException("Unable to deserialize message", e);
+    }
   }
 }

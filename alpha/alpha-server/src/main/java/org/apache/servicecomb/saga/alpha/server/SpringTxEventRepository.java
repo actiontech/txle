@@ -22,6 +22,7 @@ import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
@@ -109,6 +110,11 @@ class SpringTxEventRepository implements TxEventRepository {
   @Override
   public boolean checkIsRetiredEvent(String globalTxId) {
     return eventRepo.checkIsRetiredEvent(globalTxId) > 0;
+  }
+
+  @Override
+  public Set<String> selectEndedGlobalTx(Set<String> localTxIdSet) {
+    return eventRepo.selectEndedGlobalTx(localTxIdSet);
   }
 
 }

@@ -2,6 +2,8 @@ package org.apache.servicecomb.saga.omega.transaction;
 
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 
+import java.util.Set;
+
 class AutoCompensableInterceptor implements EventAwareInterceptor {
 	private final OmegaContext context;
 	private final MessageSender sender;
@@ -29,7 +31,7 @@ class AutoCompensableInterceptor implements EventAwareInterceptor {
 				throwable));
 	}
 
-//	public void onAutoCompensate(String parentTxId, String compensationMethod, Throwable throwable) {
-//		sender.send(new TxAutoCompensatedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod));
-//	}
+	public Set<String> fetchLocalTxIdOfEndedGlobalTx(Set<String> localTxIdSet) {
+		return sender.send(localTxIdSet);
+	}
 }
