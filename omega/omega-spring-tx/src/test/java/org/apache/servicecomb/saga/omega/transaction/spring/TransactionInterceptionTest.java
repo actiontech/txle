@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -449,6 +450,11 @@ public class TransactionInterceptionTest {
         public AlphaResponse send(TxEvent event) {
           messages.add(event.toString());
           return new AlphaResponse(false);
+        }
+
+        @Override
+        public Set<String> send(Set<String> localTxIdSet) {
+          return null;
         }
       };
     }

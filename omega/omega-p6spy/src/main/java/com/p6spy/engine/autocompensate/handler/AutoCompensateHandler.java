@@ -6,15 +6,13 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
 import com.p6spy.engine.monitor.UtxSqlMetrics;
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.omega.transaction.DataSourceMappingCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,7 +39,11 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			return;
 		}
 		String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();
-		
+
+		// To set a relationship between localTxId and datSourceInfo, in order to determine to use the relative dataSource for localTxId when it need be compensated.
+		DatabaseMetaData databaseMetaData = delegate.getConnection().getMetaData();
+		DataSourceMappingCache.putLocalTxIdAndDataSourceInfo(localTxId, databaseMetaData.getURL(), databaseMetaData.getUserName(), databaseMetaData.getDriverName());
+
 		// To parse SQL by SQLParser tools from Druid.
 		MySqlStatementParser parser = new MySqlStatementParser(executeSql);
 		SQLStatement sqlStatement = parser.parseStatement();

@@ -23,11 +23,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -173,6 +169,11 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
   @Override
   public AlphaResponse send(TxEvent event) {
     return send(event, new FastestSender());
+  }
+
+  @Override
+  public Set<String> send(Set<String> localTxIdSet) {
+    return senders.keySet().iterator().next().send(localTxIdSet);
   }
 
   AlphaResponse send(TxEvent event, MessageSenderPicker messageSenderPicker) {

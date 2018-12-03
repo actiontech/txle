@@ -23,10 +23,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.omega.context.IdGenerator;
@@ -64,6 +61,11 @@ public class CompensableInterceptorTest {
     public AlphaResponse send(TxEvent event) {
       messages.add(event);
       return new AlphaResponse(false);
+    }
+
+    @Override
+    public Set<String> send(Set<String> localTxIdSet) {
+      return null;
     }
   };
   

@@ -24,6 +24,7 @@ import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessa
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
+import org.apache.servicecomb.saga.omega.context.UtxConstants;
 import org.apache.servicecomb.saga.omega.transaction.AlphaResponse;
 import org.apache.servicecomb.saga.omega.transaction.MessageDeserializer;
 import org.apache.servicecomb.saga.omega.transaction.MessageHandler;
@@ -42,11 +43,16 @@ import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannel;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 public class GrpcClientMessageSender implements MessageSender {
   private final String target;
   private final TxEventServiceStub asyncEventService;
 
   private final MessageSerializer serializer;
+  private final MessageDeserializer deserializer;
 
   private final TxEventServiceBlockingStub blockingEventService;
 
@@ -65,6 +71,7 @@ public class GrpcClientMessageSender implements MessageSender {
     this.asyncEventService = TxEventServiceGrpc.newStub(channel);
     this.blockingEventService = TxEventServiceGrpc.newBlockingStub(channel);
     this.serializer = serializer;
+    this.deserializer = deserializer;
 
     this.compensateStreamObserver =
         new GrpcCompensateStreamObserver(handler, errorHandlerFactory.getHandler(this), deserializer);
@@ -116,6 +123,25 @@ public class GrpcClientMessageSender implements MessageSender {
 	}
     
     return new AlphaResponse(grpcAck.getAborted(), grpcAck.getPaused());// To append the pause status for global transaction By Gannalyo
+  }
+
+  @Override
+  public Set<String> send(Set<String> localTxIdSet) {
+    ByteString payloads = ByteString.copyFrom(serializer.serialize(localTxIdSet.toArray()));
+
+    Builder builder = GrpcTxEvent.newBuilder().setCategory(UtxConstants.SPECIAL_KEY).setPayloads(payloads);
+    GrpcTxEvent grpcTxEvent = builder.build();
+    blockingEventService.onTxEvent(grpcTxEvent);
+
+    Object[] deserializerPayloads = deserializer.deserialize(grpcTxEvent.getPayloads().toByteArray());
+    if (deserializerPayloads != null && deserializerPayloads.length > 0) {
+      Set<String> localTxIdSetOfEndedGlobalTx = new HashSet<>();
+      for (Object obj : deserializerPayloads) {
+        localTxIdSetOfEndedGlobalTx.add(obj + "");
+      }
+      return localTxIdSetOfEndedGlobalTx;
+    }
+    return null;
   }
 
   private GrpcTxEvent convertEvent(TxEvent event) {

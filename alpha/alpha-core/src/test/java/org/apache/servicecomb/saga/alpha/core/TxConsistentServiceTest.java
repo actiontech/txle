@@ -29,10 +29,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
-import java.util.Deque;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.stream.Collectors;
 
@@ -119,6 +116,11 @@ public class TxConsistentServiceTest {
     @Override
     public boolean checkIsRetiredEvent(String globalTxId) {
       return false;
+    }
+
+    @Override
+    public Set<String> selectEndedGlobalTx(Set<String> localTxIdSet) {
+      return null;
     }
   };
 
