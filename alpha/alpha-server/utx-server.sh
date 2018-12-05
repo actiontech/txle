@@ -149,7 +149,6 @@ stop(){
     done
 
     if [ "$P_HA" != "true" ]; then
-        echo "1111111111111111111111111111"
         # stop service in systemd. it will give a mistake 'Job for utx.service canceled.' out when use the command 'systemctl restart utx.service'.
         systemctl stop utx.service
     fi
