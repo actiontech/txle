@@ -10,6 +10,9 @@ fi
 JAVA_HOME=$(which java)
 echo $JAVA_HOME
 
+# ensure the 'bashrc' file can be loaded in using 'systemd' case.
+source ~/.bashrc
+
 # main class
 MAIN_CLASS=org.apache.servicecomb.saga.alpha.server.AlphaApplication
 
