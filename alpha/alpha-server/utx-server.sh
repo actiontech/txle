@@ -29,6 +29,7 @@ LIB_DIR=$DEPLOY_DIR/lib
 CONF_DIR=$DEPLOY_DIR/conf
 LOG_FILE="$DEPLOY_DIR/log/stdout.log"
 SERVER_PORT=""
+P_HA=""
 
 for p_name in $@; do
     val=`echo "$p_name" | sed -e 's;^--[^=]*=;;'`
@@ -37,6 +38,7 @@ for p_name in $@; do
         --log=*) LOG_FILE=$val ;;
         --debug) P_DEBUG="true" ;;
         --port=*) SERVER_PORT="-Dserver.port=$val" ;;
+        --ha) P_HA="true" ;;
     esac
 done
 
@@ -133,9 +135,6 @@ stop(){
 
     echo -e "Stopping the $SERVER_NAME server ....\c"
 
-    # stop service in systemd
-    systemctl stop utx.service
-
     kill "$PID" > /dev/null 2>&1
     rm "$UTXPIDFILE"
 
@@ -148,6 +147,12 @@ stop(){
 	fi
 	sleep 1
     done
+
+    if [ "$P_HA" != "true" ]; then
+        echo "1111111111111111111111111111"
+        # stop service in systemd. it will give a mistake 'Job for utx.service canceled.' out when use the command 'systemctl restart utx.service'.
+        systemctl stop utx.service
+    fi
 
     echo "stop OK!"
     echo "PID: $PID"

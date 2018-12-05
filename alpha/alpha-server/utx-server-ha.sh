@@ -47,7 +47,8 @@ start(){
 
 	[Service]
 	ExecStart=$DEPLOY_DIR/bin/utx-server.sh start $SERVER_PORT $CONF_DIR $LOG_FILE $P_DEBUG
-	ExecStop=$DEPLOY_DIR/bin/utx-server.sh stop
+	ExecStop=$DEPLOY_DIR/bin/utx-server.sh stop --ha
+	ExecReload=$DEPLOY_DIR/bin/utx-server.sh restart $SERVER_PORT $CONF_DIR $LOG_FILE $P_DEBUG --ha
 	PIDFile=$DEPLOY_DIR/conf/utx_server.pid
 	Restart=always
 
