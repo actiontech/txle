@@ -41,6 +41,14 @@ public class CurrentThreadOmegaContext {
 		return "";
 	}
 
+	public static boolean isAutoCompensate() {
+		OmegaContextServiceConfig context = curThreadOmegaContext.get();
+		if (context != null) {
+			return context.isAutoCompensate();
+		}
+		return false;
+	}
+
 	public static void clearCache() {
 		curThreadOmegaContext.remove();
 	}

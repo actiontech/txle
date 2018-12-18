@@ -1,8 +1,5 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
-import javax.sql.DataSource;
-import java.util.LinkedList;
-
 /**
  * Business interface for auto-compensation.
  * 
@@ -21,4 +18,5 @@ public interface IAutoCompensateService {
 	 * @since 2018-07-30
 	 */
 	public boolean executeAutoCompensateByLocalTxId(String globalTxId, String localTxId);
+
 }

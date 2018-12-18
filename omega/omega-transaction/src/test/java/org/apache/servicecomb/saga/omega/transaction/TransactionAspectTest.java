@@ -71,6 +71,11 @@ public class TransactionAspectTest {
     public Set<String> send(Set<String> localTxIdSet) {
       return null;
     }
+
+    @Override
+    public String reportMessageToServer(KafkaMessage message) {
+      return "";
+    }
   };
   private final ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
   private final MethodSignature methodSignature = mock(MethodSignature.class);

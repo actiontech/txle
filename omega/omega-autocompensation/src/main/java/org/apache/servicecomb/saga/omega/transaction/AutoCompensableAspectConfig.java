@@ -1,5 +1,6 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.repository.AutoCompensateDao;
 import org.springframework.context.annotation.Bean;

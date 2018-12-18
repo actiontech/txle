@@ -36,7 +36,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 public class SagaStartAspectTest {
@@ -70,6 +69,11 @@ public class SagaStartAspectTest {
     @Override
     public Set<String> send(Set<String> localTxIdSet) {
       return null;
+    }
+
+    @Override
+    public String reportMessageToServer(KafkaMessage message) {
+      return "";
     }
   };
   private final ProceedingJoinPoint joinPoint = Mockito.mock(ProceedingJoinPoint.class);

@@ -1,12 +1,5 @@
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
-import static org.apache.servicecomb.saga.common.EventType.TxAbortedEvent;
-
-import java.util.List;
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.common.EventType;
 import org.slf4j.Logger;
@@ -16,9 +9,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.servicecomb.saga.common.EventType.TxAbortedEvent;
+
 @RestController
-public class UtxRestApi {
-	private static final Logger LOG = LoggerFactory.getLogger(UtxRestApi.class);
+public class TransactionRestApi {
+	private static final Logger LOG = LoggerFactory.getLogger(TransactionRestApi.class);
 
 	@Autowired
 	private TxEventRepository eventRepository;
@@ -28,10 +27,10 @@ public class UtxRestApi {
 	@Autowired
 	private HttpServletRequest request;
 	
-	public UtxRestApi(TxConsistentService txConsistentService) {
+	public TransactionRestApi(TxConsistentService txConsistentService) {
 		this.txConsistentService = txConsistentService;
 	}
-	
+
 	public List<Map<String, Object>> selectAllTransactions() {
 		// TODO
 		return null;

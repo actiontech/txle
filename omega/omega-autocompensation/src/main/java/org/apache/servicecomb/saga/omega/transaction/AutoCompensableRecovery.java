@@ -44,7 +44,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 			String localTxId = context.localTxId();
 
 			// Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
-			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context));
+			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true));
 
 			AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
 					retrySignature, retries, joinPoint.getArgs());

@@ -22,10 +22,7 @@ import static org.apache.servicecomb.saga.common.EventType.SagaStartedEvent;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
-import org.apache.servicecomb.saga.omega.transaction.AlphaResponse;
-import org.apache.servicecomb.saga.omega.transaction.MessageSender;
-import org.apache.servicecomb.saga.omega.transaction.OmegaException;
-import org.apache.servicecomb.saga.omega.transaction.TxEvent;
+import org.apache.servicecomb.saga.omega.transaction.*;
 
 public class RetryableMessageSender implements MessageSender {
   private final BlockingQueue<MessageSender> availableMessageSenders;
@@ -68,6 +65,19 @@ public class RetryableMessageSender implements MessageSender {
 
   @Override
   public Set<String> send(Set<String> localTxIdSet) {
-    return null;
+    try {
+      return availableMessageSenders.take().send(localTxIdSet);
+    } catch (InterruptedException e) {
+      throw new OmegaException("Failed to send localTxIdSet " + localTxIdSet + " due to interruption", e);
+    }
+  }
+
+  @Override
+  public String reportMessageToServer(KafkaMessage message) {
+    try {
+      return availableMessageSenders.take().reportMessageToServer(message);
+    } catch (InterruptedException e) {
+      throw new OmegaException("Failed to report kafka message " + message + " due to interruption", e);
+    }
   }
 }

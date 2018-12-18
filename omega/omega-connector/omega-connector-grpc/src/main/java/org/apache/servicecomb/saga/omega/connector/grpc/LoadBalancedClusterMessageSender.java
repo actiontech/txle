@@ -33,13 +33,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.net.ssl.SSLException;
 
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
-import org.apache.servicecomb.saga.omega.transaction.AlphaResponse;
-import org.apache.servicecomb.saga.omega.transaction.MessageDeserializer;
-import org.apache.servicecomb.saga.omega.transaction.MessageHandler;
-import org.apache.servicecomb.saga.omega.transaction.MessageSender;
-import org.apache.servicecomb.saga.omega.transaction.MessageSerializer;
-import org.apache.servicecomb.saga.omega.transaction.OmegaException;
-import org.apache.servicecomb.saga.omega.transaction.TxEvent;
+import org.apache.servicecomb.saga.omega.transaction.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,6 +168,11 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
   @Override
   public Set<String> send(Set<String> localTxIdSet) {
     return senders.keySet().iterator().next().send(localTxIdSet);
+  }
+
+  @Override
+  public String reportMessageToServer(KafkaMessage message) {
+    return senders.keySet().iterator().next().reportMessageToServer(message);
   }
 
   AlphaResponse send(TxEvent event, MessageSenderPicker messageSenderPicker) {

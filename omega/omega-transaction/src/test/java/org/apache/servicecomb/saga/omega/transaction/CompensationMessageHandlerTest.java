@@ -65,6 +65,11 @@ public class CompensationMessageHandlerTest {
     public Set<String> send(Set<String> localTxIdSet) {
       return null;
     }
+
+    @Override
+    public String reportMessageToServer(KafkaMessage message) {
+      return "";
+    }
   };
 
   private final String globalTxId = uniquify("globalTxId");

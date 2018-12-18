@@ -18,12 +18,13 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import org.apache.servicecomb.saga.alpha.core.*;
-import org.apache.servicecomb.saga.alpha.core.UtxMetrics;
-import org.apache.servicecomb.saga.alpha.server.restapi.UtxRestApi;
+import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
+import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 @EntityScan(basePackages = "org.apache.servicecomb.saga.alpha")
+@Import(KafkaProducerConfig.class)
 @Configuration
 class AlphaConfig {
   private final BlockingQueue<Runnable> pendingCompensations = new LinkedBlockingQueue<>();
@@ -104,8 +106,8 @@ class AlphaConfig {
         new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks));
   }
   
-  public UtxRestApi utxRestApi(TxConsistentService txConsistentService) {
-	  return new UtxRestApi(txConsistentService);
+  public TransactionRestApi transactionRestApi(TxConsistentService txConsistentService) {
+	  return new TransactionRestApi(txConsistentService);
   }
 
   @Bean

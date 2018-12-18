@@ -15,22 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.servicecomb.saga.omega.transaction;
+package org.apache.servicecomb.saga.alpha.core.kafka;
 
-import java.util.Set;
+import org.apache.servicecomb.saga.alpha.core.TxEvent;
 
-public interface MessageSender {
-  void onConnected();
-
-  void onDisconnected();
-
-  void close();
-
-  String target();
-
-  AlphaResponse send(TxEvent event);
-
-  Set<String> send(Set<String> localTxIdSet);
-
-  String reportMessageToServer(KafkaMessage message);
+public interface IKafkaMessageProducer {
+    void send(TxEvent event);
 }

@@ -1,6 +1,7 @@
 package com.p6spy.engine.autocompensate.handler;
 
 import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.dialect.mysql.ast.clause.MySqlSelectIntoStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
@@ -33,30 +34,38 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 	}
 
 	@Override
-	public void saveAutoCompensationInfo(PreparedStatement delegate, String executeSql, boolean isBeforeNotice) throws SQLException {
+	public void saveAutoCompensationInfo(PreparedStatement delegate, String executeSql, boolean isBeforeNotice, Map<String, Object> standbyParams) throws SQLException {
 		String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
 		if (localTxId == null || localTxId.length() == 0) {
 			return;
 		}
-		String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();
-
-		// To set a relationship between localTxId and datSourceInfo, in order to determine to use the relative dataSource for localTxId when it need be compensated.
-		DatabaseMetaData databaseMetaData = delegate.getConnection().getMetaData();
-		DataSourceMappingCache.putLocalTxIdAndDataSourceInfo(localTxId, databaseMetaData.getURL(), databaseMetaData.getUserName(), databaseMetaData.getDriverName());
 
 		// To parse SQL by SQLParser tools from Druid.
 		MySqlStatementParser parser = new MySqlStatementParser(executeSql);
 		SQLStatement sqlStatement = parser.parseStatement();
-		
+		if (sqlStatement instanceof MySqlSelectIntoStatement) {
+			return;
+		}
+
+		String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();
+
+		// To set a relationship between localTxId and datSourceInfo, in order to determine to use the relative dataSource for localTxId when it need be compensated.
+		DatabaseMetaData databaseMetaData = delegate.getConnection().getMetaData();
+		String dburl = databaseMetaData.getURL(), dbusername = databaseMetaData.getUserName(), dbdrivername = databaseMetaData.getDriverName();
+		DataSourceMappingCache.putLocalTxIdAndDataSourceInfo(localTxId, dburl, dbusername, dbdrivername);
+		// To construct kafka message.
+		standbyParams.put("dbdrivername", dbdrivername);
+		standbyParams.put("dburl", dburl);
+		standbyParams.put("dbusername", dbusername);
+
 		if (isBeforeNotice && sqlStatement instanceof MySqlUpdateStatement) {
-			AutoCompensateUpdateHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server);
+			AutoCompensateUpdateHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
 		} else if (!isBeforeNotice && sqlStatement instanceof MySqlInsertStatement) {
-			AutoCompensateInsertHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server);
+			AutoCompensateInsertHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
 		} else if (isBeforeNotice && sqlStatement instanceof MySqlDeleteStatement) {
-			AutoCompensateDeleteHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server);
-//		} else if (isBeforeNotice && sqlStatement instanceof MySqlSelectIntoStatement) {// The select SQL would never enter into this area.
-			// Nothing to do
+			AutoCompensateDeleteHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
 		} else if (isBeforeNotice) {
+			standbyParams.clear();
 			// TODO To define a switch which is named for 'CheckSpecialSQL', default is closed, means that just does record, if it's open, then program will throw an exception about current special SQL, just for auto-compensation.
 			boolean checkSpecialSql = false;
 			if (checkSpecialSql) {
@@ -66,8 +75,8 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			}
 		}
 	}
-	
-	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server) throws SQLException {
+
+	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
 		return false;
 	}
 
