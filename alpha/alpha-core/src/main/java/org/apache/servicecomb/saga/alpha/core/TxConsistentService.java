@@ -17,11 +17,18 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
+import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
+import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 import static org.apache.servicecomb.saga.common.EventType.*;
 
@@ -29,6 +36,12 @@ public class TxConsistentService {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final TxEventRepository eventRepository;
+
+  @Autowired
+  private IKafkaMessageProducer kafkaMessageProducer;
+
+  @Autowired
+  private IKafkaMessageRepository kafkaMessageRepository;
 
   private final List<String> types = Arrays.asList(TxStartedEvent.name(), SagaEndedEvent.name());
 
@@ -79,6 +92,10 @@ public class TxConsistentService {
 			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
 			UtxMetrics.countTxNumber(event, false, isRetried);
 			UtxMetrics.endMarkTxDuration(event);// end duration.
+
+			// To send message to Kafka.
+			kafkaMessageProducer.send(event);
+
 			return 1;
 		}
 
@@ -124,5 +141,9 @@ public class TxConsistentService {
 
 	public Set<String> fetchLocalTxIdOfEndedGlobalTx(Set<String> localTxIdSet) {
 		return eventRepository.selectEndedGlobalTx(localTxIdSet);
+	}
+
+	public boolean saveKafkaMessage(KafkaMessage message) {
+		return kafkaMessageRepository.save(message);
 	}
 }

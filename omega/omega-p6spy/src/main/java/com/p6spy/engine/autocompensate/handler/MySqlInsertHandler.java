@@ -4,10 +4,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.p6spy.engine.monitor.UtxSqlMetrics;
 import org.apache.servicecomb.saga.omega.context.UtxConstants;
@@ -35,22 +33,33 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 	
 	@Override
 	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement,
-			String executeSql, String localTxId, String server) throws SQLException {
+											String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
 		ResultSet rs = null;
 		try {
 			MySqlInsertStatement insertStatement = (MySqlInsertStatement) sqlStatement;
 			// 1.take table's name out
 			String tableName = insertStatement.getTableName().toString();
+			standbyParams.put("tablename",tableName);
+			standbyParams.put("operation", "insert");
 
 			// 2.take primary-key's name out
 			String primaryKeyName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
 
 			// 3.take primary-key's value out
-			Object primaryKeyValue = getGeneratedKey(delegate);
-			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "The primary key info is [" + primaryKeyName + " = " + primaryKeyValue + "] to table [" + tableName + "].");
-			
+			Set<Object> primaryKeyValues = getGeneratedKey(delegate);
+			StringBuffer ids = new StringBuffer();
+			primaryKeyValues.forEach(value -> {
+				if (ids.length() == 0) {
+					ids.append(value);
+				} else {
+					ids.append(", " + value);
+				}
+			});
+			standbyParams.put("ids", ids);
+			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "The primary keys info is [" + primaryKeyName + " = " + ids.toString() + "] to table [" + tableName + "].");
+
 			// 4.take the new data out
-			List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValue);
+			List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
 
 			// 5.save saga_undo_log
 //			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + UtxConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
@@ -101,13 +110,13 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 		return compensateSqls.toString();
 	}
 	
-	private Object getGeneratedKey(PreparedStatement preparedStatement) throws SQLException {
-		Object primaryKeyValue = null;
+	private Set<Object> getGeneratedKey(PreparedStatement preparedStatement) throws SQLException {
+		Set<Object> primaryKeyValue = new HashSet<>();
 		ResultSet rs = null;
 		try {
 			rs = preparedStatement.getGeneratedKeys();
-			if (rs != null && rs.next()) {
-				primaryKeyValue = rs.getObject(1);
+			while (rs != null && rs.next()) {
+				primaryKeyValue.add(rs.getObject(1));
 			}
 		} finally {
 			if (rs != null) {
@@ -116,18 +125,24 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 		}
 		return primaryKeyValue;
 	}
-	
-	private List<Map<String, Object>> selectNewData(PreparedStatement delegate, String tableName, String primaryKeyName, Object primaryKeyValue) throws SQLException {
+
+	private List<Map<String, Object>> selectNewData(PreparedStatement delegate, String tableName, String primaryKeyName, Set<Object> primaryKeyValues) throws SQLException {
 		PreparedStatement preparedStatement = null;
 		ResultSet dataResultSet = null;
 		try {
-			String sql = String.format("SELECT * FROM %s T WHERE T.%s = %s", tableName, primaryKeyName, primaryKeyValue);
+			String sql = constructNewDataSql(primaryKeyValues);
 //			dataResultSet = delegate.getResultSet();// it's result is null.
 
 			// start to mark duration for business sql By Gannalyo.
 			UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
 
-			preparedStatement = delegate.getConnection().prepareStatement(sql);
+			String[] params = new String[2 + primaryKeyValues.size()];
+			params[0] = tableName;
+			params[1] = primaryKeyName;
+			AtomicInteger index = new AtomicInteger(2);
+			primaryKeyValues.forEach(value -> {params[index.getAndIncrement()] = String.valueOf(value);});
+
+			preparedStatement = delegate.getConnection().prepareStatement(String.format(sql, params));
 			dataResultSet = preparedStatement.executeQuery();
 
 			// end mark duration for maintaining sql By Gannalyo.
@@ -154,5 +169,25 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			}
 		}
 	}
-	
+
+	private String constructNewDataSql(Set<Object> primaryKeyValues) {
+		if (primaryKeyValues != null && !primaryKeyValues.isEmpty()) {
+			StringBuffer sql = new StringBuffer("SELECT * FROM %s T WHERE T.%s IN (");
+			if (primaryKeyValues.size() < 1000) {
+				for (int i = 0; i < primaryKeyValues.size(); i ++) {
+					if (i == 0) {
+						sql.append("%s");
+					} else {
+						sql.append(", %s");
+					}
+				}
+			} else {
+				// TODO Do not forget to handle a case which the value size is more 1000.
+			}
+			sql.append(")");
+			return sql.toString();
+		}
+		return "";
+	}
+
 }

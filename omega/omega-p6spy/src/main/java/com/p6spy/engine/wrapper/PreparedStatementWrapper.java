@@ -18,11 +18,16 @@
 package com.p6spy.engine.wrapper;
 
 import com.p6spy.engine.autocompensate.handler.AutoCompensateHandler;
-import com.p6spy.engine.autocompensate.handler.IAutoCompensateHandler;
 import com.p6spy.engine.common.PreparedStatementInformation;
 import com.p6spy.engine.common.ResultSetInformation;
 import com.p6spy.engine.event.JdbcEventListener;
 import com.p6spy.engine.monitor.UtxSqlMetrics;
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
+import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
+import org.apache.servicecomb.saga.omega.transaction.KafkaMessage;
+import org.apache.servicecomb.saga.omega.transaction.MessageSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -30,6 +35,8 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This implementation wraps a {@link PreparedStatement}  and notifies a {@link JdbcEventListener}
@@ -82,8 +89,10 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
       eventListener.onBeforeExecuteUpdate(statementInformation);
 
       // before advise for executing SQL By Gannalyo.
-      IAutoCompensateHandler autoCompensateHandler = AutoCompensateHandler.newInstance();
-      autoCompensateHandler.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), true);
+      Map<String, Object> standbyParams = new HashMap<>();
+      if (CurrentThreadOmegaContext.isAutoCompensate()) {
+        AutoCompensateHandler.newInstance().saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), true, standbyParams);
+      }
 
       // start to mark duration for business sql By Gannalyo.
       UtxSqlMetrics.startMarkSQLDurationAndCount(statementInformation.getSqlWithValues(), true);
@@ -94,7 +103,12 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
       UtxSqlMetrics.endMarkSQLDuration();
 
       // after advise for executing SQL By Gannalyo.
-      autoCompensateHandler.saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), false);
+      if (CurrentThreadOmegaContext.isAutoCompensate()) {
+        AutoCompensateHandler.newInstance().saveAutoCompensationInfo(delegate, statementInformation.getSqlWithValues(), false, standbyParams);
+
+        // To construct business information, and then report to the UTX Server.
+        constructBusinessInfoToServer(standbyParams);
+      }
 
       return rowCount;
     } catch (SQLException sqle) {
@@ -102,6 +116,33 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
       throw e;
     } finally {
       eventListener.onAfterExecuteUpdate(statementInformation, System.nanoTime() - start, rowCount, e);
+    }
+  }
+
+  // To construct business information, and then report to the UTX Server.
+  private void constructBusinessInfoToServer(Map<String, Object> standbyParams) {
+    final Logger LOG = LoggerFactory.getLogger(PreparedStatementWrapper.class);
+    try {
+      if (standbyParams == null || standbyParams.isEmpty()) {
+        return;
+      }
+
+      String dbdrivername = String.valueOf(standbyParams.get("dbdrivername"));
+      String dburl = String.valueOf(standbyParams.get("dburl"));
+      String dbusername = String.valueOf(standbyParams.get("dbusername"));
+
+      String tableName = String.valueOf(standbyParams.get("tablename"));
+      String operation = String.valueOf(standbyParams.get("operation"));
+      String ids = String.valueOf(standbyParams.get("ids"));
+      System.err.println("ids = " + ids);
+
+      String globalTxId = CurrentThreadOmegaContext.getGlobalTxIdFromCurThread();
+      String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
+
+      MessageSender messageSender = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class);
+      messageSender.reportMessageToServer(new KafkaMessage(globalTxId, localTxId, dbdrivername, dburl, dbusername, tableName, operation, ids));
+    } catch (Exception e) {
+      LOG.error("Failed to execute the method 'constructBusinessInfoToServer'.", e);
     }
   }
 

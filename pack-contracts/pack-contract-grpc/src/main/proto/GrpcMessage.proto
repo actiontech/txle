@@ -1,0 +1,29 @@
+//
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.apache.servicecomb.saga.pack.contract.grpc";
+option java_outer_classname = "MessageProto";
+
+message GrpcMessageAck {
+  bool status = 1;
+}
+
+message GrpcMessage {
+  int64 createtime = 1;
+  int32 status = 2;
+  int32 version = 3;
+
+  string dbdrivername = 4;
+  string dburl = 5;
+  string dbusername = 6;
+
+  string tablename = 7;
+  string operation = 8;
+  string ids = 9;
+
+  string globaltxid = 10;
+  string localtxid = 11;
+}
+

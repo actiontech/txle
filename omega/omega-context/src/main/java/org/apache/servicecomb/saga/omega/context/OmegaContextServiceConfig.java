@@ -7,6 +7,7 @@ public class OmegaContextServiceConfig extends OmegaContext {
     // Do not need think about concurrency situation, due to they're one-to-one with current application.
     private String serviceName;
     private String instanceId;
+    private boolean isAutoCompensate;
 
     public void setServiceName(String serviceName) {
         this.serviceName = serviceName;
@@ -24,15 +25,31 @@ public class OmegaContextServiceConfig extends OmegaContext {
         return instanceId;
     }
 
+    public boolean isAutoCompensate() {
+        return isAutoCompensate;
+    }
+
+    public void setAutoCompensate(boolean autoCompensate) {
+        isAutoCompensate = autoCompensate;
+    }
+
     public OmegaContextServiceConfig(IdGenerator<String> idGenerator) {
         super(idGenerator);
     }
 
     public OmegaContextServiceConfig(OmegaContext context) {
         super(null);
-        setGlobalTxId(context.globalTxId());
-        setLocalTxId(context.localTxId());
-        setCategory(context.category());
+        this.setGlobalTxId(context.globalTxId());
+        this.setLocalTxId(context.localTxId());
+        this.setCategory(context.category());
+    }
+
+    public OmegaContextServiceConfig(OmegaContext context, boolean isAutoCompensate) {
+        super(null);
+        this.setGlobalTxId(context.globalTxId());
+        this.setLocalTxId(context.localTxId());
+        this.setCategory(context.category());
+        this.setAutoCompensate(isAutoCompensate);
     }
 
 }

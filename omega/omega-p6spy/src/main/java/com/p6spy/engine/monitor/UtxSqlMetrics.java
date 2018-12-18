@@ -69,6 +69,9 @@ public class UtxSqlMetrics extends Collector {
             serviceName = handleStringNullValue(context.serviceName());
             category = handleStringNullValue(context.category());
         }
+
+        System.out.println(Thread.currentThread().getId());
+        // TODO If this method was invoked for many times in the same thread, then the later value will cover the early value.
         gaugeTimer.set(UTX_SQL_TIME_SECONDS_TOTAL.labels(isBizSql + "", serviceName, category).startTimer());
         UTX_SQL_TOTAL.labels(isBizSql + "", serviceName, category).inc();
     }
@@ -81,7 +84,10 @@ public class UtxSqlMetrics extends Collector {
     }
 
     public static void endMarkSQLDuration() {
-        gaugeTimer.get().setDuration();
+        Gauge.Timer timer = gaugeTimer.get();
+        if (timer != null) {
+            timer.setDuration();
+        }
         gaugeTimer.remove();
     }
 

@@ -95,6 +95,11 @@ public class DefaultRecoveryTest {
     public Set<String> send(Set<String> localTxIdSet) {
       return null;
     }
+
+    @Override
+    public String reportMessageToServer(KafkaMessage message) {
+      return "";
+    }
   };
 
   private final CompensableInterceptor interceptor = new CompensableInterceptor(omegaContext, sender);

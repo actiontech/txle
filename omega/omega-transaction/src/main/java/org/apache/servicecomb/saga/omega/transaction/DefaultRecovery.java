@@ -59,7 +59,7 @@ public class DefaultRecovery implements RecoveryPolicy {
     String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
 
     // Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
-    CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context));
+    CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, false));
 
     AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
         retrySignature, retries, joinPoint.getArgs());

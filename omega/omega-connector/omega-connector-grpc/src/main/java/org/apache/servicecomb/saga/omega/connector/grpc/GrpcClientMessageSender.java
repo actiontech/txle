@@ -20,30 +20,19 @@
 
 package org.apache.servicecomb.saga.omega.connector.grpc;
 
+import com.google.protobuf.ByteString;
+import io.grpc.ManagedChannel;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender.ErrorHandlerFactory;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
 import org.apache.servicecomb.saga.omega.context.UtxConstants;
-import org.apache.servicecomb.saga.omega.transaction.AlphaResponse;
-import org.apache.servicecomb.saga.omega.transaction.MessageDeserializer;
-import org.apache.servicecomb.saga.omega.transaction.MessageHandler;
-import org.apache.servicecomb.saga.omega.transaction.MessageSender;
-import org.apache.servicecomb.saga.omega.transaction.MessageSerializer;
-import org.apache.servicecomb.saga.omega.transaction.TxEvent;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcAck;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcServiceConfig;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent;
+import org.apache.servicecomb.saga.omega.transaction.*;
+import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent.Builder;
-import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceStub;
 
-import com.google.protobuf.ByteString;
-
-import io.grpc.ManagedChannel;
-
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -142,6 +131,24 @@ public class GrpcClientMessageSender implements MessageSender {
       return localTxIdSetOfEndedGlobalTx;
     }
     return null;
+  }
+
+  @Override
+  public String reportMessageToServer(KafkaMessage message) {
+    GrpcMessage grpcMessage = GrpcMessage.newBuilder()
+            .setCreatetime(message.getCreatetime().getTime())
+            .setStatus(message.getStatus())
+            .setVersion(message.getVersion())
+            .setDbdrivername(message.getDbdrivername())
+            .setDburl(message.getDburl())
+            .setDbusername(message.getDbusername())
+            .setTablename(message.getTablename())
+            .setOperation(message.getOperation())
+            .setIds(message.getIds())
+            .setGlobaltxid(message.getGlobaltxid())
+            .setLocaltxid(message.getLocaltxid())
+            .build();
+    return blockingEventService.onMessage(grpcMessage).getStatus() + "";
   }
 
   private GrpcTxEvent convertEvent(TxEvent event) {

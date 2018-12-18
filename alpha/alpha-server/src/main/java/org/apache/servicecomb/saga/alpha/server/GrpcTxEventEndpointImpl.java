@@ -30,16 +30,13 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.esotericsoftware.kryo.pool.KryoFactory;
 import com.esotericsoftware.kryo.pool.KryoPool;
 import com.google.protobuf.ByteString;
+import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.alpha.core.OmegaCallback;
 import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcAck;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcCompensateCommand;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcServiceConfig;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent;
+import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceImplBase;
 
 import io.grpc.stub.StreamObserver;
@@ -49,6 +46,8 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
   private static final GrpcAck ALLOW = GrpcAck.newBuilder().setAborted(false).build();
   private static final GrpcAck REJECT = GrpcAck.newBuilder().setAborted(true).build();
   private static final GrpcAck PAUSED = GrpcAck.newBuilder().setAborted(false).setPaused(true).build();
+  private static final GrpcMessageAck MSG_ACK_TRUE = GrpcMessageAck.newBuilder().setStatus(true).build();
+  private static final GrpcMessageAck MSG_ACK_FALSE = GrpcMessageAck.newBuilder().setStatus(false).build();
 
   private final KryoPool pool = new KryoPool.Builder(() -> new Kryo()).softReferences().build();
 
@@ -148,5 +147,12 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
     } catch (KryoException e) {
       throw new RuntimeException("Unable to deserialize message", e);
     }
+  }
+
+  @Override
+  public void onMessage(GrpcMessage message, StreamObserver<GrpcMessageAck> responseObserver) {
+    boolean result = txConsistentService.saveKafkaMessage(new KafkaMessage(message.getGlobaltxid(), message.getLocaltxid(), message.getDbdrivername(), message.getDburl(), message.getDbusername(), message.getTablename(), message.getOperation(), message.getIds()));
+    responseObserver.onNext(result ? MSG_ACK_TRUE : MSG_ACK_FALSE);
+    responseObserver.onCompleted();
   }
 }

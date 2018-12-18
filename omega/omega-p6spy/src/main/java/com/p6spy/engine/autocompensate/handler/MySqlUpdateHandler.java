@@ -38,13 +38,15 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 	}
 	
 	@Override
-	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server) throws SQLException {
+	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
 		ResultSet rs = null;
 		try {
 			MySqlUpdateStatement updateStatement = (MySqlUpdateStatement) sqlStatement;
 			// 1.take table's name out
 			SQLName table = updateStatement.getTableName();
 			String tableName = table.toString();
+			standbyParams.put("tablename",tableName);
+			standbyParams.put("operation", "update");
 
 			// 2.take conditions out
 			SQLExpr where = updateStatement.getWhere();// select * ... by where ... ps: having, etc.
@@ -68,6 +70,16 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Saga_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
 				return true;
 			}
+			StringBuffer ids = new StringBuffer();
+			originalDataList.forEach(map -> {
+				if (ids.length() == 0) {
+					ids.append(map.get(primaryKeyColumnName));
+				} else {
+					ids.append(", " + map.get(primaryKeyColumnName));
+				}
+			});
+			standbyParams.put("ids", ids);
+
 			String originalDataJson = JSON.toJSONString(originalDataList);
 
 			// PS: Do not joint the conditions of 'executeSql' to 'compensateSql' immediately, because the result may not be same to execute a SQL twice at different time.
