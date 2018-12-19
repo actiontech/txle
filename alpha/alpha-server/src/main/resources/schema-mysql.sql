@@ -69,3 +69,21 @@ CREATE TABLE IF NOT EXISTS TxTimeout (
   PRIMARY KEY (surrogateId),
   INDEX saga_timeouts_index (surrogateId, expiryTime, globalTxId, localTxId, status)
 ) DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS Message (
+  id bigint NOT NULL AUTO_INCREMENT,
+  globaltxid varchar(36) NOT NULL,
+  localtxid varchar(36) NOT NULL,
+  status int(1) NOT NULL DEFAULT 0 COMMENT '0-init, 1-sending, 2-success, 3-fail',
+  version int(2) NOT NULL DEFAULT 1,
+  dbdrivername varchar(50),
+  dburl varchar(100),
+  dbusername varchar(20),
+  tablename varchar(255),
+  operation varchar(20) DEFAULT 'update',
+  ids blob,
+  createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id) USING BTREE,
+  UNIQUE INDEX pk_id(id) USING BTREE,
+  INDEX utx_globalTxId_index(globaltxid) USING BTREE
+) DEFAULT CHARSET=utf8;
