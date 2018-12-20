@@ -44,14 +44,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.apache.servicecomb.saga.omega.context.CompensationContext;
 import org.apache.servicecomb.saga.omega.context.IdGenerator;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
-import org.apache.servicecomb.saga.omega.transaction.AlphaResponse;
-import org.apache.servicecomb.saga.omega.transaction.MessageHandler;
-import org.apache.servicecomb.saga.omega.transaction.MessageSender;
-import org.apache.servicecomb.saga.omega.transaction.TxAbortedEvent;
-import org.apache.servicecomb.saga.omega.transaction.TxCompensatedEvent;
-import org.apache.servicecomb.saga.omega.transaction.TxEndedEvent;
-import org.apache.servicecomb.saga.omega.transaction.TxEvent;
-import org.apache.servicecomb.saga.omega.transaction.TxStartedEvent;
+import org.apache.servicecomb.saga.omega.transaction.*;
 import org.apache.servicecomb.saga.omega.transaction.spring.TransactionInterceptionTest.MessageConfig;
 import org.apache.servicecomb.saga.omega.transaction.spring.annotations.OmegaContextAware;
 import org.junit.After;
@@ -455,6 +448,11 @@ public class TransactionInterceptionTest {
         @Override
         public Set<String> send(Set<String> localTxIdSet) {
           return null;
+        }
+
+        @Override
+        public String reportMessageToServer(KafkaMessage message) {
+          return "";
         }
       };
     }
