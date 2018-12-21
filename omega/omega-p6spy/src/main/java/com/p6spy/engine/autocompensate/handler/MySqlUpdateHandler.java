@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.p6spy.engine.monitor.UtxSqlMetrics;
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

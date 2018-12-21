@@ -1,6 +1,6 @@
 package org.apache.servicecomb.saga.omega.transaction.repository;
 
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.jdbc.core.JdbcTemplate;

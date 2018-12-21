@@ -1,4 +1,4 @@
-package org.apache.servicecomb.saga.omega.rmi.accidentplatform;
+package org.apache.servicecomb.saga.common.rmi.accidentplatform;
 
 /**
  * Accident Platform Interface.

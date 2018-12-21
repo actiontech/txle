@@ -3,7 +3,7 @@ package org.apache.servicecomb.saga.omega.transaction;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.annotations.AutoCompensable;
 import org.aspectj.lang.ProceedingJoinPoint;

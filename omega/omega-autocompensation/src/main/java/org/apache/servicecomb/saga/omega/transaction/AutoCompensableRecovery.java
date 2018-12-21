@@ -3,7 +3,7 @@ package org.apache.servicecomb.saga.omega.transaction;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.transaction.annotations.AutoCompensable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;

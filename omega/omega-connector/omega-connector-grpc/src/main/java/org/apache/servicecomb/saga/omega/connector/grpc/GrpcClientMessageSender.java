@@ -26,7 +26,7 @@ import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessa
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.transaction.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent.Builder;

@@ -1,7 +1,7 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
-import org.apache.servicecomb.saga.omega.context.UtxConstants;
-import org.apache.servicecomb.saga.omega.rmi.accidentplatform.IAccidentPlatformService;
+import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.rmi.accidentplatform.IAccidentPlatformService;
 import org.apache.servicecomb.saga.omega.transaction.repository.IAutoCompensateDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +28,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 	private IAutoCompensateDao autoCompensateDao;
 
     @Autowired
-    IAccidentPlatformService accidentPlatformService;
+	IAccidentPlatformService accidentPlatformService;
 
 //	@Transactional(propagation = Propagation.NOT_SUPPORTED) // Propagation.NOT_SUPPORTED/REQUIRED_NEW indeed is okay, if data are not same among transactions. 
 	@Override
