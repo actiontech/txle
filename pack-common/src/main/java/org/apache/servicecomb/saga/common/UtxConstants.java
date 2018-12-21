@@ -1,4 +1,4 @@
-package org.apache.servicecomb.saga.omega.context;
+package org.apache.servicecomb.saga.common;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

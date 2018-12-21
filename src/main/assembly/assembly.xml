@@ -82,10 +82,6 @@
 			<source>omega/omega-p6spy/target/omega-p6spy-${version}.jar</source>
 			<outputDirectory>/client</outputDirectory>
 		</file>
-		<file>
-			<source>omega/omega-rmi/target/omega-rmi-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
 
 		<!-- omega 四种通信 jar包 -->
 		<file>
