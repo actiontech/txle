@@ -1,6 +1,7 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
 import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
 import org.apache.servicecomb.saga.common.rmi.accidentplatform.IAccidentPlatformService;
 import org.apache.servicecomb.saga.omega.transaction.repository.IAutoCompensateDao;
 import org.slf4j.Logger;
@@ -48,7 +49,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 							LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Success to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 						} else {
 							// TODO 报差错平台，其余的是否继续执行？？？ TODO 手动补偿时，也需报差错平台
-							accidentPlatformService.reportMsgToAccidentPlatform("localTxId = " + localTxId);
+							accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.ROLLBACK_ERROR, globalTxId, localTxId);
 							LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 							throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
 						}

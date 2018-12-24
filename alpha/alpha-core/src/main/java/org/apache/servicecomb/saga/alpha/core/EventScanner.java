@@ -17,8 +17,10 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
 import java.util.List;
@@ -37,6 +39,10 @@ public class EventScanner implements Runnable {
   private final CommandRepository commandRepository;
   private final TxTimeoutRepository timeoutRepository;
   private final OmegaCallback omegaCallback;
+
+  @Autowired
+  private IKafkaMessageProducer kafkaMessageProducer;
+
   private final int eventPollingInterval;
 
   private long nextEndedEventId;
@@ -171,6 +177,8 @@ public class EventScanner implements Runnable {
   private void markGlobalTxEndWithEvent(TxEvent event) {
     CurrentThreadContext.put(event.globalTxId(), event);
     eventRepository.save(toSagaEndedEvent(event));
+    // To send message to Kafka.
+    kafkaMessageProducer.send(event);
     LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
   }
 

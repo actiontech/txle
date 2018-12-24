@@ -1,18 +1,20 @@
 package org.apache.servicecomb.saga.alpha.server.kafka;
 
 import com.google.gson.GsonBuilder;
-import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.RetriableException;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessageStatus;
 import org.apache.servicecomb.saga.common.EventType;
+import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
+import org.apache.servicecomb.saga.common.rmi.accidentplatform.IAccidentPlatformService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.ProducerListener;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -28,11 +30,13 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
 
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-
     @Autowired
-    private KafkaTemplate kafkaTemplate;
+    private KafkaProducer kafkaProducer;
 
     private IKafkaMessageRepository kafkaMessageRepository;
+
+    @Autowired
+    IAccidentPlatformService accidentPlatformService;
 
     KafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository) {
         this.kafkaMessageRepository = kafkaMessageRepository;
@@ -51,9 +55,8 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                     });
                     kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.SENDING);
 
-                    // TODO That's better to support the topic's configuration.
-                    kafkaTemplate.send("default_topic", new GsonBuilder().create().toJson(messageList));
-                    this.setProducerListener(event, idList);
+                    // send msg
+                    sendMessage(event, messageList, idList);
                 }
             }
         } catch (Exception e) {
@@ -61,31 +64,31 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
         }
     }
 
-    private void setProducerListener(TxEvent event, List<Long> idList) {
-        // listener for producer
-        kafkaTemplate.setProducerListener(new ProducerListener<String, String>() {
-            @Override
-            public void onSuccess(String topic, Integer partition, String key, String value, RecordMetadata recordMetadata) {
-                LOG.info("Successfully to send Kafka message - globalTxId = [{}].", event.globalTxId());
-                // To update message's status to 'successful'.
-                kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.SUCCESSFUL);
-            }
+    private void sendMessage(TxEvent event, List<KafkaMessage> messageList, List<Long> idList) {
+        try {
+            ProducerRecord<String, String> record = new ProducerRecord<>("default_topic", new GsonBuilder().create().toJson(messageList));
+            kafkaProducer.send(record, (metadata, exception) -> {
+                if (exception == null) {
+                    LOG.info("Successfully to send Kafka message - globalTxId = [{}].", event.globalTxId());
+                    // To update message's status to 'successful'.
+                    kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.SUCCESSFUL);
+                } else {
+                    if (exception instanceof RetriableException) {
+                        // Kafka will retry automatically for some exceptions which can possible be successful by retrying.
+                    } else {
+                        LOG.error("Unsuccessfully to send Kafka message - globalTxId = [{}].", event.globalTxId(), exception);
 
-            @Override
-            public void onError(String topic, Integer partition, String key, String value, Exception exception) {
-                LOG.error("Unsuccessfully to send Kafka message - globalTxId = [{}].", event.globalTxId(), exception);
-                // TODO retries ???
-                // ....
+                        // To report message to Accident Platform.
+                        accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.SEND_MESSAGE_ERROR, event.globalTxId(), event.localTxId());
 
-                // To update message's status to 'failed'.
-                kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.FAILED);
-            }
-
-            @Override
-            public boolean isInterestedInSuccess() {
-                // true, will call the onSuccess function.
-                return true;
-            }
-        });
+                        // To update message's status to 'failed'.
+                        kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.FAILED);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            LOG.error("To send message to Kafka exception - globalTxId = [{}].", event.globalTxId(), e);
+        }
     }
+
 }
