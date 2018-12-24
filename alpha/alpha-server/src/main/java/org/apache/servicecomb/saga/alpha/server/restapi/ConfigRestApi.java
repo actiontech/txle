@@ -1,15 +1,14 @@
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.servicecomb.saga.alpha.server.ApplicationContextUtil;
 import org.apache.servicecomb.saga.alpha.server.ConfigLoading;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaMessageProducer;
-import org.apache.servicecomb.saga.alpha.server.ApplicationContextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,7 +18,7 @@ public class ConfigRestApi {
 
 	@GetMapping("/reloadConfig/kafka")
 	public String reloadKafkaConfig() {
-	    return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class,"kafkaTemplate", new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(ConfigLoading.loadKafkaProperties())));
+	    return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class,"kafkaProducer", new KafkaProducer<>(ConfigLoading.loadKafkaProperties()));
 	}
 
 	@GetMapping("/reloadConfig/db")
