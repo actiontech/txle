@@ -72,6 +72,10 @@
 			<source>pack-contracts/pack-contract-grpc/target/pack-contract-grpc-${version}.jar</source>
 			<outputDirectory>/client</outputDirectory>
 		</file>
+		<file>
+			<source>saga-persistence/saga-persistence-jpa/target/saga-persistence-jpa-${version}.jar</source>
+			<outputDirectory>/client</outputDirectory>
+		</file>
 
 		<!-- omega 自动补偿、sql拦截、对外api jar包 -->
 		<file>

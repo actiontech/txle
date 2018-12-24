@@ -36,6 +36,7 @@
 		<module>alpha</module>
 		<module>pack-contracts</module>
 		<module>pack-common</module>
+		<module>saga-persistence</module>
 	</modules>
 
 	<properties>
