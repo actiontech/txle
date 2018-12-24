@@ -14,8 +14,8 @@ public class AccidentPlatformService implements IAccidentPlatformService {
     }
 
     @Override
-    public boolean reportMsgToAccidentPlatform(String msg) {
-        LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Message [" + msg + "] will send to Accident Platform [" + this.accidentPlatformAddress + "].");
+    public boolean reportMsgToAccidentPlatform(AccidentType type, String globalTxId, String localTxId) {
+        LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Message [type=[{}], globalTxId=[{}], localTxId=[{}]] will send to Accident Platform [" + this.accidentPlatformAddress + "].", type.name(), globalTxId, localTxId);
         return false;
     }
 

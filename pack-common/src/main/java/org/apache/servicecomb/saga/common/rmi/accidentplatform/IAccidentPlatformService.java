@@ -8,5 +8,5 @@ package org.apache.servicecomb.saga.common.rmi.accidentplatform;
  */
 public interface IAccidentPlatformService {
 	// Information to accident platform. 
-	public boolean reportMsgToAccidentPlatform(String msg);
+	public boolean reportMsgToAccidentPlatform(AccidentType type, String globalTxId, String localTxId);
 }
