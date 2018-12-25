@@ -18,6 +18,7 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import org.apache.servicecomb.saga.alpha.core.*;
+import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
 import org.springframework.beans.factory.annotation.Value;
@@ -86,11 +87,12 @@ class AlphaConfig {
       CommandRepository commandRepository,
       TxTimeoutRepository timeoutRepository,
       OmegaCallback omegaCallback,
-      Map<String, Map<String, OmegaCallback>> omegaCallbacks) {
+      Map<String, Map<String, OmegaCallback>> omegaCallbacks,
+      IKafkaMessageProducer kafkaMessageProducer) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
-        omegaCallback, eventPollingInterval).run();
+        omegaCallback, kafkaMessageProducer, eventPollingInterval).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository);
 

@@ -4,8 +4,10 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.server.ConfigLoading;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 /**
  * Kafka producer configuration.
@@ -15,8 +17,14 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 //@ConfigurationProperties(prefix="spring.kafka")
-//@PropertySource({"classpath:kafka.properties"})
+@PropertySource({"classpath:kafka.properties"})
 public class KafkaProducerConfig {
+
+    @Value("${utx.kafka.enable:false}")
+    private boolean enabled;
+
+    @Value("${topic:default_topic}")
+    private String topic;
 
     @Bean
     public KafkaProducer<String, String> kafkaProducer() {
@@ -25,7 +33,7 @@ public class KafkaProducerConfig {
 
     @Bean
     IKafkaMessageProducer kafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository) {
-        return new KafkaMessageProducer(kafkaMessageRepository);
+        return new KafkaMessageProducer(kafkaMessageRepository, enabled, topic);
     }
 
     @Bean
