@@ -78,3 +78,5 @@ utx:
   prometheus:
     metrics:
       port: 8099
+  kafka:
+    enable: false

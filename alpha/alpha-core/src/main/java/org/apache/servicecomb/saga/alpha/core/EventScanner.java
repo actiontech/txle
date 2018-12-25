@@ -39,8 +39,6 @@ public class EventScanner implements Runnable {
   private final CommandRepository commandRepository;
   private final TxTimeoutRepository timeoutRepository;
   private final OmegaCallback omegaCallback;
-
-  @Autowired
   private IKafkaMessageProducer kafkaMessageProducer;
 
   private final int eventPollingInterval;
@@ -53,12 +51,14 @@ public class EventScanner implements Runnable {
       CommandRepository commandRepository,
       TxTimeoutRepository timeoutRepository,
       OmegaCallback omegaCallback,
+      IKafkaMessageProducer kafkaMessageProducer,
       int eventPollingInterval) {
     this.scheduler = scheduler;
     this.eventRepository = eventRepository;
     this.commandRepository = commandRepository;
     this.timeoutRepository = timeoutRepository;
     this.omegaCallback = omegaCallback;
+    this.kafkaMessageProducer = kafkaMessageProducer;
     this.eventPollingInterval = eventPollingInterval;
   }
 

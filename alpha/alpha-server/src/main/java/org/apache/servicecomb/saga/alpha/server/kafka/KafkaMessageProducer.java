@@ -35,17 +35,22 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
 
     private IKafkaMessageRepository kafkaMessageRepository;
 
+    private boolean enabled;
+    private String topic;
+
     @Autowired
     IAccidentPlatformService accidentPlatformService;
 
-    KafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository) {
+    KafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository, boolean enabled, String topic) {
         this.kafkaMessageRepository = kafkaMessageRepository;
+        this.enabled = enabled;
+        this.topic = topic;
     }
 
     @Override
     public void send(TxEvent event) {
         try {
-            if (EventType.SagaEndedEvent.name().equals(event.type())) {
+            if (enabled && EventType.SagaEndedEvent.name().equals(event.type())) {
                 List<KafkaMessage> messageList = kafkaMessageRepository.findMessageListByGlobalTxId(event.globalTxId(), KafkaMessageStatus.INIT.toInteger());
                 if (messageList != null && !messageList.isEmpty()) {
                     // To update message's status to 'sending'.
@@ -66,7 +71,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
 
     private void sendMessage(TxEvent event, List<KafkaMessage> messageList, List<Long> idList) {
         try {
-            ProducerRecord<String, String> record = new ProducerRecord<>("default_topic", new GsonBuilder().create().toJson(messageList));
+            ProducerRecord<String, String> record = new ProducerRecord<>(topic, new GsonBuilder().create().toJson(messageList));
             kafkaProducer.send(record, (metadata, exception) -> {
                 if (exception == null) {
                     LOG.info("Successfully to send Kafka message - globalTxId = [{}].", event.globalTxId());

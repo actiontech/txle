@@ -53,6 +53,7 @@ import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.TxTimeout;
 import org.apache.servicecomb.saga.alpha.core.TxTimeoutRepository;
+import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcAck;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcCompensateCommand;
@@ -133,6 +134,9 @@ public class AlphaIntegrationTest {
 
   @Autowired
   private Map<String, Map<String, OmegaCallback>> omegaCallbacks;
+
+  @Autowired
+  private IKafkaMessageProducer kafkaMessageProducer;
 
   @Autowired
   private TxConsistentService consistentService;
@@ -610,6 +614,8 @@ public class AlphaIntegrationTest {
         eventRepository,
         commandRepository,
         timeoutRepository,
-        omegaCallback, 1).run();
+        omegaCallback,
+        kafkaMessageProducer,
+        1).run();
   }
 }
