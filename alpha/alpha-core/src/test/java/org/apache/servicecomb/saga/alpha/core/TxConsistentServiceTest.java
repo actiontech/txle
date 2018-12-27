@@ -75,6 +75,11 @@ public class TxConsistentServiceTest {
     }
 
     @Override
+    public List<TxEvent> findSequentialCompensableEventOfUnended() {
+      return null;
+    }
+
+    @Override
     public Optional<TxEvent> findFirstCompensatedEventByIdGreaterThan(long id) {
       return Optional.empty();
     }

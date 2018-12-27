@@ -17,17 +17,17 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import java.util.List;
-
-import javax.persistence.LockModeType;
-import javax.transaction.Transactional;
-
 import org.apache.servicecomb.saga.alpha.core.Command;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+
+import javax.persistence.LockModeType;
+import javax.transaction.Transactional;
+import java.util.List;
+import java.util.Set;
 
 public interface CommandEntityRepository extends CrudRepository<Command, Long> {
 
@@ -68,4 +68,7 @@ public interface CommandEntityRepository extends CrudRepository<Command, Long> {
       + " HAVING MAX( CASE c2.status WHEN 'PENDING' THEN 1 ELSE 0 END ) = 0) "
       + "ORDER BY c.eventId ASC LIMIT 1", nativeQuery = true)
   List<Command> findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
+
+  @Query(value = "SELECT T FROM Command T WHERE T.eventId IN ?1")
+  Set<Command> findExistCommandList(Set<Long> eventIdList);
 }

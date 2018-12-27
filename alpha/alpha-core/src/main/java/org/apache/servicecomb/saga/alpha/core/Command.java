@@ -144,6 +144,10 @@ public class Command {
     return category;
   }
 
+  public long getEventId() {
+    return eventId;
+  }
+
   @Override
   public String toString() {
     return "Command{" +

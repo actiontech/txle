@@ -22,9 +22,7 @@ import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.PENDING;
 
 import java.lang.invoke.MethodHandles;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.transaction.Transactional;
 
@@ -52,14 +50,24 @@ public class SpringCommandRepository implements CommandRepository {
 
     Map<String, Command> commands = new LinkedHashMap<>();
 
+    Set<Long> eventIdSet = new HashSet<>();
     for (TxEvent event : events) {
       commands.computeIfAbsent(event.localTxId(), k -> new Command(event));
+      eventIdSet.add(event.id());
+    }
+
+    Set<Command> existCommandList = commandRepository.findExistCommandList(eventIdSet);
+    eventIdSet.clear();
+    if (existCommandList != null && !existCommandList.isEmpty()) {
+      existCommandList.forEach(command -> {eventIdSet.add(command.getEventId());});
     }
 
     for (Command command : commands.values()) {
       LOG.info("Saving compensation command {}", command);
       try {
-        commandRepository.save(command);
+        if (!eventIdSet.contains(command.getEventId())) {// To avoid to save if the eventId is exists. If not, it will print 'duplicate eventId....' exception.
+          commandRepository.save(command);
+        }
       } catch (Exception e) {
         LOG.warn("Failed to save some command {}", command);
       }
