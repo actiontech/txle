@@ -113,8 +113,10 @@ public class EventScanner implements Runnable {
   }
 
   private void updateCompensatedCommands() {
-    eventRepository.findFirstCompensatedEventByIdGreaterThan(nextCompensatedEventId)
-        .ifPresent(event -> {
+    // The 'findFirstCompensatedEventByIdGreaterThan' interface did not think about the 'SagaEndedEvent' type so that would do too many thing those were wasted.
+      List<TxEvent> unCompensableEventList = eventRepository.findSequentialCompensableEventOfUnended();
+//        eventRepository.findFirstCompensatedEventByIdGreaterThan(nextCompensatedEventId)
+      unCompensableEventList.forEach(event -> {
           CurrentThreadContext.put(event.globalTxId(), event);
           LOG.info("Found compensated event {}", event);
           nextCompensatedEventId = event.id();

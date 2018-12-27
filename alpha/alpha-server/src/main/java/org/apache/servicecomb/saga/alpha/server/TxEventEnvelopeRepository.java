@@ -17,10 +17,7 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import javax.transaction.Transactional;
 
@@ -127,6 +124,9 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query()
   Optional<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId);
 
+  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND t.type = 'TxCompensatedEvent' ORDER BY surrogateId", nativeQuery = true)
+  List<TxEvent> findSequentialCompensableEventOfUnended();
+
   @Transactional
   @Modifying(clearAutomatically = true)
   @Query("DELETE FROM TxEvent t "
@@ -139,10 +139,13 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 
   @Transactional
   @Modifying(clearAutomatically = true)
-  @Query("DELETE FROM TxEvent t WHERE t.type = ?1 AND t.surrogateId NOT IN ?2")
+  @Query("DELETE FROM TxEvent t WHERE t.type = ?1 AND t.surrogateId IN ?2")
   void deleteDuplicateEventsByTypeAndSurrogateIds(String type, List<Long> maxSurrogateIdList);
 
-  @Query("SELECT MAX(t1.surrogateId) FROM TxEvent t1 WHERE t1.type = ?1 GROUP BY t1.globalTxId")
+  @Query("SELECT t.surrogateId FROM TxEvent t" +
+          " WHERE t.surrogateId NOT IN (SELECT MAX(t1.surrogateId) FROM TxEvent t1 WHERE t1.type = ?1 GROUP BY t1.globalTxId HAVING COUNT(1) > 1)" +
+          " AND t.globalTxId IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = ?1 GROUP BY t1.globalTxId HAVING COUNT(1) > 1)" +
+          " AND t.type = ?1")
   List<Long> getMaxSurrogateIdGroupByGlobalTxIdByType(String type);
 
   @Query(value = "SELECT T FROM TxEvent T WHERE T.type IN ('SagaPausedEvent', 'SagaContinuedEvent', 'SagaAutoContinuedEvent') AND T.globalTxId = ?1 ORDER BY T.surrogateId DESC")

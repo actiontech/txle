@@ -101,6 +101,8 @@ public interface TxEventRepository {
    */
   List<TxEvent> findFirstUncompensatedEventByIdGreaterThan(long id, String type);
 
+  List<TxEvent> findSequentialCompensableEventOfUnended();
+
   /**
    * Find a {@link TxEvent} which satisfies below requirements:
    *

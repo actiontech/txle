@@ -73,6 +73,11 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
+  public List<TxEvent> findSequentialCompensableEventOfUnended() {
+    return eventRepo.findSequentialCompensableEventOfUnended();
+  }
+
+  @Override
   public void deleteDuplicateEvents(String type) {
     eventRepo.deleteByType(type);
   }
