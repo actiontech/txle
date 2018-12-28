@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
+import java.util.Map;
+
 /**
  * Kafka producer configuration.
  *
@@ -28,7 +30,10 @@ public class KafkaProducerConfig {
 
     @Bean
     public KafkaProducer<String, String> kafkaProducer() {
-        return new KafkaProducer<>(ConfigLoading.loadKafkaProperties());
+        if (enabled) {
+            return new KafkaProducer<>(ConfigLoading.loadKafkaProperties(enabled));
+        }
+        return null;
     }
 
     @Bean
