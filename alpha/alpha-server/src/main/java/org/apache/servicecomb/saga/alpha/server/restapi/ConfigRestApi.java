@@ -6,6 +6,7 @@ import org.apache.servicecomb.saga.alpha.server.ConfigLoading;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaMessageProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
@@ -16,9 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfigRestApi {
 	private static final Logger LOG = LoggerFactory.getLogger(ConfigRestApi.class);
 
+	@Value("${utx.kafka.enable:false}")
+	private boolean enabled;
+
 	@GetMapping("/reloadConfig/kafka")
 	public String reloadKafkaConfig() {
-	    return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class,"kafkaProducer", new KafkaProducer<>(ConfigLoading.loadKafkaProperties()));
+		KafkaProducer<Object, Object> kafkaProducer = null;
+		if (enabled) {
+			kafkaProducer = new KafkaProducer<>(ConfigLoading.loadKafkaProperties(enabled));
+		}
+		return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class,"kafkaProducer", kafkaProducer);
 	}
 
 	@GetMapping("/reloadConfig/db")

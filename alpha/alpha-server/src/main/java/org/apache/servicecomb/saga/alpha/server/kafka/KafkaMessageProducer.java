@@ -80,15 +80,15 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                 } else {
                     if (exception instanceof RetriableException) {
                         // Kafka will retry automatically for some exceptions which can possible be successful by retrying.
+                        LOG.info("Unsuccessfully to send Kafka message after exhausting retries - globalTxId = [{}].", event.globalTxId(), exception);
                     } else {
-                        LOG.error("Unsuccessfully to send Kafka message - globalTxId = [{}].", event.globalTxId(), exception);
-
-                        // To report message to Accident Platform.
-                        accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.SEND_MESSAGE_ERROR, event.globalTxId(), event.localTxId());
-
-                        // To update message's status to 'failed'.
-                        kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.FAILED);
+                        LOG.error("Unsuccessfully to send Kafka message without retries - globalTxId = [{}].", event.globalTxId(), exception);
                     }
+                    // To report message to Accident Platform.
+                    accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.SEND_MESSAGE_ERROR, event.globalTxId(), event.localTxId());
+
+                    // To update message's status to 'failed'.
+                    kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.FAILED);
                 }
             });
         } catch (Exception e) {

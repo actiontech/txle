@@ -12,25 +12,27 @@ import java.util.Properties;
 public class ConfigLoading {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigLoading.class);
 
-    public static Map<String, Object> loadKafkaProperties() {
+    public static Map<String, Object> loadKafkaProperties(boolean enableKafka) {
         try {
-            Properties properties = new Properties();
-            // PropertiesLoaderUtils.loadAllProperties("kafka.properties");
-            // properties.load(System.class.getResourceAsStream("kafka.properties"));
-            // It will load the cache file for 'kafka.properties' by the two ways above.
-            // It will load the realistic kafka.properties.
-            properties.load(new FileInputStream(System.class.getResource("/kafka.properties").getPath()));
-            if (properties.isEmpty()) {
-                LOG.info("No property in kafka.properties.");
+            if (enableKafka) {
+                Properties properties = new Properties();
+                // PropertiesLoaderUtils.loadAllProperties("kafka.properties");
+                // properties.load(System.class.getResourceAsStream("kafka.properties"));
+                // It will load the cache file for 'kafka.properties' by the two ways above.
+                // It will load the realistic kafka.properties.
+                properties.load(new FileInputStream(System.class.getResource("/kafka.properties").getPath()));
+                if (properties.isEmpty()) {
+                    LOG.info("No property in kafka.properties.");
+                }
+                Map<String, Object> kafkaConfigMap = new HashMap<>();
+                properties.keySet().forEach(key -> {
+                    kafkaConfigMap.put(key + "", properties.get(key));
+                });
+                return kafkaConfigMap;
             }
-            Map<String, Object> kafkaConfigMap = new HashMap<>();
-            properties.keySet().forEach(key -> {
-                kafkaConfigMap.put(key + "", properties.get(key));
-            });
-            return kafkaConfigMap;
         } catch (IOException e) {
             LOG.error("Failed to load the kafka.properties file." + e);
         }
-        return null;
+        return new HashMap<>();
     }
 }
