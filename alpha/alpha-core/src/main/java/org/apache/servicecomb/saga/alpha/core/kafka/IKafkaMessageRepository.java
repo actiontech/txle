@@ -10,4 +10,6 @@ public interface IKafkaMessageRepository {
 
     boolean updateMessageStatusByIdList(List<Long> idList, KafkaMessageStatus messageStatus);
 
+    boolean updateMessageStatusByIdListAndStatus(List<Long> idList, KafkaMessageStatus messageStatus, KafkaMessageStatus originalStatus);
+
 }
