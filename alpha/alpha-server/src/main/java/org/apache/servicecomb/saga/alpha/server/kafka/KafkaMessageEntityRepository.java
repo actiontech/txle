@@ -24,5 +24,9 @@ public interface KafkaMessageEntityRepository extends CrudRepository<KafkaMessag
     @Query("UPDATE KafkaMessage T SET T.status = ?2 WHERE T.id IN ?1")
     int updateMessageStatusByIdList(List<Long> idList, int status);
 
+    @Transactional
+    @Modifying
+    @Query("UPDATE KafkaMessage T SET T.status = ?2 WHERE T.status = ?3 AND T.id IN ?1")
+    int updateMessageStatusByIdListAndStatus(List<Long> idList, int status, int initStatus);
 
 }

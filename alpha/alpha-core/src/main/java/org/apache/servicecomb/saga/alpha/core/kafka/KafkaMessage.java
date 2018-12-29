@@ -38,7 +38,7 @@ public class KafkaMessage {
     private KafkaMessage() {}
 
     public KafkaMessage(String globaltxid, String localtxid, String dbdrivername, String dburl, String dbusername, String tablename, String operation, String ids) {
-        this.status = 0;
+        this.status = KafkaMessageStatus.INIT.toInteger();
         this.createtime = new Date(System.currentTimeMillis());
         this.version = 1;
         this.globaltxid = globaltxid;
@@ -52,7 +52,7 @@ public class KafkaMessage {
     }
 
     public KafkaMessage(MultiValueMap<String, String> mvm) {
-        this.status = 0;
+        this.status = KafkaMessageStatus.INIT.toInteger();
         this.createtime = new Date(System.currentTimeMillis());
         this.version = 1;
         this.globaltxid = mvm.getFirst("globaltxid");

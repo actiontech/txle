@@ -18,7 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Kafka message producer.
@@ -35,11 +37,11 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
 
     private IKafkaMessageRepository kafkaMessageRepository;
 
-    private boolean enabled;
-    private String topic;
-
     @Autowired
     IAccidentPlatformService accidentPlatformService;
+
+    private boolean enabled;
+    private String topic;
 
     KafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository, boolean enabled, String topic) {
         this.kafkaMessageRepository = kafkaMessageRepository;
@@ -58,10 +60,13 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                     messageList.forEach(msg -> {
                         idList.add(msg.getId());
                     });
-                    kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.SENDING);
-
-                    // send msg
-                    sendMessage(event, messageList, idList);
+                    // Cause current method is called in many places, and one message per globalTxId, hence, use a mutex of 'globalTxId' to avoid to send message repeatedly is planned. But, it could not work among distribution servers.
+                    // So, we take advantage of the db-lock, just one server can do update successfully for same globalTxId in distribution and concurrence case.
+                    boolean updateResult = kafkaMessageRepository.updateMessageStatusByIdListAndStatus(idList, KafkaMessageStatus.SENDING, KafkaMessageStatus.INIT);
+                    if (updateResult) {
+                        // send msg to kafka
+                        sendMessage(event, messageList, idList);
+                    }
                 }
             }
         } catch (Exception e) {

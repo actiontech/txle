@@ -39,4 +39,9 @@ public class KafkaMessageRepositoryImpl implements IKafkaMessageRepository {
         return kafkaMessageEntityRepository.updateMessageStatusByIdList(idList, messageStatus.toInteger()) > 0;
     }
 
+    @Override
+    public boolean updateMessageStatusByIdListAndStatus(List<Long> idList, KafkaMessageStatus messageStatus, KafkaMessageStatus originalStatus) {
+        return kafkaMessageEntityRepository.updateMessageStatusByIdListAndStatus(idList, messageStatus.toInteger(), originalStatus.toInteger()) > 0;
+    }
+
 }
