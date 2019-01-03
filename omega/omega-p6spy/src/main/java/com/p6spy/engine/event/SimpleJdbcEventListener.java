@@ -34,7 +34,6 @@ public abstract class SimpleJdbcEventListener extends JdbcEventListener {
    * @param statementInformation The meta information about the {@link java.sql.Statement} being invoked
    */
   public void onBeforeAnyExecute(StatementInformation statementInformation) {
-	  System.err.println("onBeforeAnyExecute eeeeeeeeeeeeeeeeeeeeeeeeeeee");
   }
 
   /**
