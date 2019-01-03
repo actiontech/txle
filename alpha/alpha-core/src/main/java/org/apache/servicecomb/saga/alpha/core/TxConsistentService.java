@@ -87,6 +87,8 @@ public class TxConsistentService {
 		boolean isPaused = isGlobalTxPaused(event.globalTxId());
 		if (!isPaused) {
 			CurrentThreadContext.put(event.globalTxId(), event);
+
+			// We could intercept this method or use the Observer Design model on it, the aim is to handle some operations around it, but apparently, it is not easy to maintain code, so we reserved this idea.
 			eventRepository.save(event);
 
 			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
