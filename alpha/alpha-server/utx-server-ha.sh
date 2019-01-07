@@ -4,7 +4,7 @@
 
 if [ $# -lt 1 ];
 then
-  echo "USAGE: $0 [start|stop|restart] [--port serverport] [--config-dir config dir] [--log log name]"
+  echo "USAGE: $0 [start|stop|restart] [--port serverport] [--rpc-port rpc port] [--metrics-port metrics port] [--config-dir config dir] [--log log name]"
   exit 1
 fi
 
@@ -17,6 +17,9 @@ SERVER_NAME=Utx
 CONF_DIR=""
 LOG_FILE=""
 SERVER_PORT=""
+ONLY_PORT=""
+RPC_PORT=""
+METRICS_PORT=""
 P_DEBUG=""
 
 for p_name in $@; do
@@ -25,16 +28,18 @@ for p_name in $@; do
 	--config-dir=*) CONF_DIR="--config-dir=$val" ;;
 	--log=*) LOG_FILE="--log=$val" ;;
 	--debug) P_DEBUG="--debug" ;;
-	--port=*) SERVER_PORT="--port=$val" ;;
+	--port=*) SERVER_PORT="--port=$val" ; ONLY_PORT="$val";;
+	--rpc-port=*) RPC_PORT="--rpc-port=$val";;
+	--metrics-port=*) METRICS_PORT="--metrics-port=$val";;
     esac
 done
 
-
+UTX_SERVICE_NAME=utx$ONLY_PORT.service
 
 start(){
-	UTX_SERVICE=/usr/lib/systemd/system/utx.service
+	UTX_SERVICE=/usr/lib/systemd/system/$UTX_SERVICE_NAME
 	if [ -f "$UTX_SERVICE" ]; then
-		# delete first and create again, the aim is load new parameters.
+		# delete first and create again, the aim is to load new parameters.
 		rm "$UTX_SERVICE"
 	fi
 
@@ -43,13 +48,13 @@ start(){
 	touch "$UTX_SERVICE"
 
 	echo "[Unit]
-	Description=utx
+	Description=utx$ONLY_PORT
 
 	[Service]
-	ExecStart=$DEPLOY_DIR/bin/utx-server.sh start $SERVER_PORT $CONF_DIR $LOG_FILE $P_DEBUG
-	ExecStop=$DEPLOY_DIR/bin/utx-server.sh stop --ha
-	ExecReload=$DEPLOY_DIR/bin/utx-server.sh restart $SERVER_PORT $CONF_DIR $LOG_FILE $P_DEBUG --ha
-	PIDFile=$DEPLOY_DIR/conf/utx_server.pid
+	ExecStart=$DEPLOY_DIR/bin/utx-server.sh start $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
+	ExecStop=$DEPLOY_DIR/bin/utx-server.sh stop $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG --ha
+	ExecReload=$DEPLOY_DIR/bin/utx-server.sh restart $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG --ha
+	PIDFile=$DEPLOY_DIR/conf/utx_server$ONLY_PORT.pid
 	Restart=always
 
 	[Install]
@@ -62,7 +67,7 @@ start(){
 
 	systemctl daemon-reload
 
-	systemctl start utx
+	systemctl start $UTX_SERVICE_NAME
 
 	echo "Starting server in a highly available way."
 	echo "Please pay more attention on this server after several seconds."
@@ -72,7 +77,7 @@ stop(){
 	echo "It will take a while to stop, please wait patiently ...."
 
 	# stop service in systemd
-	systemctl stop utx.service
+	systemctl stop $UTX_SERVICE_NAME
 
 	echo "Successfully to stop server."
 }
