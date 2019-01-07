@@ -2,7 +2,7 @@
 
 if [ $# -lt 1 ];
 then
-  echo "USAGE: $0 [start|stop|restart] [--port serverport] [--config-dir config dir] [--log log name]"
+  echo "USAGE: $0 [start|stop|restart] [--port serverport] [--rpc-port rpc port] [--metrics-port metrics port] [--config-dir config dir] [--log log name]"
   exit 1
 fi
 
@@ -29,6 +29,9 @@ LIB_DIR=$DEPLOY_DIR/lib
 CONF_DIR=$DEPLOY_DIR/conf
 LOG_FILE="$DEPLOY_DIR/log/stdout.log"
 SERVER_PORT=""
+ONLY_PORT=""
+RPC_PORT=""
+METRICS_PORT=""
 P_HA=""
 
 for p_name in $@; do
@@ -37,12 +40,14 @@ for p_name in $@; do
         --config-dir=*) CONF_DIR=$val ;;
         --log=*) LOG_FILE=$val ;;
         --debug) P_DEBUG="true" ;;
-        --port=*) SERVER_PORT="-Dserver.port=$val" ;;
+        --port=*) SERVER_PORT="-Dserver.port=$val" ; ONLY_PORT="$val";;
+        --rpc-port=*) RPC_PORT="-Dalpha.server.port=$val";;
+        --metrics-port=*) METRICS_PORT="-Dutx.prometheus.metrics.port=$val";;
         --ha) P_HA="true" ;;
     esac
 done
 
-UTXPIDFILE=$CONF_DIR/utx_server.pid
+UTXPIDFILE=$CONF_DIR/utx_server$ONLY_PORT.pid
 
 #. "$CONF_DIR/server.cfg"
 #SERVER_PORT=""
@@ -105,9 +110,9 @@ start() {
     JAVA_MEM_OPTS=" -server -Xmx2g -Xms2g -Xmn256m -XX:PermSize=128m  -XX:+DisableExplicitGC -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:LargePageSizeInBytes=128m -XX:+UseFastAccessorMethods -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70 "
 
     echo -e "Starting the $SERVER_NAME server...."
-    echo "JAVA_MEM_OPTS=$JAVA_MEM_OPTS"
+    echo "JAVA_MEM_OPTS=$JAVA_MEM_OPTS $SERVER_PORT $RPC_PORT $METRICS_PORT"
 
-    nohup java $JAVA_OPTS $JAVA_MEM_OPTS $SERVER_PORT -classpath $DEPLOY_DIR:$LIB_DIR:$CONF_DIR:$LIB_JARS $MAIN_CLASS > /dev/null 2>>$LOG_FILE &
+    nohup java $JAVA_OPTS $JAVA_MEM_OPTS $SERVER_PORT $RPC_PORT $METRICS_PORT -classpath $DEPLOY_DIR:$LIB_DIR:$CONF_DIR:$LIB_JARS $MAIN_CLASS > /dev/null 2>>$LOG_FILE &
     
     if [ $? -eq 0 ]; then
 	echo $! > "$UTXPIDFILE"
@@ -150,7 +155,7 @@ stop(){
 
     if [ "$P_HA" != "true" ]; then
         # stop service in systemd. it will give a mistake 'Job for utx.service canceled.' out when use the command 'systemctl restart utx.service'.
-        systemctl stop utx.service
+        systemctl stop utx$ONLY_PORT.service
     fi
 
     echo "stop OK!"
