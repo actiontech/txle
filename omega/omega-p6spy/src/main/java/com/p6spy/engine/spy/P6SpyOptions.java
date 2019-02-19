@@ -66,7 +66,7 @@ public class P6SpyOptions extends StandardMBean implements P6SpyLoadableOptions 
     static {
       defaults = new HashMap<String, String>();
       defaults.put(LOG_MESSAGE_FORMAT, SingleLineFormat.class.getName());
-      defaults.put(LOGFILE, "spy.log");
+      defaults.put(LOGFILE, "spy.log");// close spy log
       defaults.put(APPEND, Boolean.TRUE.toString());
       defaults.put(APPENDER, FileLogger.class.getName());
       defaults.put(MODULELIST, P6SpyFactory.class.getName() + ","+ P6LogFactory.class.getName());

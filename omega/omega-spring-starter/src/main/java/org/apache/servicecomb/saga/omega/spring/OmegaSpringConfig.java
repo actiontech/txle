@@ -17,7 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.spring;
 
-import com.p6spy.engine.monitor.UtxSqlMetrics;
+import org.apache.servicecomb.saga.omega.transaction.monitor.UtxSqlMetrics ;
 import org.apache.servicecomb.saga.omega.connector.grpc.AlphaClusterConfig;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender;
 import org.apache.servicecomb.saga.omega.context.*;
