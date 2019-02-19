@@ -1,0 +1,2 @@
+# Instancing and invoking the following implementers in order.
+org.apache.servicecomb.saga.omega.transaction.autocompensate.DefaultJdbcEventListener

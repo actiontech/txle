@@ -51,7 +51,8 @@ public class P6SpyDriver implements Driver {
 
   @Override
   public boolean acceptsURL(final String url) {
-    return url != null && url.startsWith("jdbc:p6spy:");
+//    return url != null && url.startsWith("jdbc:p6spy:");
+    return url != null && url.startsWith("jdbc:");// To reduce the modifying for the database information. By Gannalyo.
   }
 
   /**
