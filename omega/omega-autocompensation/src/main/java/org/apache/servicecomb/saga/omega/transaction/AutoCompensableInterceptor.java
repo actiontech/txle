@@ -1,10 +1,15 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
+import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
 class AutoCompensableInterceptor implements EventAwareInterceptor {
+	private static final Logger LOG = LoggerFactory.getLogger(AutoCompensableInterceptor.class);
 	private final OmegaContext context;
 	private final MessageSender sender;
 
@@ -16,8 +21,10 @@ class AutoCompensableInterceptor implements EventAwareInterceptor {
 	@Override
 	public AlphaResponse preIntercept(String parentTxId, String compensationMethod, int timeout, String retriesMethod,
 			int retries, Object... message) {
-		return sender.send(new TxStartedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod,
+		AlphaResponse response = sender.send(new TxStartedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod,
 				timeout, retriesMethod, retries, message));
+		readConfigFromServer();// read 'sqlmonitor' config before executing business sql, the aim is to monitor business sql or not.
+		return response;
 	}
 
 	@Override
@@ -33,5 +40,13 @@ class AutoCompensableInterceptor implements EventAwareInterceptor {
 
 	public Set<String> fetchLocalTxIdOfEndedGlobalTx(Set<String> localTxIdSet) {
 		return sender.send(localTxIdSet);
+	}
+
+	private void readConfigFromServer() {
+		try {
+			AutoCompensableSqlMetrics.setIsMonitorSql(sender.readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger()).getStatus());
+		} catch (Exception e) {
+			LOG.error("Failed to execute method 'readConfigFromServer'.", e);
+		}
 	}
 }

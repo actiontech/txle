@@ -9,8 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
-import java.util.Map;
-
 /**
  * Kafka producer configuration.
  *
@@ -22,23 +20,17 @@ import java.util.Map;
 @PropertySource({"classpath:kafka.properties"})
 public class KafkaProducerConfig {
 
-    @Value("${utx.kafka.enable:false}")
-    private boolean enabled;
-
     @Value("${topic:default_topic}")
     private String topic;
 
     @Bean
     public KafkaProducer<String, String> kafkaProducer() {
-        if (enabled) {
-            return new KafkaProducer<>(ConfigLoading.loadKafkaProperties(enabled));
-        }
-        return null;
+        return new KafkaProducer<>(ConfigLoading.loadKafkaProperties());
     }
 
     @Bean
     IKafkaMessageProducer kafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository) {
-        return new KafkaMessageProducer(kafkaMessageRepository, enabled, topic);
+        return new KafkaMessageProducer(kafkaMessageRepository, topic);
     }
 
     @Bean

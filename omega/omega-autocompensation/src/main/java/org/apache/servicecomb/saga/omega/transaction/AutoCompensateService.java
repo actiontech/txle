@@ -1,5 +1,6 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
 import org.apache.servicecomb.saga.common.rmi.accidentplatform.IAccidentPlatformService;
@@ -31,6 +32,9 @@ public class AutoCompensateService implements IAutoCompensateService {
     @Autowired
 	IAccidentPlatformService accidentPlatformService;
 
+    @Autowired
+	MessageSender sender;
+
 //	@Transactional(propagation = Propagation.NOT_SUPPORTED) // Propagation.NOT_SUPPORTED/REQUIRED_NEW indeed is okay, if data are not same among transactions. 
 	@Override
 	public boolean executeAutoCompensateByLocalTxId(String globalTxId, String localTxId) {
@@ -41,17 +45,19 @@ public class AutoCompensateService implements IAutoCompensateService {
             sagaUndoLogList.forEach(map -> {
 				try {
 					String[] compensateSqlArr = map.get("compensateSql").toString().split(";\n");
-					for (String compensateSql : compensateSqlArr) {
+ 					for (String compensateSql : compensateSqlArr) {
 						// TODO 依据条件查出新数据，采用probuf编码，与编码好的老数据进行对比，如果相等则继续执行，如果不等，则报差错平台，查询新数据时要先锁上数据避免查询完更新前被修改
 						boolean tempResult = autoCompensateDao.executeAutoCompensateSql(compensateSql);
 						if (tempResult) {
 							result.incrementAndGet();
 							LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Success to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 						} else {
-							// TODO 报差错平台，其余的是否继续执行？？？ TODO 手动补偿时，也需报差错平台
-							accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.ROLLBACK_ERROR, globalTxId, localTxId);
-							LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
-							throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
+							if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger()).getStatus()) {// 差错平台上报支持配置降级功能
+								// TODO 报差错平台，其余的是否继续执行？？？ TODO 手动补偿时，也需报差错平台
+								accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.ROLLBACK_ERROR, globalTxId, localTxId);
+								LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
+								throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Failed to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
+							}
 						}
 					}
 				} catch (Exception e) {

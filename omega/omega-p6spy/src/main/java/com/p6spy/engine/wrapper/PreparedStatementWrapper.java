@@ -24,8 +24,8 @@ import com.p6spy.engine.event.JdbcEventListener;
 import com.p6spy.engine.monitor.UtxSqlMetrics;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
-import org.apache.servicecomb.saga.omega.transaction.KafkaMessage;
-import org.apache.servicecomb.saga.omega.transaction.MessageSender;
+//import org.apache.servicecomb.saga.omega.transaction.KafkaMessage;
+////import org.apache.servicecomb.saga.omega.transaction.MessageSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,8 +139,8 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
       String globalTxId = CurrentThreadOmegaContext.getGlobalTxIdFromCurThread();
       String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
 
-      MessageSender messageSender = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class);
-      messageSender.reportMessageToServer(new KafkaMessage(globalTxId, localTxId, dbdrivername, dburl, dbusername, tableName, operation, ids));
+//      MessageSender messageSender = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class);
+//      messageSender.reportMessageToServer(new KafkaMessage(globalTxId, localTxId, dbdrivername, dburl, dbusername, tableName, operation, ids));
     } catch (Exception e) {
       LOG.error("Failed to execute the method 'constructBusinessInfoToServer'.", e);
     }

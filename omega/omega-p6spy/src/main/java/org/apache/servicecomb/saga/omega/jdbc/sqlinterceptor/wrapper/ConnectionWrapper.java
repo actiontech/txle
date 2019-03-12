@@ -1,8 +1,8 @@
-package org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.wrapper;
+package org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper;
 
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.CallableStatementInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.PreparedStatementInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.listener.JdbcEventListener;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.CallableStatementInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.PreparedStatementInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.listener.JdbcEventListener;
 
 import java.sql.*;
 import java.util.Map;

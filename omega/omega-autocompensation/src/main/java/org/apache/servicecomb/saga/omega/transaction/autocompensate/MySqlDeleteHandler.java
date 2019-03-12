@@ -6,7 +6,8 @@ import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.fastjson.JSON;
 import org.apache.servicecomb.saga.common.UtxConstants;
-import org.apache.servicecomb.saga.omega.transaction.monitor.UtxSqlMetrics;
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
+import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,14 +129,14 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
 
 			// start to mark duration for business sql By Gannalyo.
-			UtxSqlMetrics.startMarkSQLDurationAndCount(originalDataSql, false);
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(originalDataSql, false);
 
 			preparedStatement = delegate.getConnection().prepareStatement(originalDataSql);
 			List<Map<String, Object>> originalDataList = new ArrayList<Map<String, Object>>();
 			ResultSet dataResultSet = preparedStatement.executeQuery();
 
 			// end mark duration for maintaining sql By Gannalyo.
-			UtxSqlMetrics.endMarkSQLDuration();
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 			while (dataResultSet.next()) {
 				Map<String, Object> dataMap = new HashMap<String, Object>();

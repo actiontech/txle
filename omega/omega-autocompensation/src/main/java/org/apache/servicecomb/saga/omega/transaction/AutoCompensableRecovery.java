@@ -1,9 +1,9 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
-import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.transaction.annotations.AutoCompensable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -33,21 +33,24 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 	public Object apply(ProceedingJoinPoint joinPoint, AutoCompensable compensable,
 			AutoCompensableInterceptor interceptor, OmegaContext context, String parentTxId, int retries, IAutoCompensateService autoCompensateService)
 			throws Throwable {
-		String compensationSignature = AutoCompensableConstants.AUTO_COMPENSABLE_METHOD;
+		String compensationSignature = UtxConstants.AUTO_COMPENSABLE_METHOD;
 		try {
 			Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
 			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Intercepting autoCompensable method {} with context {}", method.toString(), context);
 
 			// String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
 			String retrySignature = "";
-
 			String localTxId = context.localTxId();
 
 			// Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
-			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true));
+			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, true));
 
 			AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
 					retrySignature, retries, joinPoint.getArgs());
+			if (!response.enabledTx()) {
+				CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, false));
+				return joinPoint.proceed();
+			}
 			if (response.aborted()) {
 				context.setLocalTxId(parentTxId);
 				throw new InvalidTransactionException(UtxConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId

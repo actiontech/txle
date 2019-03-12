@@ -5,8 +5,11 @@ import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.hotspot.DefaultExports;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
+import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -22,6 +25,9 @@ import static org.apache.servicecomb.saga.common.EventType.*;
 public class UtxMetrics extends Collector {
 
     private static final Logger LOG = LoggerFactory.getLogger(UtxMetrics.class);
+
+    @Autowired
+    IConfigCenterService dbDegradationConfigService;
 
     // TODO The value of 'Counter' will become zero after restarting current application.
     // ps: Support cluster mode, in the cluster cases, to distinguish every instance by labelNames. Please view the prometheus.yml
@@ -42,6 +48,8 @@ public class UtxMetrics extends Collector {
     // mark duration
     // To store 'globalTxId' or 'localTxId' for aborted events, it is the aim to avoid counting repeat event number. Do not need to pay more attention on restart, cluster and concurrence.
     private static final Map<String, Gauge.Timer> txIdAndGaugeTimer = new HashMap<>();
+    // Total seconds spent for someone transaction. Ps: It will show one row only if you search this metric in 'http://ip:9090/graph'.
+    // But, Prometheus will record every metric in different times, and you can search, like 'utx_transaction_time_seconds_total[5m]', then it will show many rows to you.
     private static final Gauge UTX_TRANSACTION_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_time_seconds_total", "Total seconds spent executing the global transaction.");
     private static final Gauge UTX_TRANSACTION_CHILD_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_child_time_seconds_total", "Total seconds spent executing the child transaction.");
 
@@ -54,7 +62,7 @@ public class UtxMetrics extends Collector {
     private static final Gauge UTX_SQL_TIME_SECONDS_TOTAL = buildGaugeForSql("utx_sql_time_seconds_total", "Total seconds spent executing sql.");
     private static final Counter UTX_SQL_TOTAL = buildCounterForSql("utx_sql_total", "SQL total number.");
 
-    private static boolean isEnableMonitor = false;// if the property 'utx.prometheus.metrics.port' has a valid value, then it is true. true: enable monitor, false: disable monitor
+    private static boolean isEnableMonitorServer = false;// if the property 'utx.prometheus.metrics.port' has a valid value, then it is true. true: enable monitor, false: disable monitor
 
     private static Counter buildCounter(String name, String help) {
 //        return Counter.build(name, help).labelNames(labelNames).register();// got an error in using the labelNames variable case.
@@ -82,7 +90,7 @@ public class UtxMetrics extends Collector {
                 if (metricsPort > 0) {
                     // Initialize Prometheus's Metrics Server.
                     new HTTPServer(metricsPort);// To establish the metrics server immediately without checking the port status.
-                    isEnableMonitor = true;
+                    isEnableMonitorServer = true;
                 }
             }
             this.register();
@@ -103,7 +111,8 @@ public class UtxMetrics extends Collector {
         return metricList;
     }
 
-    public static void countTxNumber(TxEvent event, boolean isTimeout, boolean isRetried) {
+    public void countTxNumber(TxEvent event, boolean isTimeout, boolean isRetried) {
+        if (!isEnableMonitor(event)) return;
         try {
             Set<String> eventTypesOfCurrentTx = globalTxIdAndTypes.get(event.globalTxId());
             if (eventTypesOfCurrentTx == null) {
@@ -154,8 +163,8 @@ public class UtxMetrics extends Collector {
         }
     }
 
-    public static void countChildTxNumber(TxEvent event) {
-        if (!isEnableMonitor) return;
+    public void countChildTxNumber(TxEvent event) {
+        if (!isEnableMonitor(event)) return;
         if (TxStartedEvent.name().equals(event.type()) && !localTxIdSet.contains(event.localTxId())) {
             UTX_TRANSACTION_CHILD_TOTAL.labels(event.serviceName(), event.category()).inc();
             localTxIdSet.add(event.localTxId());
@@ -164,8 +173,8 @@ public class UtxMetrics extends Collector {
         }
     }
 
-    public static void startMarkTxDuration(TxEvent event) {
-        if (!isEnableMonitor) return;
+    public void startMarkTxDuration(TxEvent event) {
+        if (!isEnableMonitor(event)) return;
         // Start a timer to track a duration, for the gauge with no labels. So, we must set the value of the labelNames property.
         if (SagaStartedEvent.name().equals(event.type())) {
             txIdAndGaugeTimer.put(event.globalTxId(), UTX_TRANSACTION_TIME_SECONDS_TOTAL.labels(event.serviceName(), event.category()).startTimer());
@@ -174,8 +183,8 @@ public class UtxMetrics extends Collector {
         }
     }
 
-    public static void endMarkTxDuration(TxEvent event) {
-        if (!isEnableMonitor) return;
+    public void endMarkTxDuration(TxEvent event) {
+        if (!isEnableMonitor(event)) return;
         String globalOrLocalTxId = "";
         if (SagaEndedEvent.name().equals(event.type())) {
             globalOrLocalTxId = event.globalTxId();
@@ -189,8 +198,8 @@ public class UtxMetrics extends Collector {
         }
     }
 
-    public static String startMarkSQLDurationAndCount(String sql, boolean isJpaStandard, Object[] args) {
-        if (!isEnableMonitor) return "";
+    public String startMarkSQLDurationAndCount(String sql, boolean isJpaStandard, Object[] args) {
+        if (!isEnableMonitorServer) return "";
 
         String globalTxId = null;
         TxEvent event = null;
@@ -215,19 +224,27 @@ public class UtxMetrics extends Collector {
             globalTxId = event.globalTxId();
         }
         gaugeTimer.set(UTX_SQL_TIME_SECONDS_TOTAL.labels(false + "", serviceName, category).startTimer());
-        UTX_SQL_TOTAL.labels(false + "", serviceName, category).inc();
+        if ("saga-eureka-provider1".equals(serviceName)) {
+            UTX_SQL_TOTAL.labels(false + "", serviceName, category).inc();
+            System.out.println("UTX_SQL_TOTAL = " + UTX_SQL_TOTAL);
+        }
 
         return globalTxId;
     }
 
-    public static void endMarkSQLDuration(String globalTxId) {
-        if (!isEnableMonitor) return;
+    public void endMarkSQLDuration(String globalTxId) {
+        if (!isEnableMonitorServer) return;
         Gauge.Timer timer = gaugeTimer.get();
         if (timer != null) {
             timer.setDuration();
         }
         gaugeTimer.remove();
         CurrentThreadContext.clearCache(globalTxId);
+    }
+
+    private boolean isEnableMonitor(TxEvent event) {
+        if (!isEnableMonitorServer) return false;
+        return dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.TxMonitor);
     }
 
 }

@@ -6,10 +6,11 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
-import org.apache.servicecomb.saga.omega.transaction.monitor.UtxSqlMetrics;
 import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.DataSourceMappingCache;
+import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,10 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		SQLStatement sqlStatement = parser.parseStatement();
 		if (sqlStatement instanceof MySqlSelectIntoStatement) {
 			return;
+		}
+
+		if (standbyParams == null) {
+			standbyParams = new HashMap<>();
 		}
 
 		String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();
@@ -84,13 +89,13 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		String sql = "SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL;
 
 		// start to mark duration for maintaining sql By Gannalyo.
-		UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+		ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
 
 		PreparedStatement prepareStatement = delegate.getConnection().prepareStatement(sql);
 		ResultSet resultSet = prepareStatement.executeQuery();
 
 		// end mark duration for maintaining sql By Gannalyo.
-		UtxSqlMetrics.endMarkSQLDuration();
+		ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 		Map<String, String> columnNameType = new HashMap<>();
 		while (resultSet.next()) {
@@ -104,14 +109,14 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		String primaryKeyColumnName = "id", sql = "SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL;
 
 		// start to mark duration for maintaining sql By Gannalyo.
-		UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+		ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
 
 		// So far, didn't know how to get primary-key from Druid. So, use the original way.
 		PreparedStatement ps = delegate.getConnection().prepareStatement(sql);
 		ResultSet columnResultSet = ps.executeQuery();
 
 		// end mark duration for maintaining sql By Gannalyo.
-		UtxSqlMetrics.endMarkSQLDuration();
+		ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 		while (columnResultSet.next()) {
 			if ("PRI".equalsIgnoreCase(columnResultSet.getString("Key")) && primaryKeyColumnName.length() == 0) {
@@ -178,12 +183,12 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			preparedStatement.setTimestamp(index++, currentTime);
 
 			// start to mark duration for maintaining sql By Gannalyo.
-			UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
 
 			boolean result = preparedStatement.executeUpdate() > 0;
 
 			// end mark duration for maintaining sql By Gannalyo.
-			UtxSqlMetrics.endMarkSQLDuration();
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 			return result;
 		} finally {

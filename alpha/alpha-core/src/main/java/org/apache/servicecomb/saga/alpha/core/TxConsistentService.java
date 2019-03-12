@@ -43,6 +43,9 @@ public class TxConsistentService {
   @Autowired
   private IKafkaMessageRepository kafkaMessageRepository;
 
+	@Autowired
+	UtxMetrics utxMetrics;
+
   private final List<String> types = Arrays.asList(TxStartedEvent.name(), SagaEndedEvent.name());
 
   public TxConsistentService(TxEventRepository eventRepository) {
@@ -50,16 +53,16 @@ public class TxConsistentService {
   }
 
   public boolean handle(TxEvent event) {
-	  UtxMetrics.startMarkTxDuration(event);// start duration.
+	  utxMetrics.startMarkTxDuration(event);// start duration.
 	  if (types.contains(event.type()) && isGlobalTxAborted(event)) {
 		  LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted",
 				  event.type(), event.globalTxId());
-		  UtxMetrics.endMarkTxDuration(event);// end duration.
+		  utxMetrics.endMarkTxDuration(event);// end duration.
 		  return false;
 	  }
 
 	  eventRepository.save(event);
-	  UtxMetrics.endMarkTxDuration(event);// end duration.
+	  utxMetrics.endMarkTxDuration(event);// end duration.
 
 	  return true;
   }
@@ -70,13 +73,13 @@ public class TxConsistentService {
 	 * @author Gannalyo
 	 */
 	public int handleSupportTxPause(TxEvent event) {
-		UtxMetrics.startMarkTxDuration(event);// start duration.
-		UtxMetrics.countChildTxNumber(event);// child transaction count
+		utxMetrics.startMarkTxDuration(event);// start duration.
+		utxMetrics.countChildTxNumber(event);// child transaction count
 		if (types.contains(event.type()) && isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", event.type(), event.globalTxId());
 			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
-			UtxMetrics.countTxNumber(event, false, isRetried);
-			UtxMetrics.endMarkTxDuration(event);// end duration.
+			utxMetrics.countTxNumber(event, false, isRetried);
+			utxMetrics.endMarkTxDuration(event);// end duration.
 			return -1;
 		}
 
@@ -92,8 +95,8 @@ public class TxConsistentService {
 			eventRepository.save(event);
 
 			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
-			UtxMetrics.countTxNumber(event, false, isRetried);
-			UtxMetrics.endMarkTxDuration(event);// end duration.
+			utxMetrics.countTxNumber(event, false, isRetried);
+			utxMetrics.endMarkTxDuration(event);// end duration.
 
 			// To send message to Kafka.
 			kafkaMessageProducer.send(event);
@@ -101,7 +104,7 @@ public class TxConsistentService {
 			return 1;
 		}
 
-		UtxMetrics.endMarkTxDuration(event);// end duration.
+		utxMetrics.endMarkTxDuration(event);// end duration.
 
 		return 0;
 	}

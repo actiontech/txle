@@ -17,6 +17,8 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
+
 import java.util.Set;
 
 public interface MessageSender {
@@ -33,4 +35,6 @@ public interface MessageSender {
   Set<String> send(Set<String> localTxIdSet);
 
   String reportMessageToServer(KafkaMessage message);
+
+  GrpcConfigAck readConfigFromServer(int type);
 }

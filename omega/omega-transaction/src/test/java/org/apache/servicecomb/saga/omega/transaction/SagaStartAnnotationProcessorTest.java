@@ -36,6 +36,7 @@ import javax.transaction.TransactionalException;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.omega.context.IdGenerator;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
+import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -78,6 +79,11 @@ public class SagaStartAnnotationProcessorTest {
     @Override
     public String reportMessageToServer(KafkaMessage message) {
       return "";
+    }
+
+    @Override
+    public GrpcConfigAck readConfigFromServer(int type) {
+      return null;
     }
   };
 

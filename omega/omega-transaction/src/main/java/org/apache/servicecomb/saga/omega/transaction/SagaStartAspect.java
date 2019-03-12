@@ -17,9 +17,6 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
-
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.annotations.SagaStart;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -28,6 +25,9 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 
 @Aspect
 public class SagaStartAspect {
@@ -44,13 +44,17 @@ public class SagaStartAspect {
 
   @Around("execution(@org.apache.servicecomb.saga.omega.context.annotations.SagaStart * *(..)) && @annotation(sagaStart)")
   Object advise(ProceedingJoinPoint joinPoint, SagaStart sagaStart) throws Throwable {
-    initializeOmegaContext(sagaStart);
-    Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
-
-    sagaStartAnnotationProcessor.preIntercept(context.globalTxId(), method.toString(), sagaStart.timeout(), "", 0);
-    LOG.debug("Initialized context {} before execution of method {}", context, method.toString());
-
+    Method method = null;
     try {
+      initializeOmegaContext(sagaStart);
+      method = ((MethodSignature) joinPoint.getSignature()).getMethod();
+
+      AlphaResponse alphaResponse = sagaStartAnnotationProcessor.preIntercept(context.globalTxId(), method.toString(), sagaStart.timeout(), "", 0);
+      LOG.debug("Initialized context {} before execution of method {}", context, method.toString());
+      if (!alphaResponse.enabledTx()) {
+        return joinPoint.proceed();
+      }
+
       Object result = joinPoint.proceed();
 
       sagaStartAnnotationProcessor.postIntercept(context.globalTxId(), method.toString());
@@ -60,9 +64,13 @@ public class SagaStartAspect {
     } catch (Throwable throwable) {
       // We don't need to handle the OmegaException here
       if (!(throwable instanceof OmegaException)) {
-        sagaStartAnnotationProcessor.onError(context.globalTxId(), method.toString(), throwable);
+        sagaStartAnnotationProcessor.onError(context.globalTxId(), method == null ? null : method.toString(), throwable);
         LOG.error("Transaction {} failed.", context.globalTxId());
       }
+      // TODO
+//      if (enabled) {// fault degradation
+//        return joinPoint.proceed();
+//      }
       throw throwable;
     } finally {
       context.clear();

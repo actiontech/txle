@@ -1,8 +1,8 @@
-package org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.listener;
+package org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.listener;
 
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.CallableStatementInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.PreparedStatementInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.ResultSetInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.CallableStatementInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.PreparedStatementInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.ResultSetInformation;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -72,7 +72,7 @@ public abstract class JdbcEventListener {
     }
 
     public void onAfterExecuteUpdateWithParams(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos,
-                                               int rowCount, SQLException e, Map<JdbcEventListener, Object> listenerParams) throws SQLException {
+                                               int rowCount, SQLException e, Map<JdbcEventListener, Object> listenerParams) {
     }
 
     public void onBeforeExecuteUpdate(String sql) {

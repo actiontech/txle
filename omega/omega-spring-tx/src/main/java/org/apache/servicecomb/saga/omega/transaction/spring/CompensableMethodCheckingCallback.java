@@ -17,16 +17,16 @@
 
 package org.apache.servicecomb.saga.omega.transaction.spring;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
-
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.CompensationContext;
-import org.apache.servicecomb.saga.omega.transaction.AutoCompensableConstants;
 import org.apache.servicecomb.saga.omega.transaction.OmegaException;
 import org.apache.servicecomb.saga.omega.transaction.annotations.Compensable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ReflectionUtils.MethodCallback;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 
 class CompensableMethodCheckingCallback implements MethodCallback {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -44,7 +44,7 @@ class CompensableMethodCheckingCallback implements MethodCallback {
   public void doWith(Method method) throws IllegalArgumentException {
     if (!method.isAnnotationPresent(Compensable.class)) {
     	// for auto-compensation By Gannalyo
-    	if (AutoCompensableConstants.AUTO_COMPENSABLE_METHOD.equals(method.toString())) {
+    	if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(method.toString())) {
     		compensationContext.addCompensationContext(method, bean);
     	}
     	return;
