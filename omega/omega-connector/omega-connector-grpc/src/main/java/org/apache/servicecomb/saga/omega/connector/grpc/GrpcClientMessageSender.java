@@ -34,6 +34,7 @@ import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEvent
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceStub;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class GrpcClientMessageSender implements MessageSender {
@@ -110,8 +111,8 @@ public class GrpcClientMessageSender implements MessageSender {
 			break;
 		}
 	}
-    
-    return new AlphaResponse(grpcAck.getAborted(), grpcAck.getPaused());// To append the pause status for global transaction By Gannalyo
+
+    return new AlphaResponse(grpcAck.getAborted(), grpcAck.getPaused(), grpcAck.getIsEnabledTx());// To append the pause status for global transaction By Gannalyo
   }
 
   @Override
@@ -149,6 +150,11 @@ public class GrpcClientMessageSender implements MessageSender {
             .setLocaltxid(message.getLocaltxid())
             .build();
     return blockingEventService.onMessage(grpcMessage).getStatus() + "";
+  }
+
+  @Override
+  public GrpcConfigAck readConfigFromServer(int type) {
+    return blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setType(type).build());
   }
 
   private GrpcTxEvent convertEvent(TxEvent event) {

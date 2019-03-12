@@ -17,11 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
-
-import javax.transaction.InvalidTransactionException;
-
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
@@ -30,6 +26,10 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.transaction.InvalidTransactionException;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 
 /**
  * DefaultRecovery is used to execute business logic once.
@@ -59,10 +59,13 @@ public class DefaultRecovery implements RecoveryPolicy {
     String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
 
     // Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
-    CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, false));
+    CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, false, false));
 
     AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
         retrySignature, retries, joinPoint.getArgs());
+    if (!response.enabledTx()) {
+      return joinPoint.proceed();
+    }
     if (response.aborted()) {
       String abortedLocalTxId = context.localTxId();
       context.setLocalTxId(parentTxId);

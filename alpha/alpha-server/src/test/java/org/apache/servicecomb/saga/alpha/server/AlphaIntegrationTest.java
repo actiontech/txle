@@ -45,14 +45,7 @@ import java.util.function.Consumer;
 import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLException;
 
-import org.apache.servicecomb.saga.alpha.core.CommandRepository;
-import org.apache.servicecomb.saga.alpha.core.EventScanner;
-import org.apache.servicecomb.saga.alpha.core.OmegaCallback;
-import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
-import org.apache.servicecomb.saga.alpha.core.TxEvent;
-import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
-import org.apache.servicecomb.saga.alpha.core.TxTimeout;
-import org.apache.servicecomb.saga.alpha.core.TxTimeoutRepository;
+import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcAck;
@@ -137,6 +130,9 @@ public class AlphaIntegrationTest {
 
   @Autowired
   private IKafkaMessageProducer kafkaMessageProducer;
+
+  @Autowired
+  UtxMetrics utxMetrics;
 
   @Autowired
   private TxConsistentService consistentService;
@@ -616,6 +612,7 @@ public class AlphaIntegrationTest {
         timeoutRepository,
         omegaCallback,
         kafkaMessageProducer,
+        utxMetrics,
         1).run();
   }
 }

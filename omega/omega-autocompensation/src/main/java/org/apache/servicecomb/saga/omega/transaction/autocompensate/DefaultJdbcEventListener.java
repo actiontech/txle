@@ -2,14 +2,14 @@ package org.apache.servicecomb.saga.omega.transaction.autocompensate;
 
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.CallableStatementInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.PreparedStatementInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.ResultSetInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.listener.JdbcEventListener;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.PreparedStatementWrapper;
 import org.apache.servicecomb.saga.omega.transaction.KafkaMessage;
 import org.apache.servicecomb.saga.omega.transaction.MessageSender;
-import org.apache.servicecomb.saga.omega.transaction.monitor.UtxSqlMetrics;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.CallableStatementInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.PreparedStatementInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.ResultSetInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.listener.JdbcEventListener;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.wrapper.PreparedStatementWrapper;
+import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DefaultJdbcEventListener extends JdbcEventListener {
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultJdbcEventListener.class);
 
     @Override
     public void onBeforeGetConnection() {
@@ -81,23 +82,41 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
 
     @Override
     public void onBeforeExecuteUpdate(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation) {
-        System.out.println(this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).");
+        try {
+            if (CurrentThreadOmegaContext.isAutoCompensate()) {
+                // before advise for executing SQL By Gannalyo.
+                if (CurrentThreadOmegaContext.isEnabledAutoCompensateTx()) {
+                    AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), true, null);
+                }
+
+                // start to mark duration for business sql By Gannalyo.
+                ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(preparedStatementInformation.getSqlWithValues(), true);
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to execute method " + this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).", e);
+        }
     }
 
     @Override
     public Object onBeforeExecuteUpdateWithReturnValue(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation) throws SQLException {
-        System.out.println(this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).");
+        try {
+            System.err.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            if (CurrentThreadOmegaContext.isAutoCompensate()) {
+                // before advise for executing SQL By Gannalyo.
+                Map<String, Object> standbyParams = new HashMap<>();
+                if (CurrentThreadOmegaContext.isEnabledAutoCompensateTx()) {
+                    AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), true, standbyParams);
+                }
 
-        // before advise for executing SQL By Gannalyo.
-        Map<String, Object> standbyParams = new HashMap<>();
-        if (CurrentThreadOmegaContext.isAutoCompensate()) {
-            AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), true, standbyParams);
+                // start to mark duration for business sql By Gannalyo.
+                ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(preparedStatementInformation.getSqlWithValues(), true);
+
+                return standbyParams;
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to execute method " + this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).", e);
         }
-
-        // start to mark duration for business sql By Gannalyo.
-        UtxSqlMetrics.startMarkSQLDurationAndCount(preparedStatementInformation.getSqlWithValues(), true);
-
-        return standbyParams;
+        return null;
     }
 
     @Override
@@ -112,25 +131,30 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
 
     @Override
     public void onAfterExecuteUpdateWithParams(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos,
-                                               int rowCount, SQLException e, Map<JdbcEventListener, Object> listenerParams) throws SQLException {
-        System.out.println(this.getClass() + " - onAfterExecuteUpdateWithParams(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos, int rowCount, SQLException e, Object params).");
+                                               int rowCount, SQLException e, Map<JdbcEventListener, Object> listenerParams) {
+        try {
+            // after advise for executing SQL By Gannalyo.
+            if (CurrentThreadOmegaContext.isAutoCompensate()) {
+                // end mark duration for business sql By Gannalyo.
+                ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
-        Map<String, Object> standbyParams = null;
-        if (listenerParams != null) {
-            Object params = listenerParams.get(this);
-            if (params != null) {
-                standbyParams = (Map<String, Object>) params;
+                if (CurrentThreadOmegaContext.isEnabledAutoCompensateTx()) {
+                    Map<String, Object> standbyParams = null;
+                    if (listenerParams != null) {
+                        Object params = listenerParams.get(this);
+                        if (params != null) {
+                            standbyParams = (Map<String, Object>) params;
+                        }
+                    }
+
+                    AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), false, standbyParams);
+
+                    // To construct business information, and then report to the UTX Server.
+                    constructBusinessInfoToServer(standbyParams);
+                }
             }
-        }
-        // end mark duration for business sql By Gannalyo.
-        UtxSqlMetrics.endMarkSQLDuration();
-
-        // after advise for executing SQL By Gannalyo.
-        if (CurrentThreadOmegaContext.isAutoCompensate()) {
-            AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), false, standbyParams);
-
-            // To construct business information, and then report to the UTX Server.
-            constructBusinessInfoToServer(standbyParams);
+        } catch (Exception ex) {
+            LOG.error("Failed to execute method " + this.getClass() + " - onAfterExecuteUpdateWithParams(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos, int rowCount, SQLException e, Object params).", ex);
         }
     }
 
@@ -242,8 +266,8 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
             String globalTxId = CurrentThreadOmegaContext.getGlobalTxIdFromCurThread();
             String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
 
-//            MessageSender messageSender = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class);
-//            messageSender.reportMessageToServer(new KafkaMessage(globalTxId, localTxId, dbdrivername, dburl, dbusername, tableName, operation, ids));
+            MessageSender messageSender = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class);
+            messageSender.reportMessageToServer(new KafkaMessage(globalTxId, localTxId, dbdrivername, dburl, dbusername, tableName, operation, ids));
         } catch (Exception e) {
             LOG.error("Failed to execute the method 'constructBusinessInfoToServer'.", e);
         }

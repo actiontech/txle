@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.apache.servicecomb.saga.pack.contract.grpc";
+option java_outer_classname = "ConfigProto";
+
+message GrpcConfigAck {
+  bool status = 1;
+  int64 interval = 2;
+  bool accidentreport = 3;
+  bool sqlmonitor = 4;
+}
+
+message GrpcConfig {
+  string serviceName = 1;
+  string instanceId = 2;
+  string category = 3;
+  int32 type = 4;
+}

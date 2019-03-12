@@ -17,14 +17,15 @@
 
 package org.apache.servicecomb.saga.omega.context;
 
+import org.apache.servicecomb.saga.common.UtxConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CompensationContext {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -48,7 +49,7 @@ public class CompensationContext {
     String oldLocalTxId= omegaContext.localTxId();
     try {
     	// for auto-compensation By Gannalyo
-    	if ("public boolean org.apache.servicecomb.saga.omega.transaction.AutoCompensateService.executeAutoCompensateByLocalTxId(java.lang.String,java.lang.String)".equals(compensationMethod)) {
+    	if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(compensationMethod)) {
     		contextInternal.compensationMethod.invoke(contextInternal.target, globalTxId, localTxId);
     		return;
     	}

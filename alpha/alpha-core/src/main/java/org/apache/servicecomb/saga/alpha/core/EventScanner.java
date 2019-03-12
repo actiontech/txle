@@ -40,6 +40,7 @@ public class EventScanner implements Runnable {
   private final TxTimeoutRepository timeoutRepository;
   private final OmegaCallback omegaCallback;
   private IKafkaMessageProducer kafkaMessageProducer;
+  private UtxMetrics utxMetrics;
 
   private final int eventPollingInterval;
 
@@ -52,6 +53,7 @@ public class EventScanner implements Runnable {
       TxTimeoutRepository timeoutRepository,
       OmegaCallback omegaCallback,
       IKafkaMessageProducer kafkaMessageProducer,
+      UtxMetrics utxMetrics,
       int eventPollingInterval) {
     this.scheduler = scheduler;
     this.eventRepository = eventRepository;
@@ -59,6 +61,7 @@ public class EventScanner implements Runnable {
     this.timeoutRepository = timeoutRepository;
     this.omegaCallback = omegaCallback;
     this.kafkaMessageProducer = kafkaMessageProducer;
+    this.utxMetrics = utxMetrics;
     this.eventPollingInterval = eventPollingInterval;
   }
 
@@ -156,7 +159,7 @@ public class EventScanner implements Runnable {
       eventRepository.save(event);
 
       boolean isRetried = eventRepository.checkIsRetiredEvent(event.type());
-      UtxMetrics.countTxNumber(event, true, isRetried);
+      utxMetrics.countTxNumber(event, true, isRetried);
 
       if (timeout.type().equals(TxStartedEvent.name())) {
         eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())

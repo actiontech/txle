@@ -5,6 +5,8 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.RetriableException;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
+import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
@@ -18,9 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Kafka message producer.
@@ -40,18 +40,20 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     @Autowired
     IAccidentPlatformService accidentPlatformService;
 
-    private boolean enabled;
+    @Autowired
+    IConfigCenterService dbDegradationConfigService;
+
     private String topic;
 
-    KafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository, boolean enabled, String topic) {
+    KafkaMessageProducer(IKafkaMessageRepository kafkaMessageRepository, String topic) {
         this.kafkaMessageRepository = kafkaMessageRepository;
-        this.enabled = enabled;
         this.topic = topic;
     }
 
     @Override
     public void send(TxEvent event) {
         try {
+            boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.BizInfoToKafka);
             if (enabled && EventType.SagaEndedEvent.name().equals(event.type())) {
                 List<KafkaMessage> messageList = kafkaMessageRepository.findMessageListByGlobalTxId(event.globalTxId(), KafkaMessageStatus.INIT.toInteger());
                 if (messageList != null && !messageList.isEmpty()) {
@@ -89,8 +91,11 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                     } else {
                         LOG.error("Unsuccessfully to send Kafka message without retries - globalTxId = [{}].", event.globalTxId(), exception);
                     }
-                    // To report message to Accident Platform.
-                    accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.SEND_MESSAGE_ERROR, event.globalTxId(), event.localTxId());
+                    boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.AccidentReport);
+                    if (enabled) {
+                        // To report message to Accident Platform.
+                        accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.SEND_MESSAGE_ERROR, event.globalTxId(), event.localTxId());
+                    }
 
                     // To update message's status to 'failed'.
                     kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.FAILED);

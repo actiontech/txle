@@ -35,6 +35,7 @@ import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.omega.context.IdGenerator;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.annotations.Compensable;
+import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.Before;
@@ -99,6 +100,11 @@ public class DefaultRecoveryTest {
     @Override
     public String reportMessageToServer(KafkaMessage message) {
       return "";
+    }
+
+    @Override
+    public GrpcConfigAck readConfigFromServer(int type) {
+      return null;
     }
   };
 

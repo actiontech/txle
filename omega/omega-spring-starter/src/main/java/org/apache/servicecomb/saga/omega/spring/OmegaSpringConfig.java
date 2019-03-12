@@ -17,14 +17,16 @@
 
 package org.apache.servicecomb.saga.omega.spring;
 
-import org.apache.servicecomb.saga.omega.transaction.monitor.UtxSqlMetrics ;
 import org.apache.servicecomb.saga.omega.connector.grpc.AlphaClusterConfig;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender;
 import org.apache.servicecomb.saga.omega.context.*;
 import org.apache.servicecomb.saga.omega.format.KryoMessageFormat;
 import org.apache.servicecomb.saga.omega.format.MessageFormat;
+import org.apache.servicecomb.saga.omega.transaction.CommonPrometheusMetrics;
 import org.apache.servicecomb.saga.omega.transaction.MessageHandler;
 import org.apache.servicecomb.saga.omega.transaction.MessageSender;
+import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
+import org.apache.servicecomb.saga.omega.transaction.monitor.CompensableSqlMetrics;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -60,8 +62,18 @@ class OmegaSpringConfig {
   }
 
   @Bean
-  public UtxSqlMetrics utxMetrics() {
-    return new UtxSqlMetrics(promMetricsPort);
+  CommonPrometheusMetrics commonPrometheusMetrics() {
+    return new CommonPrometheusMetrics(promMetricsPort);
+  }
+
+  @Bean
+  CompensableSqlMetrics compensableSqlMetrics() {
+    return new CompensableSqlMetrics(promMetricsPort);
+  }
+
+  @Bean
+  AutoCompensableSqlMetrics autoCompensableSqlMetrics() {
+    return new AutoCompensableSqlMetrics(promMetricsPort);
   }
 
   @Bean
@@ -98,4 +110,5 @@ class OmegaSpringConfig {
     }));
     return sender;
   }
+
 }

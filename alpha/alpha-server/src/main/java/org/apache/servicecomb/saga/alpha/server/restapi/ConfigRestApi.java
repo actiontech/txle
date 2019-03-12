@@ -6,7 +6,6 @@ import org.apache.servicecomb.saga.alpha.server.ConfigLoading;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaMessageProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
@@ -15,35 +14,28 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class ConfigRestApi {
-	private static final Logger LOG = LoggerFactory.getLogger(ConfigRestApi.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ConfigRestApi.class);
 
-	@Value("${utx.kafka.enable:false}")
-	private boolean enabled;
+    @GetMapping("/reloadConfig/kafka")
+    public String reloadKafkaConfig() {
+        return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class, "kafkaProducer", new KafkaProducer<>(ConfigLoading.loadKafkaProperties()));
+    }
 
-	@GetMapping("/reloadConfig/kafka")
-	public String reloadKafkaConfig() {
-		KafkaProducer<Object, Object> kafkaProducer = null;
-		if (enabled) {
-			kafkaProducer = new KafkaProducer<>(ConfigLoading.loadKafkaProperties(enabled));
-		}
-		return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class,"kafkaProducer", kafkaProducer);
-	}
+    @GetMapping("/reloadConfig/db")
+    public String reloadDBConfig() {
+        return "ok";
+    }
 
-	@GetMapping("/reloadConfig/db")
-	public String reloadDBConfig() {
-		return "ok";
-	}
+    @GetMapping("/reloadConfig")
+    public String reloadAllConfig() {
+        reloadKafkaConfig();
+        reloadDBConfig();
+        return "ok";
+    }
 
-	@GetMapping("/reloadConfig")
-	public String reloadAllConfig() {
-		reloadKafkaConfig();
-		reloadDBConfig();
-		return "ok";
-	}
-
-	// To inject new value for some property to some bean again.
-	private String reInjectPropertyToBean(String beanName, Class clazz, String propertyName, Object propertyValue) {
-	    try {
+    // To inject new value for some property to some bean again.
+    private String reInjectPropertyToBean(String beanName, Class clazz, String propertyName, Object propertyValue) {
+        try {
             ApplicationContext ctx = ApplicationContextUtil.getApplicationContext();
             DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) ctx.getAutowireCapableBeanFactory();
             BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(clazz);
@@ -51,7 +43,7 @@ public class ConfigRestApi {
             defaultListableBeanFactory.registerBeanDefinition(beanName, beanDefinitionBuilder.getBeanDefinition());
             return Boolean.TRUE.toString();
         } catch (Exception e) {
-	        LOG.error("Failed to execute method 'reInjectPropertyToBean', beanName - " + beanName + ".", e);
+            LOG.error("Failed to execute method 'reInjectPropertyToBean', beanName - " + beanName + ".", e);
         }
         return Boolean.FALSE.toString();
     }

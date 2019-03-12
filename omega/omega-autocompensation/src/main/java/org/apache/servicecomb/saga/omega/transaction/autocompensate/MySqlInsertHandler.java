@@ -3,7 +3,8 @@ package org.apache.servicecomb.saga.omega.transaction.autocompensate;
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import org.apache.servicecomb.saga.common.UtxConstants;
-import org.apache.servicecomb.saga.omega.transaction.monitor.UtxSqlMetrics;
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
+import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,12 +66,12 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			String compensateSql = constructCompensateSql(delegate, insertStatement, tableName, newDataList);
 
 			// start to mark duration for business sql By Gannalyo.
-			UtxSqlMetrics.startMarkSQLDurationAndCount(compensateSql, false);
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
 
 			boolean result = this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
 
 			// end mark duration for maintaining sql By Gannalyo.
-			UtxSqlMetrics.endMarkSQLDuration();
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 			return  result;
 		} catch (SQLException e) {
@@ -133,7 +134,7 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 //			dataResultSet = delegate.getResultSet();// it's result is null.
 
 			// start to mark duration for business sql By Gannalyo.
-			UtxSqlMetrics.startMarkSQLDurationAndCount(sql, false);
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
 
 			String[] params = new String[2 + primaryKeyValues.size()];
 			params[0] = tableName;
@@ -145,7 +146,7 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			dataResultSet = preparedStatement.executeQuery();
 
 			// end mark duration for maintaining sql By Gannalyo.
-			UtxSqlMetrics.endMarkSQLDuration();
+			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 			List<Map<String, Object>> newDataList = new ArrayList<>();
 			while (dataResultSet.next()) {

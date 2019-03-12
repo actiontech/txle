@@ -18,7 +18,11 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import org.apache.servicecomb.saga.alpha.core.*;
+import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
+import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
+import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityRepository;
+import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
 import org.springframework.beans.factory.annotation.Value;
@@ -79,6 +83,14 @@ class AlphaConfig {
   GrpcServerConfig grpcServerConfig() { return new GrpcServerConfig(); }
 
   @Bean
+  IConfigCenterService dbDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) { return new DBDegradationConfigService(configCenterEntityRepository); }
+
+  @Bean
+  UtxJpaRepositoryInterceptor utxJpaRepositoryInterceptor() {
+    return new UtxJpaRepositoryInterceptor();
+  }
+
+  @Bean
   TxConsistentService txConsistentService(
       @Value("${alpha.event.pollingInterval:500}") int eventPollingInterval,
       GrpcServerConfig serverConfig,
@@ -88,24 +100,26 @@ class AlphaConfig {
       TxTimeoutRepository timeoutRepository,
       OmegaCallback omegaCallback,
       Map<String, Map<String, OmegaCallback>> omegaCallbacks,
-      IKafkaMessageProducer kafkaMessageProducer) {
+      IKafkaMessageProducer kafkaMessageProducer,
+      IConfigCenterService dbDegradationConfigService,
+      UtxMetrics utxMetrics) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
-        omegaCallback, kafkaMessageProducer, eventPollingInterval).run();
+        omegaCallback, kafkaMessageProducer, utxMetrics, eventPollingInterval).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository);
 
-    ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks);
+    ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService);
     new Thread(startable::start).start();
 
     return consistentService;
   }
 
   private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService,
-      Map<String, Map<String, OmegaCallback>> omegaCallbacks) {
+                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService) {
     return new GrpcStartable(serverConfig,
-        new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks));
+        new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService));
   }
   
   public TransactionRestApi transactionRestApi(TxConsistentService txConsistentService) {
@@ -115,6 +129,11 @@ class AlphaConfig {
   @Bean
   public UtxMetrics utxMetrics() {
     return new UtxMetrics(promMetricsPort);
+  }
+
+  @Bean
+  public DegradationConfigAspect degradationConfigAspect() {
+    return new DegradationConfigAspect();
   }
 
   @PostConstruct

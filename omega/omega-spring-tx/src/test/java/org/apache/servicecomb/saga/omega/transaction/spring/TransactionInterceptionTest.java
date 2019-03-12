@@ -47,6 +47,7 @@ import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.*;
 import org.apache.servicecomb.saga.omega.transaction.spring.TransactionInterceptionTest.MessageConfig;
 import org.apache.servicecomb.saga.omega.transaction.spring.annotations.OmegaContextAware;
+import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -453,6 +454,11 @@ public class TransactionInterceptionTest {
         @Override
         public String reportMessageToServer(KafkaMessage message) {
           return "";
+        }
+
+        @Override
+        public GrpcConfigAck readConfigFromServer(int type) {
+          return null;
         }
       };
     }

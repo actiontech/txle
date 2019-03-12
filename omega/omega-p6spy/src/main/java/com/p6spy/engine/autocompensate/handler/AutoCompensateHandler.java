@@ -9,7 +9,7 @@ import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
 import com.p6spy.engine.monitor.UtxSqlMetrics;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.common.UtxConstants;
-import org.apache.servicecomb.saga.omega.transaction.DataSourceMappingCache;
+//import org.apache.servicecomb.saga.omega.jdbc.DataSourceMappingCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +52,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		// To set a relationship between localTxId and datSourceInfo, in order to determine to use the relative dataSource for localTxId when it need be compensated.
 		DatabaseMetaData databaseMetaData = delegate.getConnection().getMetaData();
 		String dburl = databaseMetaData.getURL(), dbusername = databaseMetaData.getUserName(), dbdrivername = databaseMetaData.getDriverName();
-		DataSourceMappingCache.putLocalTxIdAndDataSourceInfo(localTxId, dburl, dbusername, dbdrivername);
+//		DataSourceMappingCache.putLocalTxIdAndDataSourceInfo(localTxId, dburl, dbusername, dbdrivername);
 		// To construct kafka message.
 		standbyParams.put("dbdrivername", dbdrivername);
 		standbyParams.put("dburl", dburl);

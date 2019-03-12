@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.servicecomb.saga.omega.transaction.*;
+import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 
 public class RetryableMessageSender implements MessageSender {
   private final BlockingQueue<MessageSender> availableMessageSenders;
@@ -78,6 +79,15 @@ public class RetryableMessageSender implements MessageSender {
       return availableMessageSenders.take().reportMessageToServer(message);
     } catch (InterruptedException e) {
       throw new OmegaException("Failed to report kafka message " + message + " due to interruption", e);
+    }
+  }
+
+  @Override
+  public GrpcConfigAck readConfigFromServer(int type) {
+    try {
+      return availableMessageSenders.take().readConfigFromServer(type);
+    } catch (InterruptedException e) {
+      throw new OmegaException("Failed to read config (type = " + type + ") from server.", e);
     }
   }
 }

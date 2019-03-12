@@ -1,6 +1,7 @@
 package org.apache.servicecomb.saga.alpha.core;
 
 import org.aopalliance.intercept.MethodInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.support.JpaRepositoryFactory;
 import org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean;
@@ -14,10 +15,13 @@ public class UtxJpaRepositoryProxyFactory<R extends JpaRepository<T, I>, T, I ex
         super(repositoryInterface);
     }
 
+    @Autowired
+    UtxJpaRepositoryInterceptor utxJpaRepositoryInterceptor;
+
     protected RepositoryFactorySupport createRepositoryFactory(EntityManager entityManager) {
         try {
             JpaRepositoryFactory jpaFac = new JpaRepositoryFactory(entityManager);
-            jpaFac.addRepositoryProxyPostProcessor((proxyFactory, repositoryInformation) -> proxyFactory.addAdvice((MethodInterceptor) methodInvocation -> UtxJpaRepositoryInterceptor.doFilter(methodInvocation)));
+            jpaFac.addRepositoryProxyPostProcessor((proxyFactory, repositoryInformation) -> proxyFactory.addAdvice((MethodInterceptor) methodInvocation -> utxJpaRepositoryInterceptor.doFilter(methodInvocation)));
             return jpaFac;
         } catch (Exception e) {
             return super.createRepositoryFactory(entityManager);

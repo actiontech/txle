@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.omega.context.CompensationContext;
+import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -69,6 +70,11 @@ public class CompensationMessageHandlerTest {
     @Override
     public String reportMessageToServer(KafkaMessage message) {
       return "";
+    }
+
+    @Override
+    public GrpcConfigAck readConfigFromServer(int type) {
+      return null;
     }
   };
 

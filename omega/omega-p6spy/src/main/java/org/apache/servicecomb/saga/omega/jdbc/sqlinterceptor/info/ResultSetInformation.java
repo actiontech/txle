@@ -1,4 +1,4 @@
-package org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info;
+package org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

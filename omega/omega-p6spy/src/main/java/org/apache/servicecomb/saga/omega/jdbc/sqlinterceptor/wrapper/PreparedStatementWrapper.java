@@ -1,8 +1,8 @@
-package org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.wrapper;
+package org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper;
 
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.PreparedStatementInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.info.ResultSetInformation;
-import org.apache.servicecomb.saga.omega.transaction.sqlinterceptor.listener.JdbcEventListener;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.PreparedStatementInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.ResultSetInformation;
+import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.listener.JdbcEventListener;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -59,7 +59,9 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
         int rowCount = 0;
         Map<JdbcEventListener, Object> listenerParams = null;
         try {
-            listenerParams = (Map<JdbcEventListener, Object>) eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, preparedStatementInformation);
+            listenerParams = null;//(Map<JdbcEventListener, Object>) eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, preparedStatementInformation);
+            // 函数onBeforeExecuteUpdateWithReturnValue有返回值，导致在CompoundJdbcEventListener.onBeforeExecuteUpdateWithReturnValue中调用时仅执行了手动补偿中的对应方法，自动补偿中的对应方法无法被执行，去掉返回值可正常执行
+            eventListener.onBeforeExecuteUpdate(preparedStatement, preparedStatementInformation);
 
             rowCount = preparedStatement.executeUpdate();
 

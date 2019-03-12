@@ -26,6 +26,9 @@ public class TransactionRestApi {
 
 	@Autowired
 	private HttpServletRequest request;
+
+	@Autowired
+	UtxMetrics utxMetrics;
 	
 	public TransactionRestApi(TxConsistentService txConsistentService) {
 		this.txConsistentService = txConsistentService;
@@ -154,7 +157,7 @@ public class TransactionRestApi {
 
 		TxEvent event = new TxEvent(ip_port, ip_port, globalTxId, txEvent.localTxId(), txEvent.parentTxId(), eventTypeName, "", pausePeriod, "", 0, txEvent.category(), null);
 		eventRepository.save(event);
-		UtxMetrics.countTxNumber(event, false, false);
+		utxMetrics.countTxNumber(event, false, false);
 
 		return "ok";
 	}

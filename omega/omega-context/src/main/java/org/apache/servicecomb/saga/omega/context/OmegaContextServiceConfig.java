@@ -7,7 +7,8 @@ public class OmegaContextServiceConfig extends OmegaContext {
     // Do not need think about concurrency situation, due to they're one-to-one with current application.
     private String serviceName;
     private String instanceId;
-    private boolean isAutoCompensate;
+    private boolean isAutoCompensate;// compensation or auto-compensation
+    private boolean isEnabledAutoCompensateTx;// true: record undo_log, otherwise do nothing, just for auto-compensation.
 
     public void setServiceName(String serviceName) {
         this.serviceName = serviceName;
@@ -30,7 +31,15 @@ public class OmegaContextServiceConfig extends OmegaContext {
     }
 
     public void setAutoCompensate(boolean autoCompensate) {
-        isAutoCompensate = autoCompensate;
+        this.isAutoCompensate = autoCompensate;
+    }
+
+    public boolean isEnabledAutoCompensateTx() {
+        return isEnabledAutoCompensateTx;
+    }
+
+    public void setIsEnabledAutoCompensateTx(boolean isEnabledAutoCompensateTx) {
+        this.isEnabledAutoCompensateTx = isEnabledAutoCompensateTx;
     }
 
     public OmegaContextServiceConfig(IdGenerator<String> idGenerator) {
@@ -44,12 +53,13 @@ public class OmegaContextServiceConfig extends OmegaContext {
         this.setCategory(context.category());
     }
 
-    public OmegaContextServiceConfig(OmegaContext context, boolean isAutoCompensate) {
+    public OmegaContextServiceConfig(OmegaContext context, boolean isAutoCompensate, boolean isEnabledAutoCompensateTx) {
         super(null);
         this.setGlobalTxId(context.globalTxId());
         this.setLocalTxId(context.localTxId());
         this.setCategory(context.category());
         this.setAutoCompensate(isAutoCompensate);
+        this.setIsEnabledAutoCompensateTx(isEnabledAutoCompensateTx);
     }
 
 }
