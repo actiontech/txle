@@ -71,7 +71,12 @@ public class DBDegradationConfigService implements IConfigCenterService {
             }
             return UtxConstants.ENABLED.equals(value);
         }
-        return true;// All of configs are enabled by default.
+
+        // All of configs except fault-tolerant are enabled by default.
+        if (ConfigCenterType.GlobalTxFaultTolerant.equals(type) || ConfigCenterType.CompensationFaultTolerant.equals(type) || ConfigCenterType.AutoCompensationFaultTolerant.equals(type)) {
+            return false;
+        }
+        return true;
     }
 
     @Override

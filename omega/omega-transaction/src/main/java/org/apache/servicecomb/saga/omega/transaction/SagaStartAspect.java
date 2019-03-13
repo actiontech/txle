@@ -17,6 +17,8 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.common.ConfigCenterType;
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.annotations.SagaStart;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -45,32 +47,35 @@ public class SagaStartAspect {
   @Around("execution(@org.apache.servicecomb.saga.omega.context.annotations.SagaStart * *(..)) && @annotation(sagaStart)")
   Object advise(ProceedingJoinPoint joinPoint, SagaStart sagaStart) throws Throwable {
     Method method = null;
+    boolean isProceed = false;
     try {
       initializeOmegaContext(sagaStart);
       method = ((MethodSignature) joinPoint.getSignature()).getMethod();
 
       AlphaResponse alphaResponse = sagaStartAnnotationProcessor.preIntercept(context.globalTxId(), method.toString(), sagaStart.timeout(), "", 0);
       LOG.debug("Initialized context {} before execution of method {}", context, method.toString());
-      if (!alphaResponse.enabledTx()) {
-        return joinPoint.proceed();
-      }
 
       Object result = joinPoint.proceed();
+      isProceed = true;
 
-      sagaStartAnnotationProcessor.postIntercept(context.globalTxId(), method.toString());
-      LOG.debug("Transaction with context {} has finished.", context);
+      if (alphaResponse.enabledTx()) {
+        sagaStartAnnotationProcessor.postIntercept(context.globalTxId(), method.toString());
+        LOG.debug("Transaction with context {} has finished.", context);
+      }
 
       return result;
     } catch (Throwable throwable) {
+      boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.GlobalTxFaultTolerant.toInteger()).getStatus();
       // We don't need to handle the OmegaException here
-      if (!(throwable instanceof OmegaException)) {
+      if (!(throwable instanceof OmegaException) && !isFaultTolerant) {
         sagaStartAnnotationProcessor.onError(context.globalTxId(), method == null ? null : method.toString(), throwable);
         LOG.error("Transaction {} failed.", context.globalTxId());
       }
-      // TODO
-//      if (enabled) {// fault degradation
-//        return joinPoint.proceed();
-//      }
+
+      // 容错降级逻辑：1.如果没有执行过业务方法，且开启了容错降级，那么此处执行业务方法  2.如果开启了容错配置，无论异常与执行业务方法顺序如何，都需要保证已执行过的业务不能被全局事务回滚掉
+      if (!isProceed && isFaultTolerant) {// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+          return joinPoint.proceed();
+      }
       throw throwable;
     } finally {
       context.clear();

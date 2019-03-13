@@ -1,6 +1,8 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
@@ -33,47 +35,56 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 	public Object apply(ProceedingJoinPoint joinPoint, AutoCompensable compensable,
 			AutoCompensableInterceptor interceptor, OmegaContext context, String parentTxId, int retries, IAutoCompensateService autoCompensateService)
 			throws Throwable {
-		String compensationSignature = UtxConstants.AUTO_COMPENSABLE_METHOD;
-		try {
-			Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
-			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Intercepting autoCompensable method {} with context {}", method.toString(), context);
+		Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
+		LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Intercepting autoCompensable method {} with context {}", method.toString(), context);
 
-			// String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
-			String retrySignature = "";
+		// String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
+		String retrySignature = "";
+		boolean isProceed = false;
+		boolean enabledTx = false;
+		try {
 			String localTxId = context.localTxId();
 
 			// Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
-			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, true));
+			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, false));
 
-			AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
+			AlphaResponse response = interceptor.preIntercept(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD, compensable.timeout(),
 					retrySignature, retries, joinPoint.getArgs());
-			if (!response.enabledTx()) {
-				CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, false));
-				return joinPoint.proceed();
-			}
-			if (response.aborted()) {
-				context.setLocalTxId(parentTxId);
-				throw new InvalidTransactionException(UtxConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId
-						+ " because global transaction " + context.globalTxId() + " has already aborted.");
-			}
+			enabledTx = response.enabledTx();
 
-			Object result = null;
-			try {
-				// To execute business logic.
-				result = joinPoint.proceed();
-			} catch (Exception e) {
-				LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to proceed business, context {}, method {}", context, method.toString(), e);
-				throw e;
+			Object result = joinPoint.proceed();
+			isProceed = true;
+
+			if (enabledTx) {
+				CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, true));
+
+				if (response.aborted()) {
+					context.setLocalTxId(parentTxId);
+					throw new InvalidTransactionException(UtxConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId
+							+ " because global transaction " + context.globalTxId() + " has already aborted.");
+				}
+
+				CurrentThreadOmegaContext.clearCache();
+
+				// To submit the TxEndedEvent.
+				interceptor.postIntercept(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD);
 			}
-			
-			CurrentThreadOmegaContext.clearCache();
-			
-			// To submit the TxEndedEvent.
-			interceptor.postIntercept(parentTxId, compensationSignature);
 
 			return result;
+		} catch (InvalidTransactionException e) {
+			throw e;
 		} catch (Throwable e) {
-			interceptor.onError(parentTxId, compensationSignature, e);
+			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to proceed business, context {}, method {}", context, method.toString(), e);
+
+			boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.CompensationFaultTolerant.toInteger()).getStatus();
+			if (enabledTx && !isFaultTolerant) {
+				interceptor.onError(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD, e);
+			}
+
+			if (!isProceed && isFaultTolerant) {// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+				return joinPoint.proceed();
+			}
+
 			// So far, it cannot call auto-compensation method immediately due to every Omega has itself DB-link. By Gannalyo
 			throw e;
 		} finally {

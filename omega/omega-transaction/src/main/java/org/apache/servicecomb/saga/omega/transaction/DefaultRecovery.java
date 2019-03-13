@@ -17,7 +17,9 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
@@ -52,46 +54,50 @@ public class DefaultRecovery implements RecoveryPolicy {
       OmegaContext context, String parentTxId, int retries) throws Throwable {
     Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
     LOG.debug("Intercepting compensable method {} with context {}", method.toString(), context);
-
-    String compensationSignature =
-        compensable.compensationMethod().isEmpty() ? "" : compensationMethodSignature(joinPoint, compensable, method);
-
+    String compensationSignature = compensable.compensationMethod().isEmpty() ? "" : compensationMethodSignature(joinPoint, compensable, method);
     String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
-
-    // Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
-    CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, false, false));
-
-    AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(),
-        retrySignature, retries, joinPoint.getArgs());
-    if (!response.enabledTx()) {
-      return joinPoint.proceed();
-    }
-    if (response.aborted()) {
-      String abortedLocalTxId = context.localTxId();
-      context.setLocalTxId(parentTxId);
-      throw new InvalidTransactionException("Abort sub transaction " + abortedLocalTxId +
-          " because global transaction " + context.globalTxId() + " has already aborted.");
-    }
+    boolean isProceed = false;
+    boolean enabledTx = false;
 
     try {
+      // Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
+      CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, false, false));
+
+      AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(), retrySignature, retries, joinPoint.getArgs());
+      enabledTx = response.enabledTx();
+
       Object result = joinPoint.proceed();
+      isProceed = true;
 
-      CurrentThreadOmegaContext.clearCache();
+      if (enabledTx) {
+        if (response.aborted()) {
+          String abortedLocalTxId = context.localTxId();
+          context.setLocalTxId(parentTxId);
+          throw new InvalidTransactionException("Abort sub transaction " + abortedLocalTxId + " because global transaction " + context.globalTxId() + " has already aborted.");
+        }
 
-      interceptor.postIntercept(parentTxId, compensationSignature);
+        CurrentThreadOmegaContext.clearCache();
+        interceptor.postIntercept(parentTxId, compensationSignature);
+      }
 
       return result;
+    } catch (InvalidTransactionException ite) {
+      throw  ite;
     } catch (Throwable throwable) {
-      interceptor.onError(parentTxId, compensationSignature, throwable);
+      boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.CompensationFaultTolerant.toInteger()).getStatus();
+      if (enabledTx && !isFaultTolerant) {
+        interceptor.onError(parentTxId, compensationSignature, throwable);
+      }
+
+      if (!isProceed && isFaultTolerant) {// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+          return joinPoint.proceed();
+      }
       throw throwable;
     }
   }
 
   String compensationMethodSignature(ProceedingJoinPoint joinPoint, Compensable compensable, Method method)
       throws NoSuchMethodException {
-    return joinPoint.getTarget()
-        .getClass()
-        .getDeclaredMethod(compensable.compensationMethod(), method.getParameterTypes())
-        .toString();
+    return joinPoint.getTarget().getClass().getDeclaredMethod(compensable.compensationMethod(), method.getParameterTypes()).toString();
   }
 }

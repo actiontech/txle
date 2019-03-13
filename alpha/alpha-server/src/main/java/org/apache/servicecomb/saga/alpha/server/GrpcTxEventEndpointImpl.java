@@ -92,7 +92,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
             return;
         }
 
-        // check global tx, compensation, auto-compensation. All of configs are enabled by default.
+        // check global tx, compensation, auto-compensation. All of configs except fault-tolerant are enabled by default.
         if (!isEnabledTx(message, responseObserver)) {
             return;
         }

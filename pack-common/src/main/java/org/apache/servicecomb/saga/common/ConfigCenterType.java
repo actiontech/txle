@@ -4,7 +4,7 @@ package org.apache.servicecomb.saga.common;
  * if values are less than 50, then configs for server, otherwise configs for client.
  */
 public enum ConfigCenterType {
-    // All of values are enabled or disabled in database.
+    // All of values except fault-tolerant are enabled or disabled in database.
     GlobalTx,
     Compensation,
     AutoCompensation,
@@ -12,6 +12,9 @@ public enum ConfigCenterType {
     TxMonitor,
     Alert,
     Schedule,
+    GlobalTxFaultTolerant,
+    CompensationFaultTolerant,
+    AutoCompensationFaultTolerant,
     AccidentReport,
     SqlMonitor;
 
@@ -31,6 +34,12 @@ public enum ConfigCenterType {
                 return 6;
             case Schedule:
                 return 7;
+            case GlobalTxFaultTolerant:
+                return 8;
+            case CompensationFaultTolerant:
+                return 9;
+            case AutoCompensationFaultTolerant:
+                return 10;
             case AccidentReport:
                 return 50;
             case SqlMonitor:
@@ -56,6 +65,12 @@ public enum ConfigCenterType {
                 return "告警";
             case Schedule:
                 return "定时任务";
+            case GlobalTxFaultTolerant:
+                return "全局事务容错";
+            case CompensationFaultTolerant:
+                return "手动补偿容错";
+            case AutoCompensationFaultTolerant:
+                return "自动补偿容错";
             case AccidentReport:
                 return "差错上报";
             case SqlMonitor:
@@ -81,6 +96,12 @@ public enum ConfigCenterType {
                 return Alert;
             case 7:
                 return Schedule;
+            case 8:
+                return GlobalTxFaultTolerant;
+            case 9:
+                return CompensationFaultTolerant;
+            case 10:
+                return AutoCompensationFaultTolerant;
             case 50:
                 return AccidentReport;
             case 51:
