@@ -21,6 +21,7 @@ import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.annotations.SagaStart;
+import org.apache.servicecomb.saga.omega.transaction.monitor.CompensableSqlMetrics;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -54,6 +55,9 @@ public class SagaStartAspect {
 
       AlphaResponse alphaResponse = sagaStartAnnotationProcessor.preIntercept(context.globalTxId(), method.toString(), sagaStart.timeout(), "", 0);
       LOG.debug("Initialized context {} before execution of method {}", context, method.toString());
+      if (!alphaResponse.enabledTx()) {
+        CompensableSqlMetrics.setIsMonitorSql(ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger()).getStatus());
+      }
 
       Object result = joinPoint.proceed();
       isProceed = true;
