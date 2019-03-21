@@ -224,10 +224,8 @@ public class UtxMetrics extends Collector {
             globalTxId = event.globalTxId();
         }
         gaugeTimer.set(UTX_SQL_TIME_SECONDS_TOTAL.labels(false + "", serviceName, category).startTimer());
-        if ("saga-eureka-provider1".equals(serviceName)) {
-            UTX_SQL_TOTAL.labels(false + "", serviceName, category).inc();
-            System.out.println("UTX_SQL_TOTAL = " + UTX_SQL_TOTAL);
-        }
+        // 成功情况2条，需要回滚前查provide1，记录p1待补偿命令，下p1补偿，更新待补偿命令为done，记录p1对应的SagaEndedEvent，共7条。
+        UTX_SQL_TOTAL.labels(false + "", serviceName, category).inc();
 
         return globalTxId;
     }

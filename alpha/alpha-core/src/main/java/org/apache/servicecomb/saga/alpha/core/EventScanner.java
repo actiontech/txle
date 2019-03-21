@@ -102,7 +102,10 @@ public class EventScanner implements Runnable {
   }
 
   private void updateTimeoutStatus() {
-    timeoutRepository.markTimeoutAsDone();
+    List<Long> timeoutIdList = timeoutRepository.selectTimeoutIdList();
+    if (timeoutIdList != null && !timeoutIdList.isEmpty()) {
+      timeoutRepository.markTimeoutAsDone(timeoutIdList);
+    }
   }
 
   private void saveUncompensatedEventsToCommands() {
