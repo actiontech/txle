@@ -174,8 +174,11 @@ case $1 in
 
 	restart)
 		echo "$SERVER_NAME server is restarting ...."
-		stop;
-		sleep 1;
+		# support to restart even though not started.
+		if [ -f "$UTXPIDFILE" ]; then
+            stop;
+            sleep 1;
+        fi
 		start;
 	;;
 
