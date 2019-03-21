@@ -22,7 +22,9 @@ import java.util.List;
 public interface TxTimeoutRepository {
   void save(TxTimeout timeout);
 
-  void markTimeoutAsDone();
+  void markTimeoutAsDone(List<Long> surrogateIdList);
+
+  List<Long> selectTimeoutIdList();
 
   List<TxTimeout> findFirstTimeout();
 }

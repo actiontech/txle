@@ -50,8 +50,13 @@ public class SpringTxTimeoutRepository implements TxTimeoutRepository {
   }
 
   @Override
-  public void markTimeoutAsDone() {
-    timeoutRepo.updateStatusOfFinishedTx();
+  public void markTimeoutAsDone(List<Long> surrogateIdList) {
+    timeoutRepo.updateStatusOfFinishedTx(surrogateIdList);
+  }
+
+  @Override
+  public List<Long> selectTimeoutIdList() {
+    return timeoutRepo.selectTimeoutIdList();
   }
 
   @Transactional
