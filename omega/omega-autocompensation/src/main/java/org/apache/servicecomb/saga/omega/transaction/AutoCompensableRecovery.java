@@ -51,13 +51,12 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 			AlphaResponse response = interceptor.preIntercept(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD, compensable.timeout(),
 					retrySignature, retries, joinPoint.getArgs());
 			enabledTx = response.enabledTx();
+			CurrentThreadOmegaContext.getContextFromCurThread().setIsEnabledAutoCompensateTx(enabledTx);
 
 			Object result = joinPoint.proceed();
 			isProceed = true;
 
 			if (enabledTx) {
-				CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, true));
-
 				if (response.aborted()) {
 					context.setLocalTxId(parentTxId);
 					throw new InvalidTransactionException(UtxConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId

@@ -191,6 +191,9 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 			return result;
+		} catch (Exception e) {
+			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to save undo_log, localTxId=[{}].", localTxId, e);
+			return false;
 		} finally {
 			if (preparedStatement != null) {
 				preparedStatement.close();

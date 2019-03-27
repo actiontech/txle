@@ -1,16 +1,17 @@
 package org.apache.servicecomb.saga.alpha.server.kafka;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.RetriableException;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
-import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessageStatus;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
 import org.apache.servicecomb.saga.common.rmi.accidentplatform.IAccidentPlatformService;
@@ -94,7 +95,11 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                     boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.AccidentReport);
                     if (enabled) {
                         // To report message to Accident Platform.
-                        accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.SEND_MESSAGE_ERROR, event.globalTxId(), event.localTxId());
+                        JsonObject jsonParams = new JsonObject();
+                        jsonParams.addProperty("type", AccidentType.SEND_MESSAGE_ERROR.toDescription());
+                        jsonParams.addProperty("globalTxId", event.globalTxId());
+                        jsonParams.addProperty("localTxId", event.localTxId());
+                        accidentPlatformService.reportMsgToAccidentPlatform(jsonParams.toString());
                     }
 
                     // To update message's status to 'failed'.

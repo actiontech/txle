@@ -62,7 +62,6 @@ public class CommonPrometheusMetrics extends Collector {
             category = handleStringNullValue(context.category());
         }
 
-        System.out.println(Thread.currentThread().getId());
         // TODO If this method was invoked for many times in the same thread, then the later value will cover the early value.
         gaugeTimer.set(UTX_SQL_TIME_SECONDS_TOTAL.labels(isBizSql + "", serviceName, category).startTimer());
         UTX_SQL_TOTAL.labels(isBizSql + "", serviceName, category).inc();
