@@ -74,12 +74,12 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
     // The Aspect annotation works for Spring Bean only By Gannalyo
     @Override
     public void onBeforeExecuteUpdate(PreparedStatementInformation preparedStatementInformation) {
-        System.out.println(this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).");
+        LOG.info(this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).");
     }
 
     @Override
     public void onBeforeExecuteUpdate(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation) {
-        System.out.println(this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).");
+        LOG.info(this.getClass() + " - onBeforeExecuteUpdate(PreparedStatementInformation statementInformation).");
         if (!CurrentThreadOmegaContext.isAutoCompensate()) {
             // start to mark duration for business sql By Gannalyo.
             ApplicationContextUtil.getApplicationContext().getBean(CompensableSqlMetrics.class).startMarkSQLDurationAndCount(preparedStatementInformation.getSqlWithValues(), true);
@@ -107,7 +107,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
     @Override
     public void onAfterExecuteUpdate(PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos,
                                      int rowCount, SQLException e) {
-        System.out.println(this.getClass() + " - onAfterExecuteUpdate(PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos, int rowCount, SQLException e).");
+        LOG.info(this.getClass() + " - onAfterExecuteUpdate(PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos, int rowCount, SQLException e).");
     }
 
     @Override
@@ -125,32 +125,32 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
 
     @Override
     public void onBeforeExecuteUpdate(String sql) {
-        System.out.println(this.getClass() + " - onBeforeExecuteUpdate(String sql).");
+        LOG.info(this.getClass() + " - onBeforeExecuteUpdate(String sql).");
     }
 
     @Override
     public void onAfterExecuteUpdate(long timeElapsedNanos, String sql, int rowCount, SQLException e) {
-        System.out.println(this.getClass() + " - onAfterExecuteUpdate(long timeElapsedNanos, String sql, int rowCount, SQLException e).");
+        LOG.info(this.getClass() + " - onAfterExecuteUpdate(long timeElapsedNanos, String sql, int rowCount, SQLException e).");
     }
 
     @Override
     public void onBeforeExecuteQuery(PreparedStatementInformation statementInformation) {
-        System.out.println(this.getClass() + " - onBeforeExecuteQuery(PreparedStatementInformation statementInformation).");
+        LOG.info(this.getClass() + " - onBeforeExecuteQuery(PreparedStatementInformation statementInformation).");
     }
 
     @Override
     public void onAfterExecuteQuery(PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos, SQLException e) {
-        System.out.println(this.getClass() + " - onAfterExecuteQuery(PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos, SQLException e).");
+        LOG.info(this.getClass() + " - onAfterExecuteQuery(PreparedStatementInformation preparedStatementInformation, long timeElapsedNanos, SQLException e).");
     }
 
     @Override
     public void onBeforeExecuteQuery(String sql) {
-        System.out.println(this.getClass() + " - onBeforeExecuteQuery(String sql).");
+        LOG.info(this.getClass() + " - onBeforeExecuteQuery(String sql).");
     }
 
     @Override
     public void onAfterExecuteQuery(long timeElapsedNanos, String sql, SQLException e) {
-        System.out.println(this.getClass() + " - onAfterExecuteQuery(long timeElapsedNanos, String sql, SQLException e).");
+        LOG.info(this.getClass() + " - onAfterExecuteQuery(long timeElapsedNanos, String sql, SQLException e).");
     }
 
     @Override

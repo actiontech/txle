@@ -184,9 +184,10 @@ public class EventScanner implements Runnable {
 
   private void markGlobalTxEndWithEvent(TxEvent event) {
     CurrentThreadContext.put(event.globalTxId(), event);
-    eventRepository.save(toSagaEndedEvent(event));
+    TxEvent sagaEndedEvent = toSagaEndedEvent(event);
+    eventRepository.save(sagaEndedEvent);
     // To send message to Kafka.
-    kafkaMessageProducer.send(event);
+    kafkaMessageProducer.send(sagaEndedEvent);
     LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
   }
 

@@ -35,7 +35,7 @@ public class OmegaContextServiceConfig extends OmegaContext {
     }
 
     public boolean isEnabledAutoCompensateTx() {
-        return isEnabledAutoCompensateTx;
+        return this.isEnabledAutoCompensateTx;
     }
 
     public void setIsEnabledAutoCompensateTx(boolean isEnabledAutoCompensateTx) {

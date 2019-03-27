@@ -59,8 +59,8 @@ public class SagaStartAspect {
         CompensableSqlMetrics.setIsMonitorSql(ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger()).getStatus());
       }
 
+      isProceed = true;// no matter following result.
       Object result = joinPoint.proceed();
-      isProceed = true;
 
       if (alphaResponse.enabledTx()) {
         sagaStartAnnotationProcessor.postIntercept(context.globalTxId(), method.toString());

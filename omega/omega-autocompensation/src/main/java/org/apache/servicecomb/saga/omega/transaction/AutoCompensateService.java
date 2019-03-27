@@ -1,5 +1,6 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
+import com.google.gson.JsonObject;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
@@ -54,7 +55,11 @@ public class AutoCompensateService implements IAutoCompensateService {
 						} else {
 							if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger()).getStatus()) {// 差错平台上报支持配置降级功能
 								// TODO 报差错平台，其余的是否继续执行？？？ TODO 手动补偿时，也需报差错平台
-								accidentPlatformService.reportMsgToAccidentPlatform(AccidentType.ROLLBACK_ERROR, globalTxId, localTxId);
+								JsonObject jsonParams = new JsonObject();
+								jsonParams.addProperty("type", AccidentType.ROLLBACK_ERROR.toDescription());
+								jsonParams.addProperty("globalTxId", globalTxId);
+								jsonParams.addProperty("localTxId", localTxId);
+								accidentPlatformService.reportMsgToAccidentPlatform(jsonParams.toString());
 								LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 								throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Failed to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
 							}

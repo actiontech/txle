@@ -10,6 +10,7 @@ public final class UtxConstants {
 	public static final String ACTION_SQL = " /**utx_sql**/";
 	public static final String SPECIAL_KEY = "UTX-SPECIAL-KEY";// Usage in org.apache.servicecomb.saga.alpha.server.GrpcTxEventEndpointImpl.onTxEvent
 
+	public static final String OK = "ok";
 	public static final String ENABLED = "enabled";
 	public static final String DISABLED = "disabled";
 	public static final int YES = 1;
