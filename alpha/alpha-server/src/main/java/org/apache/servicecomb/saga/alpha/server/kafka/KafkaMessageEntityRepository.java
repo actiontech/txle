@@ -13,11 +13,11 @@ public interface KafkaMessageEntityRepository extends CrudRepository<KafkaMessag
     @Query("SELECT T FROM KafkaMessage T WHERE T.status = ?2 AND T.globaltxid = ?1")
     List<KafkaMessage> findMessageListByGlobalTxId(String globalTxId, int status);
 
-//	@Query("from SagaUndoLogEntity where globalTxId = ?1")
-//	List<TxEvent> findSagaUndoLogEntityByGlobalTxId(@Param("globalTxId") String globalTxId);
+//	@Query("from UtxUndoLogEntity where globalTxId = ?1")
+//	List<TxEvent> findUtxUndoLogEntityByGlobalTxId(@Param("globalTxId") String globalTxId);
 //
-//	@Query("from SagaUndoLogEntity where globalTxId = ?1 and localTxId = ?2")
-//	List<TxEvent> findSagaUndoLogEntityByGlobalTxId(@Param("globalTxId") String globalTxId, @Param("localTxId") String localTxId);
+//	@Query("from UtxUndoLogEntity where globalTxId = ?1 and localTxId = ?2")
+//	List<TxEvent> findUtxUndoLogEntityByGlobalTxId(@Param("globalTxId") String globalTxId, @Param("localTxId") String localTxId);
 
     @Transactional
     @Modifying

@@ -58,7 +58,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 4.take the original data out and put the lock on data.
 			List<Map<String, Object>> originalData = selectOriginalData(delegate, deleteStatement, tableName, primaryKeyColumnName, whereSql);
 			if (originalData == null || originalData.isEmpty()) {
-				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Saga_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
+				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Utx_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
 				return true;
 			}
 			StringBuffer ids = new StringBuffer();
@@ -78,8 +78,8 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
 			// 5.construct compensateSql
 			String compensateSql = constructCompensateSql(delegate, deleteStatement, tableName, primaryKeyColumnName, originalData);
 			
-			// 6.save saga_undo_log
-			return this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
+			// 6.save utx_undo_log
+			return this.saveUtxUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
 		} catch (SQLException e) {
 			LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for delete sql.", e);
 			throw e;

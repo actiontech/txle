@@ -41,9 +41,9 @@ public class AutoCompensateService implements IAutoCompensateService {
 	public boolean executeAutoCompensateByLocalTxId(String globalTxId, String localTxId) {
 		AtomicInteger result = new AtomicInteger(0);
         autoCompensateDao.setDataSource(DataSourceMappingCache.get(localTxId));
-        List<Map<String, Object>> sagaUndoLogList = autoCompensateDao.execute("SELECT * FROM saga_undo_log T WHERE T.globalTxId = ? AND T.localTxId = ?", globalTxId, localTxId);
-        if (sagaUndoLogList != null && !sagaUndoLogList.isEmpty()) {
-            sagaUndoLogList.forEach(map -> {
+        List<Map<String, Object>> utxUndoLogList = autoCompensateDao.execute("SELECT * FROM utx_undo_log T WHERE T.globalTxId = ? AND T.localTxId = ?", globalTxId, localTxId);
+        if (utxUndoLogList != null && !utxUndoLogList.isEmpty()) {
+            utxUndoLogList.forEach(map -> {
 				try {
 					String[] compensateSqlArr = map.get("compensateSql").toString().split(";\n");
  					for (String compensateSql : compensateSqlArr) {
@@ -66,10 +66,10 @@ public class AutoCompensateService implements IAutoCompensateService {
 						}
 					}
 				} catch (Exception e) {
-					LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to execute AutoCompensable SQL, UndoLog [{}]", StringUtils.collectionToCommaDelimitedString(sagaUndoLogList), e);
+					LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to execute AutoCompensable SQL, UndoLog [{}]", StringUtils.collectionToCommaDelimitedString(utxUndoLogList), e);
 				}
 			});
-			// TODO to update compensation status in saga_undo_log.
+			// TODO to update compensation status in utx_undo_log.
 		}
 		return result.get() > 0;
 	}

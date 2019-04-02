@@ -61,14 +61,14 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			// 4.take the new data out
 			List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
 
-			// 5.save saga_undo_log
+			// 5.save utx_undo_log
 //			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + UtxConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
 			String compensateSql = constructCompensateSql(delegate, insertStatement, tableName, newDataList);
 
 			// start to mark duration for business sql By Gannalyo.
 			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
 
-			boolean result = this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
+			boolean result = this.saveUtxUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
 
 			// end mark duration for maintaining sql By Gannalyo.
 			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
