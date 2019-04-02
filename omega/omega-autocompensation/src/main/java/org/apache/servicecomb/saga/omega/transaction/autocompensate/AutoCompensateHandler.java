@@ -160,17 +160,17 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 	}
 	
 	/**
-	 * To save auto-compensation info to data table 'saga_undo_log'.
+	 * To save auto-compensation info to data table 'utx_undo_log'.
 	 * 
 	 * @author Gannalyo
 	 * @since 2018-08-08
 	 */
-	public boolean saveSagaUndoLog(PreparedStatement delegate, String localTxId, String executeSql, String compensateSql, String originalDataJson, String server) throws SQLException {
+	public boolean saveUtxUndoLog(PreparedStatement delegate, String localTxId, String executeSql, String compensateSql, String originalDataJson, String server) throws SQLException {
 		int index = 1;
 		Timestamp currentTime = new Timestamp(System.currentTimeMillis());
 		PreparedStatement preparedStatement = null;
 		try {
-			String sql = "insert into saga_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)" + UtxConstants.ACTION_SQL;
+			String sql = "insert into utx_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)" + UtxConstants.ACTION_SQL;
 			preparedStatement = delegate.getConnection().prepareStatement(sql);
 			preparedStatement.setString(index++, CurrentThreadOmegaContext.getGlobalTxIdFromCurThread());
 			preparedStatement.setString(index++, localTxId);

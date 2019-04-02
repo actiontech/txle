@@ -67,7 +67,7 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 			List<Map<String, Object>> newDataList = selectNewDataList(delegate, updateStatement, tableName, primaryKeyColumnName, whereSql);
 			List<Map<String, Object>> originalDataList = selectOriginalData(newDataList);
 			if (originalDataList == null || originalDataList.isEmpty()) {
-				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Saga_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
+				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Utx_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
 				return true;
 			}
 			StringBuffer ids = new StringBuffer();
@@ -87,8 +87,8 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 			// 5.construct compensateSql
 			String compensateSql = constructCompensateSql(delegate, updateStatement, tableName, newDataList, whereSql);
 			
-			// 6.save saga_undo_log
-			return this.saveSagaUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
+			// 6.save utx_undo_log
+			return this.saveUtxUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
 		} catch (SQLException e) {
 			LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for update SQL.", e);
 			throw e;
