@@ -51,8 +51,10 @@ public class DBDegradationConfigService implements IConfigCenterService {
         List<ConfigCenter> configCenterList = configCenterEntityRepository.selectConfigCenterByType(instanceId, ConfigCenterStatus.Normal.toInteger(), type.toInteger());
         if (configCenterList != null && !configCenterList.isEmpty()) {
             String value = "";
+            boolean isExistsCongis = false;
             for (ConfigCenter config : configCenterList) {
                 if (config.getInstanceid() == null || config.getInstanceid().trim().length() == 0) {
+                    isExistsCongis = true;
                     if (config.getAbility() == UtxConstants.NO) {
                         return false;
                     }
@@ -60,16 +62,18 @@ public class DBDegradationConfigService implements IConfigCenterService {
                     break;
                 }
             }
-            for (ConfigCenter config : configCenterList) {
-                if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0) {
-                    if (config.getAbility() == UtxConstants.NO) {
-                        break;// do not cover the value of global config.
+            if (isExistsCongis) {// 强制每个配置必须有全局配置才生效
+                for (ConfigCenter config : configCenterList) {
+                    if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0) {
+                        if (config.getAbility() == UtxConstants.NO) {
+                            break;// do not cover the value of global config.
+                        }
+                        value = config.getValue();
+                        break;// cover the value of global config.
                     }
-                    value = config.getValue();
-                    break;// cover the value of global config.
                 }
+                return UtxConstants.ENABLED.equals(value);
             }
-            return UtxConstants.ENABLED.equals(value);
         }
 
         // All of configs except fault-tolerant are enabled by default.
