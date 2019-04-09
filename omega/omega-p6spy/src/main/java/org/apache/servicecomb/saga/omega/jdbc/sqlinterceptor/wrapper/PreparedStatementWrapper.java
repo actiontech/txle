@@ -331,14 +331,21 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
     public boolean execute() throws SQLException {
         SQLException e = null;
         long start = System.nanoTime();
+        boolean result = false;
+        Map<JdbcEventListener, Object> listenerParams = null;
         try {
-            eventListener.onBeforeExecute(preparedStatementInformation);
-            return preparedStatement.execute();
+            listenerParams = null;//(Map<JdbcEventListener, Object>) eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, preparedStatementInformation);
+            // 函数onBeforeExecuteUpdateWithReturnValue有返回值，导致在CompoundJdbcEventListener.onBeforeExecuteUpdateWithReturnValue中调用时仅执行了手动补偿中的对应方法，自动补偿中的对应方法无法被执行，去掉返回值可正常执行
+            eventListener.onBeforeExecuteUpdate(preparedStatement, preparedStatementInformation);
+
+            result = preparedStatement.execute();
+
+            return result;
         } catch (SQLException sqlException) {
             e = sqlException;
             throw e;
         } finally {
-            eventListener.onAfterExecute(preparedStatementInformation, System.nanoTime() - start, e);
+            eventListener.onAfterExecuteUpdateWithParams(preparedStatement, preparedStatementInformation, System.nanoTime() - start, result ? 1 : 0, e, listenerParams);
         }
     }
 

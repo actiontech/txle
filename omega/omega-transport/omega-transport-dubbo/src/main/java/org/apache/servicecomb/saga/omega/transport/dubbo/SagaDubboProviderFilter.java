@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
 
+import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_CATEGORY_KEY;
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_ID_KEY;
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.LOCAL_TX_ID_KEY;
 
@@ -37,37 +38,46 @@ import static org.apache.servicecomb.saga.omega.context.OmegaContext.LOCAL_TX_ID
 @Activate(group = Constants.PROVIDER)
 public class SagaDubboProviderFilter implements Filter {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  // As we use the spring to manage the omegaContext, the Autowired work out of box
-  @Autowired(required=false)
-  private OmegaContext omegaContext;
+    // As we use the spring to manage the omegaContext, the Autowired work out of box
+    @Autowired(required = false)
+    private OmegaContext omegaContext;
 
-  public void setOmegaContext(OmegaContext omegaContext) {
-    this.omegaContext = omegaContext;
-  }
-
-  @Override
-  public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
-    if (omegaContext != null) {
-      String globalTxId = invocation.getAttachment(GLOBAL_TX_ID_KEY);
-      if (globalTxId == null) {
-        LOG.info("no such omega context global id: {}", GLOBAL_TX_ID_KEY);
-      } else {
-        omegaContext.setGlobalTxId(globalTxId);
-        omegaContext.setLocalTxId(invocation.getAttachment(LOCAL_TX_ID_KEY));
-        LOG.info("Added {} {} and {} {} to omegaContext", new Object[] {GLOBAL_TX_ID_KEY, omegaContext.globalTxId(),
-            LOCAL_TX_ID_KEY, omegaContext.localTxId()});
-      }
-      invocation.getAttachments().put(GLOBAL_TX_ID_KEY, null);
-      invocation.getAttachments().put(LOCAL_TX_ID_KEY, null);
-    } else {
-      LOG.debug("Cannot find omegaContext");
+    public void setOmegaContext(OmegaContext omegaContext) {
+        this.omegaContext = omegaContext;
     }
 
-    if (invoker != null) {
-      return invoker.invoke(invocation);
+    @Override
+    public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        if (omegaContext != null) {
+            String globalTxId = invocation.getAttachment(GLOBAL_TX_ID_KEY);
+            if (globalTxId == null) {
+                LOG.info("no such omega context global id: {}", GLOBAL_TX_ID_KEY);
+            } else {
+                omegaContext.setGlobalTxId(globalTxId);
+                omegaContext.setLocalTxId(invocation.getAttachment(LOCAL_TX_ID_KEY));
+                omegaContext.setCategory(invocation.getAttachment(GLOBAL_TX_CATEGORY_KEY));
+                LOG.info("Added {} {} and {} {} and {} {} to omegaContext", new Object[]{GLOBAL_TX_ID_KEY, omegaContext.globalTxId(),
+                        LOCAL_TX_ID_KEY, omegaContext.localTxId(), GLOBAL_TX_CATEGORY_KEY, omegaContext.category()});
+            }
+            invocation.getAttachments().put(GLOBAL_TX_ID_KEY, null);
+            invocation.getAttachments().put(LOCAL_TX_ID_KEY, null);
+            invocation.getAttachments().put(GLOBAL_TX_CATEGORY_KEY, null);
+        } else {
+            LOG.debug("Cannot inject transaction ID, as the OmegaContext is null.");
+        }
+
+
+        try {
+            if (invoker != null) {
+                return invoker.invoke(invocation);
+            }
+        } finally {
+            if (omegaContext != null) {
+                omegaContext.clear();
+            }
+        }
+        return null;
     }
-    return null;
-  }
 }

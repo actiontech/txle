@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
 
+import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_CATEGORY_KEY;
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_ID_KEY;
 import static org.apache.servicecomb.saga.omega.context.OmegaContext.LOCAL_TX_ID_KEY;
 
@@ -46,12 +47,15 @@ public class FeignClientRequestInterceptor implements RequestInterceptor {
         if (omegaContext!= null && omegaContext.globalTxId() != null) {
             input.header(GLOBAL_TX_ID_KEY, omegaContext.globalTxId());
             input.header(LOCAL_TX_ID_KEY, omegaContext.localTxId());
+            input.header(GLOBAL_TX_CATEGORY_KEY, omegaContext.category());
 
-            LOG.debug("Added {} {} and {} {} to request header",
+            LOG.debug("Added {} {} and {} {} and {} {} to request header",
                     GLOBAL_TX_ID_KEY,
                     omegaContext.globalTxId(),
                     LOCAL_TX_ID_KEY,
-                    omegaContext.localTxId());
+                    omegaContext.localTxId(),
+                    GLOBAL_TX_CATEGORY_KEY,
+                    omegaContext.category());
         }
     }
 }

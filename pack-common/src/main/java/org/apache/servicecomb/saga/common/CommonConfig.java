@@ -1,8 +1,5 @@
 package org.apache.servicecomb.saga.common;
 
-import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentPlatformService;
-import org.apache.servicecomb.saga.common.rmi.accidentplatform.IAccidentPlatformService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
@@ -20,15 +17,6 @@ import org.springframework.web.client.RestTemplate;
 @EnableAspectJAutoProxy
 public class CommonConfig {
 
-    @Value("${utx.accident.platform.address.api:\"\"}")
-    private String accidentPlatformAddress;
-
-    @Value("${utx.accident.platform.retry.retries:3}")
-    private int retries;
-
-    @Value("${utx.accident.platform.retry.interval:1}")
-    private int interval;
-
     @Bean
     public RestTemplate restTemplate(ClientHttpRequestFactory factory) {
         return new RestTemplate(factory);
@@ -37,11 +25,6 @@ public class CommonConfig {
     @Bean
     public ClientHttpRequestFactory simpleClientHttpRequestFactory() {
         return new SimpleClientHttpRequestFactory();// setReadTimeout(5000); setConnectTimeout(15000);
-    }
-
-    @Bean
-    IAccidentPlatformService accidentPlatformService(RestTemplate restTemplate) {
-        return new AccidentPlatformService(accidentPlatformAddress, retries, interval, restTemplate);
     }
 
 }

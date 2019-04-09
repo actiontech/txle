@@ -1,7 +1,5 @@
 package org.apache.servicecomb.saga.omega.transaction.monitor;
 
-import org.apache.servicecomb.saga.omega.transaction.CommonPrometheusMetrics;
-
 import java.util.List;
 
 /**
