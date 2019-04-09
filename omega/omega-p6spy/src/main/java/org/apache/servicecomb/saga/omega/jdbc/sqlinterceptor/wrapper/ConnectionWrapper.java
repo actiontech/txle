@@ -31,7 +31,7 @@ public class ConnectionWrapper implements Connection {
 
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
-        return PreparedStatementWrapper.wrap(connection.prepareStatement(sql), new PreparedStatementInformation(sql), jdbcEventListener);
+        return PreparedStatementWrapper.wrap(connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS), new PreparedStatementInformation(sql), jdbcEventListener);
     }
 
     @Override

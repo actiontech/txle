@@ -118,6 +118,8 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			while (rs != null && rs.next()) {
 				primaryKeyValue.add(rs.getObject(1));
 			}
+		} catch (Exception e) {
+			LOG.error("Failed to execute method 'getGeneratedKey'." );
 		} finally {
 			if (rs != null) {
 				rs.close();
