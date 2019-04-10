@@ -11,6 +11,7 @@ import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessageStatus;
+import org.apache.servicecomb.saga.alpha.server.accidentplatform.ServerAccidentPlatformService;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
@@ -39,7 +40,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     private IKafkaMessageRepository kafkaMessageRepository;
 
     @Autowired
-    IAccidentPlatformService accidentPlatformService;
+    ServerAccidentPlatformService serverAccidentPlatformService;
 
     @Autowired
     IConfigCenterService dbDegradationConfigService;
@@ -92,15 +93,13 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                     } else {
                         LOG.error("Unsuccessfully to send Kafka message without retries - globalTxId = [{}].", event.globalTxId(), exception);
                     }
-                    boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.AccidentReport);
-                    if (enabled) {
-                        // To report message to Accident Platform.
-                        JsonObject jsonParams = new JsonObject();
-                        jsonParams.addProperty("type", AccidentType.SEND_MESSAGE_ERROR.toDescription());
-                        jsonParams.addProperty("globalTxId", event.globalTxId());
-                        jsonParams.addProperty("localTxId", event.localTxId());
-                        accidentPlatformService.reportMsgToAccidentPlatform(jsonParams.toString());
-                    }
+                    // To report message to Accident Platform.
+                    JsonObject jsonParams = new JsonObject();
+                    jsonParams.addProperty("type", AccidentType.SEND_MESSAGE_ERROR.toDescription());
+                    jsonParams.addProperty("globalTxId", event.globalTxId());
+                    jsonParams.addProperty("localTxId", event.localTxId());
+                    jsonParams.addProperty("instanceId", event.instanceId());
+                    serverAccidentPlatformService.reportMsgToAccidentPlatform(jsonParams.toString());
 
                     // To update message's status to 'failed'.
                     kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.FAILED);

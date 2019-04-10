@@ -21,6 +21,7 @@ import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
+import org.apache.servicecomb.saga.alpha.server.accidentplatform.ServerAccidentPlatformService;
 import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
@@ -30,6 +31,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -48,6 +50,15 @@ class AlphaConfig {
 
   @Value("${utx.prometheus.metrics.port:-1}")
   private String promMetricsPort;
+
+  @Value("${utx.accident.platform.address.api:\"\"}")
+  private String accidentPlatformAddress;
+
+  @Value("${utx.accident.platform.retry.retries:3}")
+  private int retries;
+
+  @Value("${utx.accident.platform.retry.interval:1}")
+  private int interval;
 
   @Bean
   Map<String, Map<String, OmegaCallback>> omegaCallbacks() {
@@ -88,6 +99,11 @@ class AlphaConfig {
   @Bean
   UtxJpaRepositoryInterceptor utxJpaRepositoryInterceptor() {
     return new UtxJpaRepositoryInterceptor();
+  }
+
+  @Bean
+  ServerAccidentPlatformService serverAccidentPlatformService(RestTemplate restTemplate) {
+    return new ServerAccidentPlatformService(accidentPlatformAddress, retries, interval, restTemplate);
   }
 
   @Bean
