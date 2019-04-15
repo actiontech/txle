@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS TxTimeout (
 CREATE INDEX IF NOT EXISTS saga_timeouts_index ON TxTimeout (surrogateId, expiryTime, globalTxId, localTxId, status);
 
 /*
- * TODO *********************** It is necessary to execute following sqls before online. **********************
+ * *********************** It is necessary to execute following sqls before online. **********************
  */
 CREATE TABLE IF NOT EXISTS Message (
   id BIGSERIAL PRIMARY KEY,

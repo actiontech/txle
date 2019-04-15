@@ -76,7 +76,8 @@ public class LoadBalancedClusterMessageSenderTest extends LoadBalancedClusterMes
         deserializer,
         new ServiceConfig(serviceName),
         handler,
-        100);
+        100,
+        60);
   }
 
   @BeforeClass

@@ -1,14 +1,8 @@
 #!/bin/bash
 
-if [ $# -lt 1 ];
-then
-  echo "USAGE: $0 [start|stop|restart] [--port serverport] [--rpc-port rpc port] [--metrics-port metrics port] [--config-dir config dir] [--log log name]"
-  exit 1
-fi
-
 # Java_HOME
 JAVA_HOME=$(which java)
-echo $JAVA_HOME
+# echo $JAVA_HOME
 
 # ensure the 'bashrc' file can be loaded in using 'systemd' case.
 source ~/.bashrc
@@ -33,6 +27,7 @@ ONLY_PORT=""
 RPC_PORT=""
 METRICS_PORT=""
 P_HA=""
+P_DEBUG=""
 
 for p_name in $@; do
     val=`echo "$p_name" | sed -e 's;^--[^=]*=;;'`
@@ -48,17 +43,6 @@ for p_name in $@; do
 done
 
 UTXPIDFILE=$CONF_DIR/utx_server$ONLY_PORT.pid
-
-#. "$CONF_DIR/server.cfg"
-#SERVER_PORT=""
-#LOG_FILE="$DEPLOY_DIR/log/stdout.log"
-#
-#if [ -n "$port" ]; then
-#    SERVER_PORT="-Dserver.port=$port"
-#fi
-#if [ -n "$log_url" ]; then
-#    LOG_FILE="$log_url"
-#fi
 
 start() {
     if [ ! -f "$UTXPIDFILE" ]; then
@@ -113,7 +97,7 @@ start() {
     echo "JAVA_MEM_OPTS=$JAVA_MEM_OPTS $SERVER_PORT $RPC_PORT $METRICS_PORT"
 
     nohup java $JAVA_OPTS $JAVA_MEM_OPTS $SERVER_PORT $RPC_PORT $METRICS_PORT -classpath $DEPLOY_DIR:$LIB_DIR:$CONF_DIR:$LIB_JARS $MAIN_CLASS > /dev/null 2>>$LOG_FILE &
-    
+
     if [ $? -eq 0 ]; then
 	echo $! > "$UTXPIDFILE"
     fi
@@ -153,7 +137,7 @@ stop(){
 	sleep 1
     done
 
-    if [ "$P_HA" != "true" ]; then
+    if [ "$P_HA" == "true" ]; then
         # stop service in systemd. it will give a mistake 'Job for utx.service canceled.' out when use the command 'systemctl restart utx.service'.
         systemctl stop utx$ONLY_PORT.service
     fi
@@ -163,13 +147,66 @@ stop(){
 }
 
 
+UTX_SERVICE_NAME=utx$ONLY_PORT.service
+start_ha() {
+	UTX_SERVICE=/usr/lib/systemd/system/$UTX_SERVICE_NAME
+	if [ -f "$UTX_SERVICE" ]; then
+		# delete first and create again, the aim is to load new parameters.
+		rm "$UTX_SERVICE"
+	fi
+
+
+	touch "$UTX_SERVICE"
+
+	echo "[Unit]
+	Description=utx$ONLY_PORT
+
+	[Service]
+	ExecStart=$DEPLOY_DIR/bin/utx start $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
+	ExecStop=$DEPLOY_DIR/bin/utx stop $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
+	ExecReload=$DEPLOY_DIR/bin/utx restart $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
+	PIDFile=$DEPLOY_DIR/conf/utx_server$ONLY_PORT.pid
+	Restart=always
+
+	[Install]
+	WantedBy=multi-user.target" > $UTX_SERVICE
+
+
+
+	cd /usr/lib/systemd/system
+
+	systemctl daemon-reload
+
+	systemctl start $UTX_SERVICE_NAME
+
+	echo "Starting server in a highly available way."
+	echo "Please pay more attention on this server after several seconds."
+}
+
+stop_ha(){
+	echo "It will take a while to stop, please wait patiently ...."
+
+	# stop service in systemd
+	systemctl stop $UTX_SERVICE_NAME
+
+	echo "Successfully to stop server."
+}
+
 case $1 in
 	start)
-		start;
+		if [ "$P_HA" != "true" ]; then
+			start;
+		else
+			start_ha;
+		fi
 	;;
 
 	stop)
-		stop;
+		if [ "$P_HA" != "true" ]; then
+			stop;
+		else
+			stop_ha;
+		fi
 	;;
 
 	restart)
@@ -182,8 +219,21 @@ case $1 in
 		start;
 	;;
 
+	--help)
+		echo "Usage: utx COMMAND [OPTIONS]    e.g. ./utx start --port=8090"
+		echo ""
+		echo "Commands: start|stop|restart"
+		echo ""
+		echo "Options:"
+		echo "  --port              Set custom port for server"
+		echo "  --rpc-port          Set custom port for rpc"
+		echo "  --metrics-port      Set custom port for prometheus"
+		echo "  --config-dir        Appoint a config file for server"
+		echo "  --log               Appoint a log file for server"
+	;;
+
 	*)
-		echo "Usage: start.sh {start|stop|restart}"
+		echo "Usage: utx {start|stop|restart}"
 	;;
 esac
 exit 0

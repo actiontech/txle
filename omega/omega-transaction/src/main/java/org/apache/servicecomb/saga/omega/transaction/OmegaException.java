@@ -17,12 +17,14 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
+import org.apache.servicecomb.saga.common.UtxConstants;
+
 public class OmegaException extends RuntimeException {
   public OmegaException(String message) {
     super(message);
   }
 
   public OmegaException(String cause, Throwable throwable) {
-    super(cause, throwable);
+    super(UtxConstants.logErrorPrefixWithTime() + cause, throwable);
   }
 }

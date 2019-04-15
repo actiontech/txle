@@ -102,7 +102,8 @@ class OmegaSpringConfig {
       @Value("${alpha.cluster.ssl.certChain:ca.crt}") String certChain,
       @Value("${omega.connection.reconnectDelay:3000}") int reconnectDelay,
       ServiceConfig serviceConfig,
-      @Lazy MessageHandler handler) {
+      @Lazy MessageHandler handler,
+      @Value("${utx.transaction.txPauseCheckInterval:60}") int txPauseCheckInterval) {
 
     MessageFormat messageFormat = new KryoMessageFormat();
     AlphaClusterConfig clusterConfig = new AlphaClusterConfig(Arrays.asList(addresses),
@@ -113,7 +114,8 @@ class OmegaSpringConfig {
         messageFormat,
         serviceConfig,
         handler,
-        reconnectDelay);
+        reconnectDelay,
+        txPauseCheckInterval);
 
     sender.onConnected();
     
