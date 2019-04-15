@@ -20,13 +20,12 @@
 			<outputDirectory>/conf</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<!-- 打包时把utx-server.sh和utx-server-ha.sh文件放在bin目录 -->
+			<!-- 打包时把utx文件放在bin目录 -->
 			<directory></directory>
 			<outputDirectory>/bin</outputDirectory>
 			<!-- 此处赋值权限实际未生效，需要在最终打tar.gz包(即utx根目录下的pom.xml关联的assembly.xml文件中)设置 -->
-			<fileMode>0755</fileMode>
 			<includes>
-				<include>*.sh</include>
+				<include>utx</include>
 			</includes>
 		</fileSet>
 	</fileSets>

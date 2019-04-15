@@ -100,16 +100,19 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         handleSupportTxPause(message, responseObserver);
     }
 
-    // TODO cache??? no, distributed cache???
+    // Do not use any cache, the aim is to provide a realtime config.
     private boolean isEnabledTx(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
         boolean result = true;
         if (EventType.SagaStartedEvent.name().equals(message.getType())) {
             result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.GlobalTx);
         } else if (EventType.TxStartedEvent.name().equals(message.getType())) {
-            if (!UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.Compensation);
-            } else if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.AutoCompensation);
+            result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.GlobalTx);
+            if (result) {// If the global transaction was not enabled, then two child transactions were regarded as disabled.
+                if (!UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
+                    result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.Compensation);
+                } else if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
+                    result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.AutoCompensation);
+                }
             }
         }
 

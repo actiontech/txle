@@ -74,7 +74,8 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
       MessageDeserializer deserializer,
       ServiceConfig serviceConfig,
       MessageHandler handler,
-      int reconnectDelay) {
+      int reconnectDelay,
+      int txPauseCheckInterval) {
 
     if (clusterConfig.getAddresses().size() == 0) {
       throw new IllegalArgumentException("No reachable cluster address provided");
@@ -111,7 +112,8 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
               deserializer,
               serviceConfig,
               new ErrorHandlerFactory(),
-              handler),
+              handler,
+              txPauseCheckInterval),
           0L);
     }
 

@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 public class AutoCompensableForwardRecovery extends AutoCompensableRecovery {
 	private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-	// TODO: 2018/03/10 we do not support retry with timeout yet
+	// 2018/03/10 we do not support retry with timeout yet
 	@Override
 	public Object apply(ProceedingJoinPoint joinPoint, AutoCompensable compensable,
 			AutoCompensableInterceptor interceptor, OmegaContext context, String parentTxId, int retries,

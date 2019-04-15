@@ -76,7 +76,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			if (checkSpecialSql) {
 				throw new SQLException(UtxConstants.logErrorPrefixWithTime() + "Do not support sql [" + executeSql + "] to auto-compensation.");
 			} else {
-				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Do not support sql [{}] to auto-compensation, but it has been executed due to the switch is closed.", executeSql);
+				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Do not support sql [{}] to auto-compensation, but it has been executed due to the switch 'checkSpecialSql' is closed.", executeSql);
 			}
 		}
 	}

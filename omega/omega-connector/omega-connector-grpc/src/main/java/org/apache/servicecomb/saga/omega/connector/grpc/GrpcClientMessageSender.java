@@ -32,6 +32,7 @@ import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent.Builder;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceStub;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -49,6 +50,8 @@ public class GrpcClientMessageSender implements MessageSender {
   private final GrpcCompensateStreamObserver compensateStreamObserver;
   private final GrpcServiceConfig serviceConfig;
 
+  private int txPauseCheckInterval;
+
   public GrpcClientMessageSender(
       String address,
       ManagedChannel channel,
@@ -56,7 +59,8 @@ public class GrpcClientMessageSender implements MessageSender {
       MessageDeserializer deserializer,
       ServiceConfig serviceConfig,
       ErrorHandlerFactory errorHandlerFactory,
-      MessageHandler handler) {
+      MessageHandler handler,
+      int txPauseCheckInterval) {
     this.target = address;
     this.asyncEventService = TxEventServiceGrpc.newStub(channel);
     this.blockingEventService = TxEventServiceGrpc.newBlockingStub(channel);
@@ -66,6 +70,8 @@ public class GrpcClientMessageSender implements MessageSender {
     this.compensateStreamObserver =
         new GrpcCompensateStreamObserver(handler, errorHandlerFactory.getHandler(this), deserializer);
     this.serviceConfig = serviceConfig(serviceConfig.serviceName(), serviceConfig.instanceId());
+
+    this.txPauseCheckInterval = txPauseCheckInterval;
   }
 
   @Override
@@ -100,12 +106,8 @@ public class GrpcClientMessageSender implements MessageSender {
     } catch (Exception e) {}
 
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
-    // TODO any hidden trouble about current logic???
-    // If transaction is paused, then Client will retry.
-//    try {Thread.sleep(10 * 1000);} catch (InterruptedException e) {}
-	while (grpcAck.getPaused()) {
-		// TODO default 60s, support to configure in the future.
-		try {Thread.sleep(10 * 1000);} catch (InterruptedException e) {}
+	while (grpcAck.getPaused()) {// It's a manual operation to pause transaction, so it can accept to pause for one minute.
+		try {Thread.sleep(txPauseCheckInterval * 1000);} catch (InterruptedException e) {}
 		grpcAck = blockingEventService.onTxEvent(convertEvent(event));
 		if (!grpcAck.getPaused()) {
 			break;
