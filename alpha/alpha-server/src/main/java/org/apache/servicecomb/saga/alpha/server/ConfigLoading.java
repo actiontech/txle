@@ -3,6 +3,7 @@ package org.apache.servicecomb.saga.alpha.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
@@ -29,7 +30,7 @@ public class ConfigLoading {
             });
             return kafkaConfigMap;
         } catch (IOException e) {
-            LOG.error("Failed to load the kafka.properties file." + e);
+            LOG.error("Failed to load the kafka.properties file.", e);
         }
         return new HashMap<>();
     }
