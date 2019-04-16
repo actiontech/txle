@@ -9,6 +9,7 @@ import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
+import org.apache.servicecomb.saga.omega.context.UtxStaticConfig;
 import org.apache.servicecomb.saga.omega.transaction.DataSourceMappingCache;
 import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
@@ -71,8 +72,8 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 			AutoCompensateDeleteHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
 		} else if (isBeforeNotice) {
 			standbyParams.clear();
-			// TODO To define a switch which is named for 'CheckSpecialSQL', default is closed, means that just does record, if it's open, then program will throw an exception about current special SQL, just for auto-compensation.
-			boolean checkSpecialSql = false;
+			// Default is closed, means that just does record, if it's open, then program will throw an exception about current special SQL, just for auto-compensation.
+			boolean checkSpecialSql = UtxStaticConfig.getBooleanConfig("utx.transaction.auto-compensation.check-special-sql", false);
 			if (checkSpecialSql) {
 				throw new SQLException(UtxConstants.logErrorPrefixWithTime() + "Do not support sql [" + executeSql + "] to auto-compensation.");
 			} else {

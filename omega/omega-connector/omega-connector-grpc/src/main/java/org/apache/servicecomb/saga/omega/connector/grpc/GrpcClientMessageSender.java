@@ -27,6 +27,7 @@ import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
 import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.omega.context.UtxStaticConfig;
 import org.apache.servicecomb.saga.omega.transaction.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent.Builder;
@@ -50,8 +51,6 @@ public class GrpcClientMessageSender implements MessageSender {
   private final GrpcCompensateStreamObserver compensateStreamObserver;
   private final GrpcServiceConfig serviceConfig;
 
-  private int txPauseCheckInterval;
-
   public GrpcClientMessageSender(
       String address,
       ManagedChannel channel,
@@ -59,8 +58,7 @@ public class GrpcClientMessageSender implements MessageSender {
       MessageDeserializer deserializer,
       ServiceConfig serviceConfig,
       ErrorHandlerFactory errorHandlerFactory,
-      MessageHandler handler,
-      int txPauseCheckInterval) {
+      MessageHandler handler) {
     this.target = address;
     this.asyncEventService = TxEventServiceGrpc.newStub(channel);
     this.blockingEventService = TxEventServiceGrpc.newBlockingStub(channel);
@@ -70,8 +68,6 @@ public class GrpcClientMessageSender implements MessageSender {
     this.compensateStreamObserver =
         new GrpcCompensateStreamObserver(handler, errorHandlerFactory.getHandler(this), deserializer);
     this.serviceConfig = serviceConfig(serviceConfig.serviceName(), serviceConfig.instanceId());
-
-    this.txPauseCheckInterval = txPauseCheckInterval;
   }
 
   @Override
@@ -107,7 +103,7 @@ public class GrpcClientMessageSender implements MessageSender {
 
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
 	while (grpcAck.getPaused()) {// It's a manual operation to pause transaction, so it can accept to pause for one minute.
-		try {Thread.sleep(txPauseCheckInterval * 1000);} catch (InterruptedException e) {}
+      try {Thread.sleep(UtxStaticConfig.getIntegerConfig("utx.transaction.pause-check-interval", 60) * 1000);} catch (InterruptedException e) {}
 		grpcAck = blockingEventService.onTxEvent(convertEvent(event));
 		if (!grpcAck.getPaused()) {
 			break;

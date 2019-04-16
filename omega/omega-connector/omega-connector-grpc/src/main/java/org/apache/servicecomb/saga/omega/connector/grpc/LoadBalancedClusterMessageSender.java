@@ -17,29 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.connector.grpc;
 
-import static java.util.Collections.emptyList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.invoke.MethodHandles;
-import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-
-import javax.net.ssl.SSLException;
-
-import org.apache.servicecomb.saga.omega.context.ServiceConfig;
-import org.apache.servicecomb.saga.omega.transaction.*;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Supplier;
-
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.GrpcSslContexts;
@@ -48,6 +26,21 @@ import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
+import org.apache.servicecomb.saga.omega.context.ServiceConfig;
+import org.apache.servicecomb.saga.omega.transaction.*;
+import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLException;
+import java.io.File;
+import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+import java.util.*;
+import java.util.concurrent.*;
+
+import static java.util.Collections.emptyList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class LoadBalancedClusterMessageSender implements MessageSender {
 
@@ -74,8 +67,7 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
       MessageDeserializer deserializer,
       ServiceConfig serviceConfig,
       MessageHandler handler,
-      int reconnectDelay,
-      int txPauseCheckInterval) {
+      int reconnectDelay) {
 
     if (clusterConfig.getAddresses().size() == 0) {
       throw new IllegalArgumentException("No reachable cluster address provided");
@@ -112,8 +104,7 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
               deserializer,
               serviceConfig,
               new ErrorHandlerFactory(),
-              handler,
-              txPauseCheckInterval),
+              handler),
           0L);
     }
 

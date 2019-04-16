@@ -93,6 +93,11 @@ class OmegaSpringConfig {
   }
 
   @Bean
+  UtxStaticConfig utxStaticConfig() {
+    return new UtxStaticConfig();
+  }
+
+  @Bean
   MessageSender grpcMessageSender(
       @Value("${alpha.cluster.address:localhost:8080}") String[] addresses,
       @Value("${alpha.cluster.ssl.enable:false}") boolean enableSSL,
@@ -102,8 +107,7 @@ class OmegaSpringConfig {
       @Value("${alpha.cluster.ssl.certChain:ca.crt}") String certChain,
       @Value("${omega.connection.reconnectDelay:3000}") int reconnectDelay,
       ServiceConfig serviceConfig,
-      @Lazy MessageHandler handler,
-      @Value("${utx.transaction.txPauseCheckInterval:60}") int txPauseCheckInterval) {
+      @Lazy MessageHandler handler) {
 
     MessageFormat messageFormat = new KryoMessageFormat();
     AlphaClusterConfig clusterConfig = new AlphaClusterConfig(Arrays.asList(addresses),
@@ -114,8 +118,7 @@ class OmegaSpringConfig {
         messageFormat,
         serviceConfig,
         handler,
-        reconnectDelay,
-        txPauseCheckInterval);
+        reconnectDelay);
 
     sender.onConnected();
     
