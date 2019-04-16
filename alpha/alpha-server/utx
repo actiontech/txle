@@ -38,7 +38,7 @@ for p_name in $@; do
         --port=*) SERVER_PORT="-Dserver.port=$val" ; ONLY_PORT="$val";;
         --rpc-port=*) RPC_PORT="-Dalpha.server.port=$val";;
         --metrics-port=*) METRICS_PORT="-Dutx.prometheus.metrics.port=$val";;
-        --ha) P_HA="true" ;;
+        -ha) P_HA="true" ;;
     esac
 done
 
@@ -213,10 +213,18 @@ case $1 in
 		echo "$SERVER_NAME server is restarting ...."
 		# support to restart even though not started.
 		if [ -f "$UTXPIDFILE" ]; then
-            stop;
-            sleep 1;
-        fi
-		start;
+			if [ "$P_HA" != "true" ]; then
+				stop;
+			else
+				stop_ha;
+			fi
+			sleep 1;
+		fi
+		if [ "$P_HA" != "true" ]; then
+			start;
+		else
+			start_ha;
+		fi
 	;;
 
 	--help)
@@ -230,6 +238,7 @@ case $1 in
 		echo "  --metrics-port      Set custom port for prometheus"
 		echo "  --config-dir        Appoint a config file for server"
 		echo "  --log               Appoint a log file for server"
+		echo "  -ha                 Start server by ha"
 	;;
 
 	*)
