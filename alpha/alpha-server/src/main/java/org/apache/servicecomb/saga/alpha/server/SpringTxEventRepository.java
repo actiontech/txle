@@ -122,4 +122,9 @@ class SpringTxEventRepository implements TxEventRepository {
     return eventRepo.selectEndedGlobalTx(localTxIdSet);
   }
 
+  @Override
+  public boolean checkIsExistsTxCompensatedEvent(String type, String localTxId) {
+    return eventRepo.checkIsExistsTxCompensatedEvent(type, localTxId) > 0;
+  }
+
 }

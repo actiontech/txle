@@ -66,8 +66,8 @@ public class DefaultRecovery implements RecoveryPolicy {
       AlphaResponse response = interceptor.preIntercept(parentTxId, compensationSignature, compensable.timeout(), retrySignature, retries, joinPoint.getArgs());
       enabledTx = response.enabledTx();
 
-      Object result = joinPoint.proceed();
       isProceed = true;
+      Object result = joinPoint.proceed();
 
       if (enabledTx) {
         if (response.aborted()) {

@@ -127,6 +127,11 @@ public class TxConsistentServiceTest {
     public Set<String> selectEndedGlobalTx(Set<String> localTxIdSet) {
       return null;
     }
+
+    @Override
+    public boolean checkIsExistsTxCompensatedEvent(String type, String localTxId) {
+      return false;
+    }
   };
 
   private final String globalTxId = UUID.randomUUID().toString();

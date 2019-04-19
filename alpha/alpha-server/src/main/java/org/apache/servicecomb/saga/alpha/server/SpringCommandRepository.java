@@ -82,7 +82,8 @@ public class SpringCommandRepository implements CommandRepository {
 
   @Override
   public List<Command> findUncompletedCommands(String globalTxId) {
-    return commandRepository.findByGlobalTxIdAndStatus(globalTxId, NEW.name());
+//    return commandRepository.findByGlobalTxIdAndStatus(globalTxId, NEW.name());
+    return commandRepository.findUncompletedCommandByGlobalTxIdAndStatus(globalTxId, DONE.name());
   }
 
   @Transactional
