@@ -18,9 +18,9 @@
 package org.apache.servicecomb.saga.alpha.core;
 
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
 import java.util.List;
@@ -45,7 +45,6 @@ public class EventScanner implements Runnable {
   private final int eventPollingInterval;
 
   private long nextEndedEventId;
-  private long nextCompensatedEventId;
 
   public EventScanner(ScheduledExecutorService scheduler,
       TxEventRepository eventRepository,
@@ -84,7 +83,7 @@ public class EventScanner implements Runnable {
 						updateTransactionStatus();
 					} catch (Exception e) {
 						// to avoid stopping this scheduler in case of exception By Gannalyo
-						LOG.error("[Action Saga Error] EventScanner.pollEvents.scheduleWithFixedDelay run abortively.", e);
+						LOG.error(UtxConstants.LOG_ERROR_PREFIX + "EventScanner.pollEvents.scheduleWithFixedDelay run abortively.", e);
 					}
 				},
         0,
@@ -121,11 +120,9 @@ public class EventScanner implements Runnable {
   private void updateCompensatedCommands() {
     // The 'findFirstCompensatedEventByIdGreaterThan' interface did not think about the 'SagaEndedEvent' type so that would do too many thing those were wasted.
       List<TxEvent> unCompensableEventList = eventRepository.findSequentialCompensableEventOfUnended();
-//        eventRepository.findFirstCompensatedEventByIdGreaterThan(nextCompensatedEventId)
       unCompensableEventList.forEach(event -> {
           CurrentThreadContext.put(event.globalTxId(), event);
           LOG.info("Found compensated event {}", event);
-          nextCompensatedEventId = event.id();
           updateCompensationStatus(event);
         });
   }
@@ -154,20 +151,20 @@ public class EventScanner implements Runnable {
   }
 
   private void abortTimeoutEvents() {
-    timeoutRepository.findFirstTimeout().forEach(timeout -> {
+    timeoutRepository.findFirstTimeout().forEach(timeout -> {// 查找超时且状态为 NEW 的超时记录
       LOG.info("Found timeout event {} to abort", timeout);
 
       TxEvent event = toTxAbortedEvent(timeout);
       CurrentThreadContext.put(event.globalTxId(), event);
-      eventRepository.save(event);
+      eventRepository.save(event);// 查找到超时记录后，记录相应的(超时)终止状态
 
       boolean isRetried = eventRepository.checkIsRetiredEvent(event.type());
       utxMetrics.countTxNumber(event, true, isRetried);
 
-      if (timeout.type().equals(TxStartedEvent.name())) {
-        eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
-            .ifPresent(omegaCallback::compensate);
-      }
+//      if (timeout.type().equals(TxStartedEvent.name())) {
+//        eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
+//            .ifPresent(omegaCallback::compensate);// 查找到超时记录后，屏蔽在此处触发补偿功能，完全交给compensate方法处理即可
+//      }
     });
   }
 
@@ -222,8 +219,7 @@ public class EventScanner implements Runnable {
   }
 
   private void compensate() {
-    commandRepository.findFirstCommandToCompensate()
-        .forEach(command -> {
+    commandRepository.findFirstCommandToCompensate().forEach(command -> {
           LOG.info("Compensating transaction with globalTxId {} and localTxId {}",
               command.globalTxId(),
               command.localTxId());

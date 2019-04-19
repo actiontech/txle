@@ -157,4 +157,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query(value = "SELECT DISTINCT T2.localTxId FROM TxEvent T2 WHERE T2.globalTxId IN (SELECT T1.globalTxId FROM TxEvent T1 WHERE T1.type = 'SagaEndedEvent' AND T1.globalTxId IN (SELECT T.globalTxId FROM TxEvent T WHERE T.localTxId IN ?1)) AND T2.localTxId IN ?1")
   Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
+  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent T WHERE T.type = ?1 AND T.localTxId = ?2) T1", nativeQuery = true)
+  long checkIsExistsTxCompensatedEvent(String type, String localTxId);
+
 }

@@ -92,14 +92,16 @@ public class TxConsistentService {
 			CurrentThreadContext.put(event.globalTxId(), event);
 
 			// We could intercept this method or use the Observer Design model on it, the aim is to handle some operations around it, but apparently, it is not easy to maintain code, so we reserved this idea.
-			eventRepository.save(event);
+			if (!eventRepository.checkIsExistsTxCompensatedEvent(event.type(), event.localTxId())) {// 保存事件前，检查是否已经存在某子事务的某种事件，如果存在则不再保存。如：检测某事务超时后，若在下次检测时做出补偿处理，则会保存多条超时事件信息，为避免则先检测是否存在
+				eventRepository.save(event);
 
-			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
-			utxMetrics.countTxNumber(event, false, isRetried);
-			utxMetrics.endMarkTxDuration(event);// end duration.
+				boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
+				utxMetrics.countTxNumber(event, false, isRetried);
+				utxMetrics.endMarkTxDuration(event);// end duration.
 
-			// To send message to Kafka.
-			kafkaMessageProducer.send(event);
+				// To send message to Kafka.
+				kafkaMessageProducer.send(event);
+			}
 
 			return 1;
 		}

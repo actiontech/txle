@@ -57,6 +57,10 @@ public interface CommandEntityRepository extends CrudRepository<Command, Long> {
 
   List<Command> findByGlobalTxIdAndStatus(String globalTxId, String status);
 
+  // 前接口仅查询没有NEW状态的，就将全局事物结束了，不曾料还有PENDING状态的情况，全局事物也结束了
+  @Query("FROM Command T WHERE T.globalTxId = ?1 AND T.status != ?2")
+  List<Command> findUncompletedCommandByGlobalTxIdAndStatus(String globalTxId, String status);
+
   // TODO: 2018/1/18 we assumed compensation will never fail. if all service instances are not reachable, we have to set up retry mechanism for pending commands
   @Lock(LockModeType.OPTIMISTIC)
   @Query(value = "SELECT * FROM Command AS c "

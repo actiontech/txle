@@ -139,4 +139,6 @@ public interface TxEventRepository {
 
   Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
+  boolean checkIsExistsTxCompensatedEvent(String type, String localTxId);
+
 }
