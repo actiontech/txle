@@ -4,8 +4,10 @@ import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.springframework.context.ApplicationContext;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,14 +28,23 @@ public class DataSourceMappingCache {
             if (dataSourceMap != null && !dataSourceMap.isEmpty()) {
                 synchronized (DataSourceMappingCache.class) {
                     for (String key : dataSourceMap.keySet()) {
+                        Connection connection = null;
                         try {
                             DataSource dataSource = dataSourceMap.get(key);
-                            DatabaseMetaData databaseMetaData = dataSource.getConnection().getMetaData();
+                            connection = dataSource.getConnection();
+                            DatabaseMetaData databaseMetaData = connection.getMetaData();
                             if (databaseMetaData.getURL().equals(url) && databaseMetaData.getUserName().equals(userName) && databaseMetaData.getDriverName().equals(driverName)) {
                                 localTxIdAndDataSource.put(localTxId, dataSource);
                                 break;
                             }
                         } catch (SQLException e) {
+                        } finally {
+                            if (connection != null) {
+                                try {
+                                    connection.close();
+                                } catch (SQLException e) {
+                                }
+                            }
                         }
                     }
                 }
