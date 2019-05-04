@@ -72,6 +72,7 @@ public interface CommandEntityRepository extends CrudRepository<Command, Long> {
       + " HAVING MAX( CASE c2.status WHEN 'PENDING' THEN 1 ELSE 0 END ) = 0) "
 //      + "ORDER BY c.eventId ASC LIMIT 1", nativeQuery = true)// 'LIMIT 1' made an effect on performance, and Compensation Command is always executed one by one. So, we canceled 'LIMIT 1'.
       + "ORDER BY c.eventId ASC", nativeQuery = true)
+  // 查询没有PENDING状态且未NEW状态的Command
   List<Command> findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
 
   @Query(value = "SELECT T FROM Command T WHERE T.eventId IN ?1")

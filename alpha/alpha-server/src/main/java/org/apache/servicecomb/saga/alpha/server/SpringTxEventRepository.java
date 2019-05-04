@@ -17,8 +17,6 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -64,12 +62,7 @@ class SpringTxEventRepository implements TxEventRepository {
 
   @Override
   public List<TxEvent> findFirstUncompensatedEventByIdGreaterThan(long id, String type) {
-    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(type, id, SINGLE_TX_EVENT_REQUEST);
-  }
-
-  @Override
-  public Optional<TxEvent> findFirstCompensatedEventByIdGreaterThan(long id) {
-    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(TxCompensatedEvent.name(), id);
+    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(type, SINGLE_TX_EVENT_REQUEST);
   }
 
   @Override
@@ -113,8 +106,8 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public boolean checkIsRetiredEvent(String globalTxId) {
-    return eventRepo.checkIsRetiredEvent(globalTxId) > 0;
+  public boolean checkIsRetriedEvent(String globalTxId) {
+    return eventRepo.checkIsRetriedEvent(globalTxId) > 0;
   }
 
   @Override

@@ -108,10 +108,11 @@ public class EventScanner implements Runnable {
   }
 
   private void saveUncompensatedEventsToCommands() {
+    // 其实nextEndedEventId并未使用，因为会导致在高并发场景下偶尔跳过未完成的全局事务
     eventRepository.findFirstUncompensatedEventByIdGreaterThan(nextEndedEventId, TxEndedEvent.name())
         .forEach(event -> {
           CurrentThreadContext.put(event.globalTxId(), event);
-          LOG.info("Found uncompensated event {}", event);
+          LOG.info("Found uncompensated event {}, nextEndedEventId {}", event, nextEndedEventId);
           nextEndedEventId = event.id();
           commandRepository.saveCompensationCommands(event.globalTxId());
         });
@@ -158,7 +159,7 @@ public class EventScanner implements Runnable {
       CurrentThreadContext.put(event.globalTxId(), event);
       eventRepository.save(event);// 查找到超时记录后，记录相应的(超时)终止状态
 
-      boolean isRetried = eventRepository.checkIsRetiredEvent(event.type());
+      boolean isRetried = eventRepository.checkIsRetriedEvent(event.type());
       utxMetrics.countTxNumber(event, true, isRetried);
 
 //      if (timeout.type().equals(TxStartedEvent.name())) {
