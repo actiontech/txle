@@ -34,7 +34,7 @@ public class UtxMetrics extends Collector {
     // Such as: utx_transaction_total{instance=~"utx8099",job=~"utx"} or utx_transaction_total{instance=~"utx8099",job=~"utx"}, summary is: sum(utx_transaction_total{job=~"utx"})
     private static final Counter UTX_TRANSACTION_TOTAL = buildCounter("utx_transaction_total", "Total number of transactions.");
     private static final Counter UTX_TRANSACTION_SUCCESSFUL_TOTAL = buildCounter("utx_transaction_successful_total", "Total number of successful transactions.");
-    private static final Counter UTX_TRANSACTION_FAILED_TOTAL = buildCounter("utx_transaction_failed_total", "Total number of failed transactions.");
+    private static final Counter UTX_TRANSACTION_FAILED_TOTAL = buildCounter("utx_transaction_failed_total", "Total number of transactions which had abnormity occurs.");// 发生异常的数量
     private static final Counter UTX_TRANSACTION_ROLLBACKED_TOTAL = buildCounter("utx_transaction_rollbacked_total", "Total number of rollbacked transactions.");
     private static final Counter UTX_TRANSACTION_RETRIED_TOTAL = buildCounter("utx_transaction_retried_total", "Total number of retried transactions..");
     private static final Counter UTX_TRANSACTION_TIMEOUT_TOTAL = buildCounter("utx_transaction_timeout_total", "Total number of timeout transactions.");

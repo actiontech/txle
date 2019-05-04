@@ -79,12 +79,7 @@ public class TxConsistentServiceTest {
       return null;
     }
 
-    @Override
-    public Optional<TxEvent> findFirstCompensatedEventByIdGreaterThan(long id) {
-      return Optional.empty();
-    }
-
-    @Override
+      @Override
     public void deleteDuplicateEvents(String type) {
     }
 
@@ -119,7 +114,7 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public boolean checkIsRetiredEvent(String globalTxId) {
+    public boolean checkIsRetriedEvent(String globalTxId) {
       return false;
     }
 

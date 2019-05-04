@@ -46,7 +46,7 @@ public class SpringCommandRepository implements CommandRepository {
   @Override
   public void saveCompensationCommands(String globalTxId) {
     List<TxEvent> events = eventRepository
-        .findStartedEventsWithMatchingEndedButNotCompensatedEvents(globalTxId);
+        .findStartedEventsWithMatchingEndedButNotCompensatedEvents(globalTxId);// 查询已结束但未补偿的子事务，之后保存该子事务的补偿命令，供后续补偿使用
 
     Map<String, Command> commands = new LinkedHashMap<>();
 
@@ -63,15 +63,15 @@ public class SpringCommandRepository implements CommandRepository {
     }
 
     for (Command command : commands.values()) {
-      LOG.info("Saving compensation command {}", command);
       try {
         if (!eventIdSet.contains(command.getEventId())) {// To avoid to save if the eventId is exists. If not, it will print 'duplicate eventId....' exception.
-          commandRepository.save(command);
+          if (commandRepository.save(command) != null) {
+            LOG.info("Saved compensation command {}", command);
+          }
         }
       } catch (Exception e) {
         LOG.warn("Failed to save some command {}", command);
       }
-      LOG.info("Saved compensation command {}", command);
     }
   }
 

@@ -77,7 +77,7 @@ public class TxConsistentService {
 		utxMetrics.countChildTxNumber(event);// child transaction count
 		if (types.contains(event.type()) && isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", event.type(), event.globalTxId());
-			boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
+			boolean isRetried = eventRepository.checkIsRetriedEvent(event.globalTxId());
 			utxMetrics.countTxNumber(event, false, isRetried);
 			utxMetrics.endMarkTxDuration(event);// end duration.
 			return -1;
@@ -95,7 +95,7 @@ public class TxConsistentService {
 			if (!eventRepository.checkIsExistsTxCompensatedEvent(event.type(), event.localTxId())) {// 保存事件前，检查是否已经存在某子事务的某种事件，如果存在则不再保存。如：检测某事务超时后，若在下次检测时做出补偿处理，则会保存多条超时事件信息，为避免则先检测是否存在
 				eventRepository.save(event);
 
-				boolean isRetried = eventRepository.checkIsRetiredEvent(event.globalTxId());
+				boolean isRetried = eventRepository.checkIsRetriedEvent(event.globalTxId());
 				utxMetrics.countTxNumber(event, false, isRetried);
 				utxMetrics.endMarkTxDuration(event);// end duration.
 

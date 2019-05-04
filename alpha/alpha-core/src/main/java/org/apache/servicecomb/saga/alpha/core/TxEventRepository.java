@@ -104,19 +104,6 @@ public interface TxEventRepository {
   List<TxEvent> findSequentialCompensableEventOfUnended();
 
   /**
-   * Find a {@link TxEvent} which satisfies below requirements:
-   *
-   * <ol>
-   *   <li>{@link TxEvent#type} equals to {@link EventType#TxCompensatedEvent}</li>
-   *   <li>{@link TxEvent#surrogateId} greater than param <code>id</code></li>
-   * </ol>
-   *
-   * @param id
-   * @return
-   */
-  Optional<TxEvent> findFirstCompensatedEventByIdGreaterThan(long id);
-
-  /**
    * Delete duplicated {@link TxEvent}s which {@link TxEvent#type} equals param <code>type</code>.
    *
    * @param type event type
@@ -135,7 +122,7 @@ public interface TxEventRepository {
 
   long count();
 
-  boolean checkIsRetiredEvent(String globalTxId);
+  boolean checkIsRetriedEvent(String globalTxId);
 
   Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
