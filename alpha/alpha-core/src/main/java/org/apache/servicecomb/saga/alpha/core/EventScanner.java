@@ -225,7 +225,7 @@ public class EventScanner implements Runnable {
               command.globalTxId(),
               command.localTxId());
 
-          omegaCallback.compensate(txStartedEventOf(command));
+          omegaCallback.compensate(txStartedEventOf(command));// 该方法会最终调用客户端的org.apache.servicecomb.saga.omega.transaction.CompensationMessageHandler.onReceive方法进行补偿和请求存储补偿事件
         });
   }
 

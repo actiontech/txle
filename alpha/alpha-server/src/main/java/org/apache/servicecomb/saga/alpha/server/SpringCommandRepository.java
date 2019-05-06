@@ -47,6 +47,10 @@ public class SpringCommandRepository implements CommandRepository {
   public void saveCompensationCommands(String globalTxId) {
     List<TxEvent> events = eventRepository
         .findStartedEventsWithMatchingEndedButNotCompensatedEvents(globalTxId);// 查询已结束但未补偿的子事务，之后保存该子事务的补偿命令，供后续补偿使用
+    if (events == null || events.isEmpty()) {
+      LOG.debug("Executed method 'TxEventEnvelopeRepository.findStartedEventsWithMatchingEndedButNotCompensatedEvents' globalTxId {}.", globalTxId);
+      return;
+    }
 
     Map<String, Command> commands = new LinkedHashMap<>();
 
@@ -92,12 +96,17 @@ public class SpringCommandRepository implements CommandRepository {
     List<Command> commands = commandRepository
         .findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
 
-    commands.forEach(command ->
+    commands.forEach(command -> {
+      try {
         commandRepository.updateStatusByGlobalTxIdAndLocalTxId(
-            NEW.name(),
-            PENDING.name(),
-            command.globalTxId(),
-            command.localTxId()));
+                NEW.name(),
+                PENDING.name(),
+                command.globalTxId(),
+                command.localTxId());
+      } catch (Exception e) {
+        LOG.error("Failed to execute method 'updateStatusByGlobalTxIdAndLocalTxId' localTxId {}.", command.localTxId(), e);
+      }
+    });
 
     return commands;
   }
