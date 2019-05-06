@@ -122,9 +122,9 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 //      + " ORDER BY t.surrogateId ASC")
   List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId, Pageable pageable);
 
-  @Query("SELECT t FROM TxEvent t WHERE t.type = ?1" +
+  @Query("SELECT t FROM TxEvent t WHERE (t.type = ?1 OR (t.type = 'TxStartedEvent' AND t.expiryTime < CURRENT_TIMESTAMP))" +
           // 大于未完成的全局事务的最小id值
-          " AND t.surrogateId > (select min(t5.surrogateId) from TxEvent t5 WHERE NOT EXISTS (select 1 from TxEvent t6 WHERE t6.type = 'SagaEndedEvent' AND t5.globalTxId = t6.globalTxId))" +
+          " AND t.surrogateId > (SELECT coalesce(MIN(t5.surrogateId), 0) FROM TxEvent t5 WHERE NOT EXISTS (SELECT 1 FROM TxEvent t6 WHERE t6.type = 'SagaEndedEvent' AND t5.globalTxId = t6.globalTxId))" +
           // 发生异常的
           " AND EXISTS (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.type = 'TxAbortedEvent')" +
           // 排除已补偿的
