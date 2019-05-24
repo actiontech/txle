@@ -60,15 +60,14 @@ public class SpringCommandRepository implements CommandRepository {
       eventIdSet.add(event.id());
     }
 
-    Set<Command> existCommandList = commandRepository.findExistCommandList(eventIdSet);
-    eventIdSet.clear();
-    if (existCommandList != null && !existCommandList.isEmpty()) {
-      existCommandList.forEach(command -> {eventIdSet.add(command.getEventId());});
+    Set<Long> existEventIdList = commandRepository.findExistCommandList(eventIdSet);
+    if (existEventIdList == null) {
+      existEventIdList = new HashSet<>();
     }
 
     for (Command command : commands.values()) {
       try {
-        if (!eventIdSet.contains(command.getEventId())) {// To avoid to save if the eventId is exists. If not, it will print 'duplicate eventId....' exception.
+        if (!existEventIdList.contains(command.getEventId())) {// To avoid to save if the eventId is exists. If not, it will print 'duplicate eventId....' exception.
           if (commandRepository.save(command) != null) {
             LOG.info("Saved compensation command {}", command);
           }
@@ -76,6 +75,62 @@ public class SpringCommandRepository implements CommandRepository {
       } catch (Exception e) {
         LOG.warn("Failed to save some command {}", command);
       }
+    }
+  }
+
+  @Override
+  public void saveCommandsForNeedCompensationEvent(String globalTxId, String localTxId) {
+    List<TxEvent> txStartedEvents = eventRepository.selectTxStartedEventByLocalTxId(globalTxId, localTxId);
+    if (txStartedEvents != null && !txStartedEvents.isEmpty()) {
+      Set<Long> eventIdSet = new HashSet<>();
+      txStartedEvents.forEach(event -> eventIdSet.add(event.id()));
+      Set<Long> existEventIdList = new HashSet<>();
+      if (!eventIdSet.isEmpty()) {
+        Set<Long> existCommandEventIdList = commandRepository.findExistCommandList(eventIdSet);
+        if (existCommandEventIdList != null && !existCommandEventIdList.isEmpty()) {
+          existEventIdList.addAll(existCommandEventIdList);
+        }
+      }
+
+      txStartedEvents.forEach(event -> {
+        try {
+          if (!existEventIdList.contains(event.id())) {
+            commandRepository.save(new Command(event));
+            existEventIdList.add(event.id());
+            LOG.info("Saved compensation command {}", event);
+          }
+        } catch (Exception e) {
+          LOG.warn("Failed to save some command {}", event);
+        }
+      });
+    }
+  }
+
+  @Override
+  public void saveWillCompensateCommandsForTimeout(String globalTxId) {
+    List<TxEvent> txStartedEvents = eventRepository.findNeedCompensateEventForTimeout(globalTxId);
+    if (txStartedEvents != null && !txStartedEvents.isEmpty()) {
+      txStartedEvents.forEach(event -> {
+        try {
+          commandRepository.save(new Command(event));
+        } catch (Exception e) {
+          LOG.warn("Failed to save command {} in method 'saveWillCompensateCommandsForTimeout'.", event);
+        }
+      });
+    }
+  }
+
+  @Override
+  public void saveWillCompensateCommandsForException(String globalTxId, String localTxId) {
+    List<TxEvent> txStartedEvents = eventRepository.findNeedCompensateEventForException(globalTxId, localTxId);
+    if (txStartedEvents != null && !txStartedEvents.isEmpty()) {
+      txStartedEvents.forEach(event -> {
+        try {
+          commandRepository.save(new Command(event));
+        } catch (Exception e) {
+          LOG.warn("Failed to save command {} in method 'saveWillCompensateCommandsForException'.", event);
+        }
+      });
     }
   }
 
@@ -93,8 +148,8 @@ public class SpringCommandRepository implements CommandRepository {
   @Transactional
   @Override
   public List<Command> findFirstCommandToCompensate() {
-    List<Command> commands = commandRepository
-        .findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
+//    List<Command> commands = commandRepository.findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
+    List<Command> commands = commandRepository.findCommandByStatus("NEW");
 
     commands.forEach(command -> {
       try {

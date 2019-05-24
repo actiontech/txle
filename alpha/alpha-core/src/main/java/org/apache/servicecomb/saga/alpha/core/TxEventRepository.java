@@ -59,6 +59,8 @@ public interface TxEventRepository {
    */
   List<TxEvent> findTimeoutEvents();
 
+  boolean checkIsTimeoutBeforeEnding(String globalTxId);
+
   /**
    * Find a {@link TxEvent} which satisfies below requirements:
    * <ol>

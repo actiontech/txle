@@ -70,34 +70,52 @@ public class EventScanner implements Runnable {
   }
 
   private void pollEvents() {
+    /**
+     * 补偿业务逻辑大换血：
+     *    主要需要补偿的分为两大类，超时导致的异常和其它情况导致的异常(重试属于其它情况)；
+     *    原逻辑：将二者混在一起，带来了各种繁杂困扰，出现问题很难定位；
+     *    现逻辑：将二者分开；TM主要指的是TxConsistentService#handleSupportTxPause(TxEvent)；
+     *            其它异常情况：【客户端】负责异常检测，检测到后，由TM保存Aborted事件，再对当前全局事务下的相关子事务记录补偿并及时下发补偿命令；
+     *                           排除发生异常的子事务，因为发生异常的子事务已由本地事务回滚；
+     *            超时异常情况：【定时器】负责超时检测，检测到后，由TM保存Aborted事件，再对当前全局事务下的相关子事务记录补偿并及时下发补偿命令；
+     *                           需对所有子事务进行补偿；
+     *            TM超时检测：TM中也会对即将结束的全局事务检测是否超时，因为定时扫描器中检测超时会存在一定误差，如定时器中任务需3s完成，但某事务超时设置的是2秒，此时还未等对该事物进行检测，该事务就已经结束了
+     */
+    scheduler.scheduleWithFixedDelay(
+            () -> {
+              try {
+                // 未防止出现部分事务在未检测超时前就已经结束的情况，此处将超时检测单开一个线程，否则其它方法如果执行超过了事务的超时时间，那么下次超时检测将在事务之后检测了，此时事务已经正常结束了
+                updateTimeoutStatus();
+                findTimeoutEvents();
+                abortTimeoutEvents();
+              } catch (Exception e) {
+                // to avoid stopping this scheduler in case of exception By Gannalyo
+                LOG.error(UtxConstants.LOG_ERROR_PREFIX + "EventScanner.pollEvents.scheduleWithFixedDelay run abortively.", e);
+              }
+            },
+            0,
+            eventPollingInterval,
+            MILLISECONDS);
+
     scheduler.scheduleWithFixedDelay(
 				() -> {
 					try {
-                        updateTimeoutStatus();
-						findTimeoutEvents();
-						abortTimeoutEvents();
-						saveUncompensatedEventsToCommands();
+//                        updateTimeoutStatus();
+//						findTimeoutEvents();
+//						abortTimeoutEvents();
+//						saveUncompensatedEventsToCommands();
 						compensate();
 						updateCompensatedCommands();
-						deleteDuplicateSagaEndedEvents();
-						updateTransactionStatus();
+//						deleteDuplicateSagaEndedEvents();
+//						updateTransactionStatus();
 					} catch (Exception e) {
 						// to avoid stopping this scheduler in case of exception By Gannalyo
 						LOG.error(UtxConstants.LOG_ERROR_PREFIX + "EventScanner.pollEvents.scheduleWithFixedDelay run abortively.", e);
 					}
 				},
         0,
-        eventPollingInterval,
+        eventPollingInterval * 2,
         MILLISECONDS);
-  }
-
-  private void findTimeoutEvents() {
-    eventRepository.findTimeoutEvents()
-        .forEach(event -> {
-          CurrentThreadContext.put(event.globalTxId(), event);
-          LOG.info("Found timeout event {}", event);
-          timeoutRepository.save(txTimeoutOf(event));
-        });
   }
 
   private void updateTimeoutStatus() {
@@ -107,25 +125,83 @@ public class EventScanner implements Runnable {
     }
   }
 
-  private void saveUncompensatedEventsToCommands() {
-    // 其实nextEndedEventId并未使用，因为会导致在高并发场景下偶尔跳过未完成的全局事务
-    eventRepository.findFirstUncompensatedEventByIdGreaterThan(nextEndedEventId, TxEndedEvent.name())
+  private void findTimeoutEvents() {
+    // 查询未登记过的超时
+    // SELECT t.surrogateId FROM TxTimeout t, TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type
+    eventRepository.findTimeoutEvents()
         .forEach(event -> {
           CurrentThreadContext.put(event.globalTxId(), event);
-          LOG.info("Found uncompensated event {}, nextEndedEventId {}", event, nextEndedEventId);
-          nextEndedEventId = event.id();
-          commandRepository.saveCompensationCommands(event.globalTxId());
+          LOG.info("Found timeout event {}", event);
+          try {
+            if (timeoutRepository.findTxTimeoutByEventId(event.id()) < 1) {
+              timeoutRepository.save(txTimeoutOf(event));
+            }
+          } catch (Exception e) {
+            LOG.error("Failed to save timeout {} in method 'EventScanner.findTimeoutEvents()'.", event, e);
+          }
         });
+  }
+
+  private void abortTimeoutEvents() {
+    timeoutRepository.findFirstTimeout().forEach(timeout -> {// 查找超时且状态为 NEW 的超时记录
+      LOG.info("Found timeout event {} to abort", timeout);
+
+      TxEvent event = toTxAbortedEvent(timeout);
+      CurrentThreadContext.put(event.globalTxId(), event);
+      eventRepository.save(event);// 查找到超时记录后，记录相应的(超时)终止状态
+      // 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
+      commandRepository.saveWillCompensateCommandsForTimeout(event.globalTxId());
+
+      boolean isRetried = eventRepository.checkIsRetriedEvent(event.type());
+      utxMetrics.countTxNumber(event, true, isRetried);
+
+//      if (timeout.type().equals(TxStartedEvent.name())) {
+//        eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
+//            .ifPresent(omegaCallback::compensate);// 查找到超时记录后，屏蔽在此处触发补偿功能，完全交给compensate方法处理即可
+//      }
+    });
+  }
+
+  private void saveUncompensatedEventsToCommands() {
+    long a = System.currentTimeMillis();
+    // nextEndedEventId不推荐使用，原因是某事务超时时间较长在定时器检测时并未超时，并且其后续执行了一些带有异常的事务，定时器检测到这些异常事务后该值被更改，然后该超时事务将无法被补偿，因为查询需要补偿的SQL中含id值大于该nextEndedEventId值条件
+    List<TxEvent> eventList = eventRepository.findFirstUncompensatedEventByIdGreaterThan(nextEndedEventId, TxEndedEvent.name());
+    if (eventList == null || eventList.isEmpty()) return;
+    LOG.info("Method 'find uncompensated event' took {} milliseconds, size = {}, nextEndedEventId = {}.", System.currentTimeMillis() - a, eventList == null ? 0 : eventList.size(), nextEndedEventId);
+    eventList.forEach(event -> {
+      CurrentThreadContext.put(event.globalTxId(), event);
+      LOG.info("Found uncompensated event {}, nextEndedEventId {}", event, nextEndedEventId);
+      nextEndedEventId = event.id();
+//      commandRepository.saveCompensationCommands(event.globalTxId());
+      commandRepository.saveCommandsForNeedCompensationEvent(event.globalTxId(), event.localTxId());
+    });
+  }
+
+  private void compensate() {
+    long a = System.currentTimeMillis();
+    List<Command> commandList = commandRepository.findFirstCommandToCompensate();
+    if (commandList == null || commandList.isEmpty()) return;
+    LOG.info("Method 'find compensated command' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, commandList == null ? 0 : commandList.size());
+    commandList.forEach(command -> {
+      LOG.info("Compensating transaction with globalTxId {} and localTxId {}",
+              command.globalTxId(),
+              command.localTxId());
+
+      omegaCallback.compensate(txStartedEventOf(command));// 该方法会最终调用客户端的org.apache.servicecomb.saga.omega.transaction.CompensationMessageHandler.onReceive方法进行补偿和请求存储补偿事件
+    });
   }
 
   private void updateCompensatedCommands() {
     // The 'findFirstCompensatedEventByIdGreaterThan' interface did not think about the 'SagaEndedEvent' type so that would do too many thing those were wasted.
-      List<TxEvent> unCompensableEventList = eventRepository.findSequentialCompensableEventOfUnended();
-      unCompensableEventList.forEach(event -> {
-          CurrentThreadContext.put(event.globalTxId(), event);
-          LOG.info("Found compensated event {}", event);
-          updateCompensationStatus(event);
-        });
+    long a = System.currentTimeMillis();
+    List<TxEvent> compensatedUnendEventList = eventRepository.findSequentialCompensableEventOfUnended();
+    if (compensatedUnendEventList == null || compensatedUnendEventList.isEmpty()) return;
+    LOG.info("Method 'find compensated(unend) event' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, compensatedUnendEventList == null ? 0 : compensatedUnendEventList.size());
+    compensatedUnendEventList.forEach(event -> {
+      CurrentThreadContext.put(event.globalTxId(), event);
+      LOG.info("Found compensated event {}", event);
+      updateCompensationStatus(event);
+    });
   }
 
   private void deleteDuplicateSagaEndedEvents() {
@@ -151,42 +227,30 @@ public class EventScanner implements Runnable {
     markSagaEnded(event);
   }
 
-  private void abortTimeoutEvents() {
-    timeoutRepository.findFirstTimeout().forEach(timeout -> {// 查找超时且状态为 NEW 的超时记录
-      LOG.info("Found timeout event {} to abort", timeout);
-
-      TxEvent event = toTxAbortedEvent(timeout);
-      CurrentThreadContext.put(event.globalTxId(), event);
-      eventRepository.save(event);// 查找到超时记录后，记录相应的(超时)终止状态
-
-      boolean isRetried = eventRepository.checkIsRetriedEvent(event.type());
-      utxMetrics.countTxNumber(event, true, isRetried);
-
-//      if (timeout.type().equals(TxStartedEvent.name())) {
-//        eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
-//            .ifPresent(omegaCallback::compensate);// 查找到超时记录后，屏蔽在此处触发补偿功能，完全交给compensate方法处理即可
-//      }
-    });
-  }
-
   private void updateTransactionStatus() {
     eventRepository.findFirstAbortedGlobalTransaction().ifPresent(this::markGlobalTxEndWithEvents);
   }
 
   private void markSagaEnded(TxEvent event) {
     CurrentThreadContext.put(event.globalTxId(), event);
+    // 如果没有未补偿的命令，则结束当前全局事务
+    // TODO 检查当前全局事务对应的事件是否还有需要补偿的子事务???
     if (commandRepository.findUncompletedCommands(event.globalTxId()).isEmpty()) {
       markGlobalTxEndWithEvent(event);
     }
   }
 
   private void markGlobalTxEndWithEvent(TxEvent event) {
-    CurrentThreadContext.put(event.globalTxId(), event);
-    TxEvent sagaEndedEvent = toSagaEndedEvent(event);
-    eventRepository.save(sagaEndedEvent);
-    // To send message to Kafka.
-    kafkaMessageProducer.send(sagaEndedEvent);
-    LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
+    try {
+      CurrentThreadContext.put(event.globalTxId(), event);
+      TxEvent sagaEndedEvent = toSagaEndedEvent(event);
+      eventRepository.save(sagaEndedEvent);
+      // To send message to Kafka.
+      kafkaMessageProducer.send(sagaEndedEvent);
+      LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
+    } catch (Exception e) {
+      LOG.error("Failed to save event globalTxId {} localTxId {} type {}", event.globalTxId(), event.localTxId(), event.type(), e);
+    }
   }
 
   private void markGlobalTxEndWithEvents(List<TxEvent> events) {
@@ -217,16 +281,6 @@ public class EventScanner implements Runnable {
         "",
         event.category(),
         EMPTY_PAYLOAD);
-  }
-
-  private void compensate() {
-    commandRepository.findFirstCommandToCompensate().forEach(command -> {
-          LOG.info("Compensating transaction with globalTxId {} and localTxId {}",
-              command.globalTxId(),
-              command.localTxId());
-
-          omegaCallback.compensate(txStartedEventOf(command));// 该方法会最终调用客户端的org.apache.servicecomb.saga.omega.transaction.CompensationMessageHandler.onReceive方法进行补偿和请求存储补偿事件
-        });
   }
 
   private TxEvent txStartedEventOf(Command command) {

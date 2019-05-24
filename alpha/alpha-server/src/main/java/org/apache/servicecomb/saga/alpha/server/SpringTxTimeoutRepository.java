@@ -50,6 +50,11 @@ public class SpringTxTimeoutRepository implements TxTimeoutRepository {
   }
 
   @Override
+  public long findTxTimeoutByEventId(long eventId) {
+    return timeoutRepo.findTxTimeoutByEventId(eventId);
+  }
+
+  @Override
   public void markTimeoutAsDone(List<Long> surrogateIdList) {
     timeoutRepo.updateStatusOfFinishedTx(surrogateIdList);
   }

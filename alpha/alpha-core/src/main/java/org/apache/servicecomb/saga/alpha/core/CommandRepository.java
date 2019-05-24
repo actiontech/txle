@@ -23,6 +23,12 @@ public interface CommandRepository {
 
   void saveCompensationCommands(String globalTxId);
 
+  void saveCommandsForNeedCompensationEvent(String globalTxId, String localTxId);
+
+  void saveWillCompensateCommandsForTimeout(String globalTxId);
+
+  void saveWillCompensateCommandsForException(String globalTxId, String localTxId);
+
   void markCommandAsDone(String globalTxId, String localTxId);
 
   List<Command> findUncompletedCommands(String globalTxId);
