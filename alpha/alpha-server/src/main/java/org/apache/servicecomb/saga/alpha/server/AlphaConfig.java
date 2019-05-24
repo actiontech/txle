@@ -124,7 +124,7 @@ class AlphaConfig {
         eventRepository, commandRepository, timeoutRepository,
         omegaCallback, kafkaMessageProducer, utxMetrics, eventPollingInterval).run();
 
-    TxConsistentService consistentService = new TxConsistentService(eventRepository);
+    TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
     ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService);
     new Thread(startable::start).start();

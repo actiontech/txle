@@ -31,6 +31,7 @@ public class AccidentPlatformService implements IAccidentPlatformService {
 
     @Override
     public boolean reportMsgToAccidentPlatform(String jsonParams) {
+        long a = System.currentTimeMillis();
         LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Message [[{}]] will send to Accident Platform [" + this.accidentPlatformAddress + "].", jsonParams);
         AtomicBoolean result = new AtomicBoolean();
         AtomicInteger invokeTimes = new AtomicInteger();
@@ -54,6 +55,7 @@ public class AccidentPlatformService implements IAccidentPlatformService {
             LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
             UtxAccidentMetrics.countFailedNumber();
         }
+        LOG.info("Method 'AccidentPlatformService.reportMsgToAccidentPlatform' took {} milliseconds.", System.currentTimeMillis() - a);
 
         return result.get();
     }

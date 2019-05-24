@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS TxEvent (
 
 CREATE INDEX IF NOT EXISTS saga_events_index ON TxEvent (surrogateId, globalTxId, localTxId, type, expiryTime);
 CREATE INDEX IF NOT EXISTS saga_global_tx_index ON TxEvent (globalTxId);
+CREATE INDEX IF NOT EXISTS saga_surrogateId_index ON TxEvent (surrogateId);
+CREATE INDEX IF NOT EXISTS saga_tx_type_index ON TxEvent (type);
 
 
 CREATE TABLE IF NOT EXISTS Command (

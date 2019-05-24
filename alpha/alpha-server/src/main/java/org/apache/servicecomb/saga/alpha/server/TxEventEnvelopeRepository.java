@@ -47,15 +47,15 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + "OR t.globalTxId = t.localTxId)")
   Optional<List<TxEvent>> findFirstAbortedGlobalTxByType();
 
-  @Query("SELECT t FROM TxEvent t "
-      + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
-      + "  AND t.expiryTime < CURRENT_TIMESTAMP AND NOT EXISTS( "
-      + "  SELECT t1.globalTxId FROM TxEvent t1 "
-      + "  WHERE t1.globalTxId = t.globalTxId "
-      + "    AND t1.localTxId = t.localTxId "
-      + "    AND t1.type != t.type"
-      + ")")
-  List<TxEvent> findTimeoutEvents(Pageable pageable);
+//  @Query("SELECT t FROM TxEvent t "
+//      + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
+//      + "  AND t.expiryTime < CURRENT_TIMESTAMP AND NOT EXISTS( "
+//      + "  SELECT t1.globalTxId FROM TxEvent t1 "
+//      + "  WHERE t1.globalTxId = t.globalTxId "
+//      + "    AND t1.localTxId = t.localTxId "
+//      + "    AND t1.type != t.type"
+//      + ")")
+//  List<TxEvent> findTimeoutEvents(Pageable pageable);
 
   @Query("SELECT t FROM TxEvent t "
       + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
@@ -63,9 +63,11 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + "  SELECT t1.globalTxId FROM TxEvent t1 "
       + "  WHERE t1.globalTxId = t.globalTxId "
       + "    AND t1.localTxId = t.localTxId "
-      + "    AND t1.type != t.type"
-      + ")")
-  List<TxEvent> findTimeoutEvents(Pageable pageable, Date currentDateTime);
+      + "    AND t1.type != t.type)")
+  List<TxEvent> findTimeoutEvents(Date currentDateTime);
+
+  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2 AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'TxAbortedEvent')) T1", nativeQuery = true)
+  long findTimeoutEventsBeforeEnding(String globalTxId, Date currentDateTime);
 
   @Query("SELECT t FROM TxEvent t "
       + "WHERE t.globalTxId = ?1 "
@@ -83,6 +85,9 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + "    AND t1.localTxId = t.localTxId "
       + "    AND t1.type IN ('TxStartedEvent', 'SagaStartedEvent') ) = 0 ")
   List<TxEvent> findByEventGlobalTxIdAndEventType(String globalTxId, String type);
+
+  @Query("FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId = ?2 AND t.type = 'TxStartedEvent'")
+  List<TxEvent> selectTxStartedEventByLocalTxId(String globalTxId, String localTxId);
 
   @Query("SELECT t FROM TxEvent t "
       + "WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent' AND EXISTS ( "
@@ -120,19 +125,32 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 //      + "    AND t4.type = 'TxStartedEvent' ) = 0"
 ////      + "    AND t4.type = 'TxStartedEvent' ) = 0 AND NOT EXISTS (SELECT t5.globalTxId FROM TxEvent t5 WHERE t5.globalTxId = t.globalTxId AND t5.type = 'SagaEndedEvent')"
 //      + " ORDER BY t.surrogateId ASC")
-  List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId, Pageable pageable);
+//  List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId, Pageable pageable);
 
-  @Query("SELECT t FROM TxEvent t WHERE (t.type = ?1 OR (t.type = 'TxStartedEvent' AND t.expiryTime < CURRENT_TIMESTAMP))" +
-          // 大于未完成的全局事务的最小id值
-          " AND t.surrogateId > (SELECT coalesce(MIN(t5.surrogateId), 0) FROM TxEvent t5 WHERE NOT EXISTS (SELECT 1 FROM TxEvent t6 WHERE t6.type = 'SagaEndedEvent' AND t5.globalTxId = t6.globalTxId))" +
+  // TODO select ifnull(min(t.surrogateId), 0) from TxEvent t WHERE NOT EXISTS (select 1 from TxEvent t1 WHERE t1.type = 'SagaEndedEvent' AND t.globalTxId = t1.globalTxId);
+  // min默认值不能为0，默认值应为最大surrogateId
+  @Query(value = "SELECT * FROM TxEvent t WHERE" +
+          // 从未结束(即无【SagaEndedEvent】状态)的最小事件开始查询
+          // nextEndedEventId不推荐使用，原因是某事务超时时间较长在定时器检测时并未超时，并且其后续执行了一些带有异常的事务，定时器检测到这些异常事务后该值被更改，然后该超时事务将无法被补偿，因为查询需要补偿的SQL中含id值大于该nextEndedEventId值条件
+          " t.surrogateId > (SELECT coalesce(MIN(t5.surrogateId), 0) FROM TxEvent t5 WHERE NOT EXISTS (SELECT 1 FROM TxEvent t6 WHERE t6.type = 'SagaEndedEvent' AND t5.globalTxId = t6.globalTxId AND t6.surrogateId > ?2) AND t5.surrogateId > ?2)" +
+//          " t.surrogateId > (SELECT coalesce(MIN(t5.surrogateId), 0) FROM TxEvent t5 WHERE NOT EXISTS (SELECT 1 FROM TxEvent t6 WHERE t6.type = 'SagaEndedEvent' AND t5.globalTxId = t6.globalTxId))" +
           // 发生异常的
-          " AND EXISTS (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.type = 'TxAbortedEvent')" +
+//          " AND ((t.type = 'TxStartedEvent' AND t.expiryTime < now()) OR (t.type = ?1 AND EXISTS (SELECT 1 FROM TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.type = 'TxAbortedEvent')))" +
+          " AND t.type = ?1 AND EXISTS (SELECT 1 FROM TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.type = 'TxAbortedEvent')" +
           // 排除已补偿的
           " AND NOT EXISTS (SELECT t3.globalTxId FROM TxEvent t3 WHERE t3.globalTxId = t.globalTxId AND t3.localTxId = t.localTxId AND t3.type = 'TxCompensatedEvent')" +
           // 排除重试的
-          " AND (SELECT MIN(t4.retries) FROM TxEvent t4 WHERE t4.globalTxId = t.globalTxId AND t4.localTxId = t.localTxId AND t4.type = 'TxStartedEvent') = 0" +
-          " ORDER BY t.surrogateId ASC")
-  List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, Pageable pageable);
+          " AND t.retries = 0" +
+//          " AND (SELECT MIN(t4.retries) FROM TxEvent t4 WHERE t4.globalTxId = t.globalTxId AND t4.localTxId = t.localTxId AND t4.type = 'TxStartedEvent') = 0" +
+          " ORDER BY t.surrogateId ASC", nativeQuery = true)
+  List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId);
+//  List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, Pageable pageable);
+
+  @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent'")
+  List<TxEvent> findNeedCompensateEventForTimeout(String globalTxId);
+
+  @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId != ?2 AND t.type = 'TxStartedEvent'")
+  List<TxEvent> findNeedCompensateEventForException(String globalTxId, String localTxId);
 
 //  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND (t.type = 'TxCompensatedEvent' or (t.type = 'TxAbortedEvent' AND t.globalTxId != t.localTxId)) ORDER BY surrogateId", nativeQuery = true)
   @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND t.type = 'TxCompensatedEvent' ORDER BY surrogateId", nativeQuery = true)

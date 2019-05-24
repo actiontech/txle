@@ -54,6 +54,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
 
     @Override
     public void send(TxEvent event) {
+        long a = System.currentTimeMillis();
         try {
             boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.BizInfoToKafka);
             if (enabled && EventType.SagaEndedEvent.name().equals(event.type())) {
@@ -71,10 +72,12 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                         // send msg to kafka
                         sendMessage(event, messageList, idList);
                     }
+                    LOG.info("Method 'KafkaMessageProducer.send' took {} milliseconds.", System.currentTimeMillis() - a);
                 }
             }
         } catch (Exception e) {
             LOG.error("Fail to send Kafka message - localTxId = " + event.localTxId(), e);
+            LOG.info("Method 'KafkaMessageProducer.send' took {} milliseconds.", System.currentTimeMillis() - a);
         }
     }
 

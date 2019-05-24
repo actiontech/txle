@@ -47,7 +47,12 @@ class SpringTxEventRepository implements TxEventRepository {
   @Override
   public List<TxEvent> findTimeoutEvents() {
 //    return eventRepo.findTimeoutEvents(SINGLE_TX_EVENT_REQUEST);
-    return eventRepo.findTimeoutEvents(SINGLE_TX_EVENT_REQUEST, new Date());
+    return eventRepo.findTimeoutEvents(new Date());
+  }
+
+  @Override
+  public boolean checkIsTimeoutBeforeEnding(String globalTxId) {
+    return eventRepo.findTimeoutEventsBeforeEnding(globalTxId, new Date()) > 0;
   }
 
   @Override
@@ -62,7 +67,8 @@ class SpringTxEventRepository implements TxEventRepository {
 
   @Override
   public List<TxEvent> findFirstUncompensatedEventByIdGreaterThan(long id, String type) {
-    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(type, SINGLE_TX_EVENT_REQUEST);
+//    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(type, SINGLE_TX_EVENT_REQUEST);
+    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(type, id);
   }
 
   @Override

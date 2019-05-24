@@ -56,6 +56,11 @@ public class TxConsistentServiceTest {
     }
 
     @Override
+    public boolean checkIsTimeoutBeforeEnding(String globalTxId) {
+      return false;
+    }
+
+    @Override
     public Optional<TxEvent> findTxStartedEvent(String globalTxId, String localTxId) {
       return events.stream()
           .filter(event -> globalTxId.equals(event.globalTxId()) && localTxId.equals(event.localTxId()))
@@ -137,7 +142,7 @@ public class TxConsistentServiceTest {
 
   private final String compensationMethod = getClass().getCanonicalName();
 
-  private final TxConsistentService consistentService = new TxConsistentService(eventRepository);
+  private final TxConsistentService consistentService = new TxConsistentService(eventRepository, null, null);
   private final byte[] payloads = "yeah".getBytes();
 
   @Before

@@ -22,6 +22,8 @@ import java.util.List;
 public interface TxTimeoutRepository {
   void save(TxTimeout timeout);
 
+  long findTxTimeoutByEventId(long eventId);
+
   void markTimeoutAsDone(List<Long> surrogateIdList);
 
   List<Long> selectTimeoutIdList();
