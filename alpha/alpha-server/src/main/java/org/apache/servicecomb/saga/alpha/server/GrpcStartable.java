@@ -29,6 +29,9 @@ import java.util.Properties;
 
 import javax.net.ssl.SSLException;
 
+import brave.Tracing;
+import brave.grpc.GrpcTracing;
+import io.grpc.ServerInterceptors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +49,7 @@ class GrpcStartable implements ServerStartable {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Server server;
 
-  GrpcStartable(GrpcServerConfig serverConfig, BindableService... services) {
+  GrpcStartable(GrpcServerConfig serverConfig, Tracing tracing, BindableService... services) {
     ServerBuilder<?> serverBuilder;
     if (serverConfig.isSslEnable()){
       serverBuilder = NettyServerBuilder.forAddress(
@@ -60,7 +63,10 @@ class GrpcStartable implements ServerStartable {
     } else {
       serverBuilder = ServerBuilder.forPort(serverConfig.getPort());
     }
-    Arrays.stream(services).forEach(serverBuilder::addService);
+//    Arrays.stream(services).forEach(serverBuilder::addService);
+    Arrays.stream(services).forEach(service ->
+            serverBuilder.addService(ServerInterceptors.intercept(service,
+                    GrpcTracing.create(tracing).newServerInterceptor())));// add interceptor for grpc server By Gannalyo
     server = serverBuilder.build();
   }
 

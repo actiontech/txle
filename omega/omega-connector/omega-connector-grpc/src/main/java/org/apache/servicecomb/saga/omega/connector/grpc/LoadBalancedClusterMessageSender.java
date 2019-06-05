@@ -17,6 +17,8 @@
 
 package org.apache.servicecomb.saga.omega.connector.grpc;
 
+import brave.Tracing;
+import brave.grpc.GrpcTracing;
 import com.google.common.base.Supplier;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -67,7 +69,8 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
       MessageDeserializer deserializer,
       ServiceConfig serviceConfig,
       MessageHandler handler,
-      int reconnectDelay) {
+      int reconnectDelay,
+      Tracing tracing) {
 
     if (clusterConfig.getAddresses().size() == 0) {
       throw new IllegalArgumentException("No reachable cluster address provided");
@@ -90,9 +93,11 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
          channel = NettyChannelBuilder.forTarget(address)
             .negotiationType(NegotiationType.TLS)
             .sslContext(sslContext)
+            .intercept(GrpcTracing.create(tracing).newClientInterceptor()) // add grpc interceptor for tracing By Gannalyo
             .build();
       } else {
         channel = ManagedChannelBuilder.forTarget(address).usePlaintext()
+            .intercept(GrpcTracing.create(tracing).newClientInterceptor()) // add grpc interceptor for tracing By Gannalyo
             .build();
       }
       channels.add(channel);

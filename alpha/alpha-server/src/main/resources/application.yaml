@@ -24,6 +24,10 @@ alpha:
 spring:
   profiles:
     active: mysql
+  application:
+    name: txle
+  zipkin:
+    base-url: http://10.186.61.3:9411/api/v2/spans
 
 ---
 spring:
