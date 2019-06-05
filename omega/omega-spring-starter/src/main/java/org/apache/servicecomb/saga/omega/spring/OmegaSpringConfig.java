@@ -17,6 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.spring;
 
+import brave.Tracing;
 import org.apache.servicecomb.saga.omega.connector.grpc.AlphaClusterConfig;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender;
 import org.apache.servicecomb.saga.omega.context.*;
@@ -28,6 +29,7 @@ import org.apache.servicecomb.saga.omega.transaction.accidentplatform.ClientAcci
 import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.apache.servicecomb.saga.omega.transaction.monitor.CommonPrometheusMetrics;
 import org.apache.servicecomb.saga.omega.transaction.monitor.CompensableSqlMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -107,7 +109,8 @@ class OmegaSpringConfig {
       @Value("${alpha.cluster.ssl.certChain:ca.crt}") String certChain,
       @Value("${omega.connection.reconnectDelay:3000}") int reconnectDelay,
       ServiceConfig serviceConfig,
-      @Lazy MessageHandler handler) {
+      @Lazy MessageHandler handler,
+      @Autowired Tracing tracing) {
 
     MessageFormat messageFormat = new KryoMessageFormat();
     AlphaClusterConfig clusterConfig = new AlphaClusterConfig(Arrays.asList(addresses),
@@ -118,7 +121,8 @@ class OmegaSpringConfig {
         messageFormat,
         serviceConfig,
         handler,
-        reconnectDelay);
+        reconnectDelay,
+        tracing);
 
     sender.onConnected();
     

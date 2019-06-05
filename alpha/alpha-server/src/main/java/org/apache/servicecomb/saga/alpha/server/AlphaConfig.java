@@ -17,6 +17,7 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
+import brave.Tracing;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
@@ -118,7 +119,8 @@ class AlphaConfig {
       Map<String, Map<String, OmegaCallback>> omegaCallbacks,
       IKafkaMessageProducer kafkaMessageProducer,
       IConfigCenterService dbDegradationConfigService,
-      UtxMetrics utxMetrics) {
+      UtxMetrics utxMetrics,
+      Tracing tracing) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
@@ -126,15 +128,15 @@ class AlphaConfig {
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
-    ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService);
+    ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService, tracing);
     new Thread(startable::start).start();
 
     return consistentService;
   }
 
   private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService,
-                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService) {
-    return new GrpcStartable(serverConfig,
+                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing) {
+    return new GrpcStartable(serverConfig, tracing,
         new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService));
   }
   

@@ -22,21 +22,19 @@ package org.apache.servicecomb.saga.omega.connector.grpc;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
+import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender.ErrorHandlerFactory;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
-import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.UtxStaticConfig;
 import org.apache.servicecomb.saga.omega.transaction.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent.Builder;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceStub;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 public class GrpcClientMessageSender implements MessageSender {

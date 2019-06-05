@@ -61,7 +61,8 @@ public class LoadBalanceClusterMessageSenderWithTLSTest extends LoadBalancedClus
         deserializer,
         new ServiceConfig(serviceName),
         handler,
-        100);
+        100,
+            null);
   }
 
   @BeforeClass
