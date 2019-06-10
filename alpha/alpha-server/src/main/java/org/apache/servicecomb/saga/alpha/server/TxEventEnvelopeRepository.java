@@ -21,6 +21,7 @@ import java.util.*;
 
 import javax.transaction.Transactional;
 
+import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
