@@ -18,6 +18,7 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import org.apache.servicecomb.saga.alpha.core.Command;
+import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -75,6 +76,7 @@ public interface CommandEntityRepository extends CrudRepository<Command, Long> {
   // 查询某全局事务没有PENDING状态且为NEW状态的Command
   List<Command> findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
 
+  @Query(value = "SELECT * FROM Command T WHERE T.status = ?1" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<Command> findCommandByStatus(String status);
 
   @Query(value = "SELECT T.eventId FROM Command T WHERE T.eventId IN ?1")

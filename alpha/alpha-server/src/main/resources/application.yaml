@@ -57,7 +57,7 @@ spring:
   datasource:
     username: root
     password: 123456
-    url: jdbc:mysql://10.186.61.3:3306/utx?useSSL=false
+    url: jdbc:mysql://10.186.61.3:3306/utx?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
 #    driver-class-name    it'll get an error if open it, and don't know why so far.
 #    driver-class-name: com.mysql.jdbc.driver
     platform: mysql

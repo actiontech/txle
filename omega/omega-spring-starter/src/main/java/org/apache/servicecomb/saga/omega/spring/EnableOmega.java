@@ -18,6 +18,7 @@
 package org.apache.servicecomb.saga.omega.spring;
 
 import org.apache.servicecomb.saga.common.CommonConfig;
+import org.apache.servicecomb.saga.omega.context.TracingConfiguration;
 import org.apache.servicecomb.saga.omega.transaction.AutoCompensableAspectConfig;
 import org.apache.servicecomb.saga.omega.transaction.spring.TransactionAspectConfig;
 import org.springframework.context.annotation.Import;
@@ -29,7 +30,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Import({OmegaSpringConfig.class, TransactionAspectConfig.class, AutoCompensableAspectConfig.class, CommonConfig.class})
+@Import({OmegaSpringConfig.class, TransactionAspectConfig.class, AutoCompensableAspectConfig.class, CommonConfig.class, TracingConfiguration.class})
 
 //@EntityScan(basePackages = {"com.gannalyo.saga.user.entity"})
 //@EnableJpaRepositories(basePackages = {"com.gannalyo.saga.user.repository"})

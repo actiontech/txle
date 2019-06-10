@@ -23,6 +23,7 @@ import java.util.List;
 import javax.persistence.LockModeType;
 import javax.transaction.Transactional;
 
+import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxTimeout;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
@@ -52,11 +53,11 @@ interface TxTimeoutEntityRepository extends CrudRepository<TxTimeout, Long> {
   List<TxTimeout> findFirstTimeoutTxOrderByExpireTimeAsc(Pageable pageable);
 
   @Lock(LockModeType.OPTIMISTIC)
-  @Query("SELECT t FROM TxTimeout AS t "
+  @Query(value = "SELECT * FROM TxTimeout AS t "
       + "WHERE t.status = 'NEW' "
       + "  AND t.expiryTime < ?1 "
-      + "ORDER BY t.expiryTime ASC")
-  List<TxTimeout> findFirstTimeoutTxOrderByExpireTimeAsc(Pageable pageable, Date currentDateTime);
+      + "ORDER BY t.expiryTime ASC" + EventScanner.SCANNER_SQL, nativeQuery = true)
+  List<TxTimeout> findFirstTimeoutTxOrderByExpireTimeAsc(/*Pageable pageable, */Date currentDateTime);
 
   @Transactional
   @Modifying(clearAutomatically = true)
@@ -75,7 +76,7 @@ interface TxTimeoutEntityRepository extends CrudRepository<TxTimeout, Long> {
   @Query("UPDATE TxTimeout t SET t.status = 'DONE' WHERE t.status != 'DONE' AND t.surrogateId IN ?1")
   void updateStatusOfFinishedTx(List<Long> surrogateIdList);
 
-  @Query("SELECT t.surrogateId FROM TxTimeout t, TxEvent t1 WHERE t.status != 'DONE' AND t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type")
+  @Query(value = "SELECT t.surrogateId FROM TxTimeout t, TxEvent t1 WHERE t.status != 'DONE' AND t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<Long> selectTimeoutIdList();
 
   @Query(value = "SELECT * FROM (SELECT count(1) FROM TxTimeout t WHERE t.eventId = ?1) T1", nativeQuery = true)

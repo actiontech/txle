@@ -125,6 +125,11 @@
       <artifactId>brave-instrumentation-grpc</artifactId>
       <version>${brave-version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-mysql</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
     <!-- Integrates so you can use log patterns like %X{traceId}/%X{spanId} -->
     <dependency>
       <groupId>io.zipkin.brave</groupId>

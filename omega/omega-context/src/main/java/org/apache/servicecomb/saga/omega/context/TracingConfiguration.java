@@ -1,13 +1,14 @@
-package org.apache.servicecomb.saga.common;
+package org.apache.servicecomb.saga.omega.context;
 
 import brave.CurrentSpanCustomizer;
 import brave.SpanCustomizer;
 import brave.Tracing;
+import brave.handler.FinishedSpanHandler;
+import brave.handler.MutableSpan;
 import brave.http.HttpTracing;
 import brave.httpclient.TracingHttpClientBuilder;
-import brave.propagation.B3Propagation;
-import brave.propagation.ExtraFieldPropagation;
 import brave.propagation.ThreadLocalCurrentTraceContext;
+import brave.propagation.TraceContext;
 import brave.servlet.TracingFilter;
 import brave.spring.webmvc.SpanCustomizingAsyncHandlerInterceptor;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -26,6 +27,7 @@ import zipkin2.reporter.Sender;
 import zipkin2.reporter.okhttp3.OkHttpSender;
 
 import javax.servlet.Filter;
+import java.io.IOException;
 
 /**
  * This adds tracing configuration to any web mvc controllers or rest template clients.
@@ -57,15 +59,46 @@ public class TracingConfiguration extends WebMvcConfigurerAdapter {
      * Controls aspects of tracing such as the service name that shows up in the UI
      */
     @Bean
-    Tracing tracing(@Value("${spring.application.name}") String serviceName) {
-        return Tracing.newBuilder()
+    Tracing tracing(@Value("${spring.application.name}") String serviceName, Sender sender, AsyncReporter reporter) {
+//        final Pattern exclude = Pattern.compile("(set.+)|(commit)|(select @@session)", Pattern.CASE_INSENSITIVE);
+        final String[] sqlStartArr = new String[]{"set", "commit", "/* mysql-", "show", "select @@session", "select last_insert_id"};
+        Tracing tracing = Tracing.newBuilder()
                 .localServiceName(serviceName)
 //                .propagationFactory(ExtraFieldPropagation.newFactory(B3Propagation.FACTORY, "user-name"))
                 .currentTraceContext(ThreadLocalCurrentTraceContext.newBuilder()
 //                        .addScopeDecorator(MDCScopeDecorator.create()) // puts trace IDs into logs
                                 .build()
                 )
-                .spanReporter(spanReporter()).build();
+                .addFinishedSpanHandler(new FinishedSpanHandler() {
+                    @Override
+                    public boolean handle(TraceContext traceContext, MutableSpan mutableSpan) {
+                        String tag = mutableSpan.tag("sql.query");
+                        if (tag != null) {
+                            tag = tag.toLowerCase();
+                            for (String start : sqlStartArr) {
+                                if (tag.startsWith(start)) {
+                                    return false;
+                                }
+                            }
+                        }
+                        return true;
+                    }
+                })
+                .spanReporter(reporter).build();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                tracing.close();
+                reporter.close();
+                sender.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }));
+
+        return tracing;
     }
 
     /**
