@@ -56,8 +56,8 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public boolean checkIsTimeoutBeforeEnding(String globalTxId) {
-      return false;
+    public TxEvent findTimeoutEventsBeforeEnding(String globalTxId) {
+      return null;
     }
 
     @Override
@@ -129,7 +129,7 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public boolean checkIsExistsTxCompensatedEvent(String type, String localTxId) {
+    public boolean checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type) {
       return false;
     }
   };

@@ -148,19 +148,21 @@ public class EventScanner implements Runnable {
     timeoutRepository.findFirstTimeout().forEach(timeout -> {// 查找超时且状态为 NEW 的超时记录
       LOG.info("Found timeout event {} to abort", timeout);
 
-      TxEvent event = toTxAbortedEvent(timeout);
-      CurrentThreadContext.put(event.globalTxId(), event);
-      eventRepository.save(event);// 查找到超时记录后，记录相应的(超时)终止状态
-      // 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
-      commandRepository.saveWillCompensateCommandsForTimeout(event.globalTxId());
+      TxEvent abortedEvent = toTxAbortedEvent(timeout);
+      CurrentThreadContext.put(abortedEvent.globalTxId(), abortedEvent);
+      if (!eventRepository.checkIsExistsTxCompensatedEvent(abortedEvent.globalTxId(), abortedEvent.localTxId(), abortedEvent.type())) {
+        eventRepository.save(abortedEvent);// 查找到超时记录后，记录相应的(超时)终止状态
+        // 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
+        commandRepository.saveWillCompensateCommandsForTimeout(abortedEvent.globalTxId());
 
-      boolean isRetried = eventRepository.checkIsRetriedEvent(event.type());
-      utxMetrics.countTxNumber(event, true, isRetried);
+        boolean isRetried = eventRepository.checkIsRetriedEvent(abortedEvent.type());
+        utxMetrics.countTxNumber(abortedEvent, true, isRetried);
 
 //      if (timeout.type().equals(TxStartedEvent.name())) {
 //        eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
 //            .ifPresent(omegaCallback::compensate);// 查找到超时记录后，屏蔽在此处触发补偿功能，完全交给compensate方法处理即可
 //      }
+      }
     });
   }
 

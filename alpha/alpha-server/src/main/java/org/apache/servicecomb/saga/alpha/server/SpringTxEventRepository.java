@@ -51,8 +51,8 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public boolean checkIsTimeoutBeforeEnding(String globalTxId) {
-    return eventRepo.findTimeoutEventsBeforeEnding(globalTxId, new Date()) > 0;
+  public TxEvent findTimeoutEventsBeforeEnding(String globalTxId) {
+    return eventRepo.findTimeoutEventsBeforeEnding(globalTxId, new Date());
   }
 
   @Override
@@ -122,8 +122,8 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public boolean checkIsExistsTxCompensatedEvent(String type, String localTxId) {
-    return eventRepo.checkIsExistsTxCompensatedEvent(type, localTxId) > 0;
+  public boolean checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type) {
+    return eventRepo.checkIsExistsTxCompensatedEvent(globalTxId, localTxId, type) > 0;
   }
 
 }

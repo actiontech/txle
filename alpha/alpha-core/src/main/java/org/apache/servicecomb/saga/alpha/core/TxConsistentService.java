@@ -80,9 +80,11 @@ public class TxConsistentService {
 	public int handleSupportTxPause(TxEvent event) {
 		utxMetrics.startMarkTxDuration(event);// start duration.
 		utxMetrics.countChildTxNumber(event);// child transaction count
+
+		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
 		if (types.contains(event.type()) && isGlobalTxAborted(event)) {
-			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", event.type(), event.globalTxId());
-			boolean isRetried = eventRepository.checkIsRetriedEvent(event.globalTxId());
+			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
+			boolean isRetried = eventRepository.checkIsRetriedEvent(globalTxId);
 			utxMetrics.countTxNumber(event, false, isRetried);
 			utxMetrics.endMarkTxDuration(event);// end duration.
 			return -1;
@@ -92,41 +94,59 @@ public class TxConsistentService {
 		 * To save event only when the status of the global transaction is not paused.
 		 * If not, return to client immediately, and client will do something, like sending again.
 		 */
-		boolean isPaused = isGlobalTxPaused(event.globalTxId());
+		boolean isPaused = isGlobalTxPaused(globalTxId);
 		if (!isPaused) {
-			CurrentThreadContext.put(event.globalTxId(), event);
+			CurrentThreadContext.put(globalTxId, event);
 
 			// We could intercept this method or use the Observer Design model on it, the aim is to handle some operations around it, but apparently, it is not easy to maintain code, so we reserved this idea.
 			// 保存事件前，检查是否已经存在某子事务的某种事件，如果存在则不再保存。如：检测某事务超时后，若在下次检测时做出补偿处理，则会保存多条超时事件信息，为避免则先检测是否存在
 			// 即使数据表结构对globalTxI、localTxId、type做了联合唯一约束，但最好还是先检测吧，尽量避免触发数据库唯一约束异常
-			if (!eventRepository.checkIsExistsTxCompensatedEvent(event.type(), event.localTxId())) {
+			if (!eventRepository.checkIsExistsTxCompensatedEvent(globalTxId, localTxId, type)) {
 				try {
-					if (SagaEndedEvent.name().equals(event.type())) {
-						// 由于定时扫描器中检测超时会存在一定误差，如定时器中任务需3s完成，但某事务超时设置的是2秒，此时还未等对该事物进行检测，该事务就已经结束了，所以此处在正常结束前需检测是否超时
-						if (eventRepository.checkIsTimeoutBeforeEnding(event.globalTxId())) {
-							TxTimeout txTimeout = txTimeoutOf(event);
-							try {
-								timeoutRepository.save(txTimeout);// 结束全局事务前，检测到超时，保存超时记录
-							} catch (Exception e) {
-								LOG.error("Failed to save timeout {} in method 'TxConsistentService.handleSupportTxPause()'.", txTimeout, e);
+					eventRepository.save(event);
+
+					// if (TxEndedEvent.name().equals(type) || SagaEndedEvent.name().equals(type)) {// 子事务都执行完成了，即将结束全局事件时无需再检测超时，因为即使此处检测到超时也无需回滚所有正常执行完成的子事务，直接结束即可
+					if (TxEndedEvent.name().equals(type)) {// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
+						// 若定时器检测超时后结束了当前全局事务，但超时子事务的才刚刚完成，此时检测全局事务是否已经终止，如果终止，则补偿当前刚刚完成的子事务
+						if (isGlobalTxAborted(event)) {
+							commandRepository.saveWillCompensateCmdForCurSubTx(globalTxId, localTxId);
+						} else {
+							// 由于定时扫描器中检测超时会存在一定误差，如定时器中任务需3s完成，但某事务超时设置的是2秒，此时还未等对该事物进行检测，该事务就已经结束了，所以此处在正常结束前需检测是否超时
+							TxEvent unhandleTimeoutEvent = eventRepository.findTimeoutEventsBeforeEnding(globalTxId);// 如果有值，说明在EventScanner中已检测到并处理了
+							if (unhandleTimeoutEvent != null) {
+								// ps: 在未保存event前，将其转换成timeout，timeout中将无法获取到event的id值(默认为-1)，故上一行代码查询已保存的超时事件记录
+								TxTimeout txTimeout = txTimeoutOf(unhandleTimeoutEvent);
+								try {
+									LOG.debug("TxConsistentService Detected the Timeout {}.", txTimeout);
+									timeoutRepository.save(txTimeout);// 结束全局事务前，检测到超时，保存超时记录
+									TxEvent abortedEvent = toTxAbortedEvent(txTimeout);
+									if (!eventRepository.checkIsExistsTxCompensatedEvent(globalTxId, localTxId, abortedEvent.type())) {
+										eventRepository.save(abortedEvent);// 依据超时记录生成异常事件
+									}
+									// 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
+									commandRepository.saveWillCompensateCommandsForTimeout(globalTxId);
+								} catch (Exception e) {
+									LOG.error("Failed to save timeout {} in method 'TxConsistentService.handleSupportTxPause()'.", txTimeout, e);
+								}
 							}
-							eventRepository.save(toTxAbortedEvent(txTimeout));// 依据超时记录生成异常事件
-							// 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
-							commandRepository.saveWillCompensateCommandsForTimeout(event.globalTxId());
 						}
 					}
 
-					eventRepository.save(event);
-
-					if (TxAbortedEvent.name().equals(event.type()) && !event.globalTxId().equals(event.localTxId())) {
+					if (TxAbortedEvent.name().equals(type) && !globalTxId.equals(localTxId)) {
 						// 当出现非超时的异常情况时记录待补偿命令，超时异常由定时器负责
-						commandRepository.saveWillCompensateCommandsForException(event.globalTxId(), event.localTxId());
+						// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【后】，被检测为超时，则该失败的子事务又被回滚一次
+						// 解决办法：检测超时SQL追加【无TxAbortedEvent条件】
+						// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【前】，被检测为超时，则该失败的子事务又被回滚一次
+						// 解决办法：失败时本地会立即将global和local的id记录到缓存中，后续超时补偿会先对比该缓存，不存在再补偿
+						// 带有超时的子事务执行失败前，定时器检测到超时并且进行了补偿，之后子事务中执行失败，又进行了本地回滚，即多回滚了一次
+						// 解决办法：超时只对已完成的子事务进行补偿，未完成的子事务，如果后续失败了则无需任何操作，如果成功结束，则在结束时会检测全局事务异常或超时，如果全局事务已终止了，则回滚当前成功完成的子事务
+						commandRepository.saveWillCompensateCommandsForException(globalTxId, localTxId);
 					}
 				} catch (Exception e) {
-					LOG.error("Failed to save event globalTxId {} localTxId {} type {}", event.globalTxId(), event.localTxId(), event.type(), e);
+					LOG.error("Failed to save event globalTxId {} localTxId {} type {}", globalTxId, localTxId, type, e);
 				}
 
-				boolean isRetried = eventRepository.checkIsRetriedEvent(event.globalTxId());
+				boolean isRetried = eventRepository.checkIsRetriedEvent(globalTxId);
 				utxMetrics.countTxNumber(event, false, isRetried);
 				utxMetrics.endMarkTxDuration(event);// end duration.
 

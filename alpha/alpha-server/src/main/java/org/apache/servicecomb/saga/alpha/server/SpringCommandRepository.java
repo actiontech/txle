@@ -108,27 +108,32 @@ public class SpringCommandRepository implements CommandRepository {
 
   @Override
   public void saveWillCompensateCommandsForTimeout(String globalTxId) {
-    List<TxEvent> txStartedEvents = eventRepository.findNeedCompensateEventForTimeout(globalTxId);
-    if (txStartedEvents != null && !txStartedEvents.isEmpty()) {
-      txStartedEvents.forEach(event -> {
-        try {
-          commandRepository.save(new Command(event));
-        } catch (Exception e) {
-          LOG.warn("Failed to save command {} in method 'saveWillCompensateCommandsForTimeout'.", event);
-        }
-      });
-    }
+    saveWillCompensateCommands(eventRepository.findNeedCompensateEventForTimeout(globalTxId), "saveWillCompensateCommandsForTimeout");
   }
 
   @Override
   public void saveWillCompensateCommandsForException(String globalTxId, String localTxId) {
-    List<TxEvent> txStartedEvents = eventRepository.findNeedCompensateEventForException(globalTxId, localTxId);
+    saveWillCompensateCommands(eventRepository.findNeedCompensateEventForException(globalTxId, localTxId), "saveWillCompensateCommandsForException");
+  }
+
+  @Override
+  public void saveWillCompensateCmdForCurSubTx(String globalTxId, String localTxId) {
+    saveWillCompensateCommands(eventRepository.selectTxStartedEventByLocalTxId(globalTxId, localTxId), "saveWillCompensateCmdForCurSubTx");
+  }
+
+  private void saveWillCompensateCommands(List<TxEvent> txStartedEvents, String method) {
     if (txStartedEvents != null && !txStartedEvents.isEmpty()) {
+      Set<Long> eventIdSet = new HashSet<>();
+      txStartedEvents.forEach(event -> eventIdSet.add(event.id()));
+      Set<Long> existCommandEventIdList = commandRepository.findExistCommandList(eventIdSet);
+
       txStartedEvents.forEach(event -> {
         try {
-          commandRepository.save(new Command(event));
+          if (!existCommandEventIdList.contains(event.id())) {
+            commandRepository.save(new Command(event));
+          }
         } catch (Exception e) {
-          LOG.warn("Failed to save command {} in method 'saveWillCompensateCommandsForException'.", event);
+          LOG.warn("Failed to save command {} in method {}.", event, method);
         }
       });
     }

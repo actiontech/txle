@@ -21,7 +21,6 @@ import java.util.*;
 
 import javax.transaction.Transactional;
 
-import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
@@ -58,17 +57,25 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 //      + ")")
 //  List<TxEvent> findTimeoutEvents(Pageable pageable);
 
-  @Query(value = "SELECT * FROM TxEvent t "
-      + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
-      + "  AND t.expiryTime < ?1 AND NOT EXISTS( "
-      + "  SELECT t1.globalTxId FROM TxEvent t1 "
-      + "  WHERE t1.globalTxId = t.globalTxId "
-      + "    AND t1.localTxId = t.localTxId "
-      + "    AND t1.type != t.type)" + EventScanner.SCANNER_SQL, nativeQuery = true)
+  @Query("SELECT t FROM TxEvent t "
+          + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
+          + "  AND t.expiryTime < ?1 AND NOT EXISTS( "
+          + "  SELECT t1.globalTxId FROM TxEvent t1 "
+          + "  WHERE t1.globalTxId = t.globalTxId "
+          + "    AND t1.localTxId = t.localTxId "
+          + "    AND t1.type != t.type)" +
+          // 查询超时事件要去除带有异常的，因为这种情况是未超时先异常了，所以无需再处理
+          "  AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.globalTxId = t.globalTxId AND t2.type = 'TxAbortedEvent')")
   List<TxEvent> findTimeoutEvents(Date currentDateTime);
 
-  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2 AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'TxAbortedEvent')) T1", nativeQuery = true)
-  long findTimeoutEventsBeforeEnding(String globalTxId, Date currentDateTime);
+  /**
+   * 查询某未结束的全局事务中的超时未处理的记录，如果全局事务和子事务都设置了超时，则优先获取子事务的(其实哪个都可以)
+   */
+  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2" +
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'TxAbortedEvent')" +
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'SagaEndedEvent')" +
+          " ORDER BY surrogateId DESC LIMIT 1", nativeQuery = true)
+  TxEvent findTimeoutEventsBeforeEnding(String globalTxId, Date currentDateTime);
 
   @Query("SELECT t FROM TxEvent t "
       + "WHERE t.globalTxId = ?1 "
@@ -147,14 +154,18 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId);
 //  List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, Pageable pageable);
 
-  @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent'")
+  // 对于超时场景，仅补偿已完成且未被补偿过的子事务，因为未完成的子事务不确定最终是否会完成，如果最终为完成则会由客户端的本地事务回滚，如果最终成功完成，则是上报TxEndedEvent事件时对其进行补偿
+  @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent'" +
+          " AND EXISTS (SELECT 1 FROM TxEvent t1 WHERE t1.globalTxId = ?1 AND t1.type = 'TxEndedEvent')" +
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.globalTxId = ?1 AND t2.type = 'TxCompensatedEvent')")
   List<TxEvent> findNeedCompensateEventForTimeout(String globalTxId);
 
+  // 其实和超时场景检测语句findNeedCompensateEventForTimeout应该是一样的
   @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId != ?2 AND t.type = 'TxStartedEvent'")
   List<TxEvent> findNeedCompensateEventForException(String globalTxId, String localTxId);
 
-//  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND (t.type = 'TxCompensatedEvent' or (t.type = 'TxAbortedEvent' AND t.globalTxId != t.localTxId)) ORDER BY surrogateId", nativeQuery = true)
-  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND t.type = 'TxCompensatedEvent' ORDER BY surrogateId" + EventScanner.SCANNER_SQL, nativeQuery = true)
+  //  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND (t.type = 'TxCompensatedEvent' or (t.type = 'TxAbortedEvent' AND t.globalTxId != t.localTxId)) ORDER BY surrogateId", nativeQuery = true)
+  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND t.type = 'TxCompensatedEvent' ORDER BY surrogateId", nativeQuery = true)
   List<TxEvent> findSequentialCompensableEventOfUnended();
 
   @Transactional
@@ -187,7 +198,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query(value = "SELECT DISTINCT T2.localTxId FROM TxEvent T2 WHERE T2.globalTxId IN (SELECT T1.globalTxId FROM TxEvent T1 WHERE T1.type = 'SagaEndedEvent' AND T1.globalTxId IN (SELECT T.globalTxId FROM TxEvent T WHERE T.localTxId IN ?1)) AND T2.localTxId IN ?1")
   Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
-  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent T WHERE T.type = ?1 AND T.localTxId = ?2) T1", nativeQuery = true)
-  long checkIsExistsTxCompensatedEvent(String type, String localTxId);
+  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = ?3) T1", nativeQuery = true)
+  long checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type);
 
 }
