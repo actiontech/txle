@@ -46,6 +46,8 @@ public class EventScanner implements Runnable {
 
   private long nextEndedEventId;
 
+  public static final String SCANNER_SQL = " /**scanner_sql**/";
+
   public EventScanner(ScheduledExecutorService scheduler,
       TxEventRepository eventRepository,
       CommandRepository commandRepository,

@@ -27,6 +27,7 @@ import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityR
 import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
+import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
@@ -40,7 +41,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 @EntityScan(basePackages = "org.apache.servicecomb.saga.alpha")
-@Import(KafkaProducerConfig.class)
+@Import({KafkaProducerConfig.class, TracingConfiguration.class})
 @Configuration
 class AlphaConfig {
   private final BlockingQueue<Runnable> pendingCompensations = new LinkedBlockingQueue<>();

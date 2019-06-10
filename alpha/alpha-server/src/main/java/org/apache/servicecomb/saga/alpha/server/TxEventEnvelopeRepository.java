@@ -21,6 +21,7 @@ import java.util.*;
 
 import javax.transaction.Transactional;
 
+import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
@@ -57,13 +58,13 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 //      + ")")
 //  List<TxEvent> findTimeoutEvents(Pageable pageable);
 
-  @Query("SELECT t FROM TxEvent t "
+  @Query(value = "SELECT * FROM TxEvent t "
       + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
       + "  AND t.expiryTime < ?1 AND NOT EXISTS( "
       + "  SELECT t1.globalTxId FROM TxEvent t1 "
       + "  WHERE t1.globalTxId = t.globalTxId "
       + "    AND t1.localTxId = t.localTxId "
-      + "    AND t1.type != t.type)")
+      + "    AND t1.type != t.type)" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<TxEvent> findTimeoutEvents(Date currentDateTime);
 
   @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2 AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'TxAbortedEvent')) T1", nativeQuery = true)
@@ -153,7 +154,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   List<TxEvent> findNeedCompensateEventForException(String globalTxId, String localTxId);
 
 //  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND (t.type = 'TxCompensatedEvent' or (t.type = 'TxAbortedEvent' AND t.globalTxId != t.localTxId)) ORDER BY surrogateId", nativeQuery = true)
-  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND t.type = 'TxCompensatedEvent' ORDER BY surrogateId", nativeQuery = true)
+  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND t.type = 'TxCompensatedEvent' ORDER BY surrogateId" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<TxEvent> findSequentialCompensableEventOfUnended();
 
   @Transactional

@@ -3,7 +3,6 @@ package org.apache.servicecomb.saga.common;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
@@ -16,7 +15,6 @@ import org.springframework.web.client.RestTemplate;
  */
 @Configuration
 @EnableAspectJAutoProxy
-@Import(TracingConfiguration.class)
 public class CommonConfig {
 
     @Bean
