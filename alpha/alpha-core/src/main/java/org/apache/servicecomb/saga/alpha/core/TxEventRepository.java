@@ -59,7 +59,7 @@ public interface TxEventRepository {
    */
   List<TxEvent> findTimeoutEvents();
 
-  boolean checkIsTimeoutBeforeEnding(String globalTxId);
+  TxEvent findTimeoutEventsBeforeEnding(String globalTxId);
 
   /**
    * Find a {@link TxEvent} which satisfies below requirements:
@@ -128,6 +128,6 @@ public interface TxEventRepository {
 
   Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
-  boolean checkIsExistsTxCompensatedEvent(String type, String localTxId);
+  boolean checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type);
 
 }
