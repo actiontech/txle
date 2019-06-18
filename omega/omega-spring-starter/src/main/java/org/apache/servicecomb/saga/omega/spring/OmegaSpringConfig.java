@@ -25,7 +25,7 @@ import org.apache.servicecomb.saga.omega.format.KryoMessageFormat;
 import org.apache.servicecomb.saga.omega.format.MessageFormat;
 import org.apache.servicecomb.saga.omega.transaction.MessageHandler;
 import org.apache.servicecomb.saga.omega.transaction.MessageSender;
-import org.apache.servicecomb.saga.omega.transaction.accidentplatform.ClientAccidentPlatformService;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.ClientAccidentHandlingService;
 import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.apache.servicecomb.saga.omega.transaction.monitor.CommonPrometheusMetrics;
 import org.apache.servicecomb.saga.omega.transaction.monitor.CompensableSqlMetrics;
@@ -35,7 +35,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 
@@ -44,15 +43,6 @@ class OmegaSpringConfig {
 
   @Value("${utx.prometheus.metrics.port:8098}")
   private String promMetricsPort;
-
-  @Value("${utx.accident.platform.address.api:\"\"}")
-  private String accidentPlatformAddress;
-
-  @Value("${utx.accident.platform.retry.retries:3}")
-  private int retries;
-
-  @Value("${utx.accident.platform.retry.interval:1}")
-  private int interval;
 
   @Bean(name = {"omegaUniqueIdGenerator"})
   IdGenerator<String> idGenerator() {
@@ -90,8 +80,8 @@ class OmegaSpringConfig {
   }
 
   @Bean
-  ClientAccidentPlatformService clientAccidentPlatformService(RestTemplate restTemplate) {
-    return new ClientAccidentPlatformService(accidentPlatformAddress, retries, interval, restTemplate);
+  ClientAccidentHandlingService clientAccidentHandlingService() {
+    return new ClientAccidentHandlingService();
   }
 
   @Bean

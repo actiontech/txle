@@ -2,8 +2,8 @@ package org.apache.servicecomb.saga.omega.transaction;
 
 import com.google.gson.JsonObject;
 import org.apache.servicecomb.saga.common.UtxConstants;
-import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
-import org.apache.servicecomb.saga.omega.transaction.accidentplatform.ClientAccidentPlatformService;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandleType;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.ClientAccidentHandlingService;
 import org.apache.servicecomb.saga.omega.transaction.repository.IAutoCompensateDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 	private IAutoCompensateDao autoCompensateDao;
 
     @Autowired
-	ClientAccidentPlatformService clientAccidentPlatformService;
+    ClientAccidentHandlingService clientAccidentHandlingService;
 
     @Autowired
 	MessageSender sender;
@@ -55,11 +55,12 @@ public class AutoCompensateService implements IAutoCompensateService {
 						} else {
 							// TODO 报差错平台，其余的是否继续执行？？？ TODO 手动补偿时，也需报差错平台
 							JsonObject jsonParams = new JsonObject();
-							jsonParams.addProperty("type", AccidentType.ROLLBACK_ERROR.toDescription());
-							jsonParams.addProperty("globalTxId", globalTxId);
-							jsonParams.addProperty("localTxId", localTxId);
-							clientAccidentPlatformService.reportMsgToAccidentPlatform(jsonParams.toString());
-							LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
+							jsonParams.addProperty("type", AccidentHandleType.ROLLBACK_ERROR.toInteger());
+							jsonParams.addProperty("globaltxid", globalTxId);
+							jsonParams.addProperty("localtxid", localTxId);
+							jsonParams.addProperty("bizinfo", compensateSql);
+							clientAccidentHandlingService.reportMsgToAccidentPlatform(jsonParams.toString());
+//							LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to executed AutoCompensable SQL [{}], result [{}]", compensateSql, tempResult);
 							throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Failed to executed AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
 						}
 					}

@@ -65,16 +65,17 @@
 
   <Loggers>
     <logger name="org.springframework" level="info" additivity="true">
-      <AppenderRef ref="warnLog"/>
+      <!--<AppenderRef ref="warnLog"/>-->
       <AppenderRef ref="errorLog"/>
     </logger>
 
-    <logger name="java.sql.PreparedStatement" level="debug" additivity="true">
+    <!--<logger name="java.sql.PreparedStatement" level="debug" additivity="true">
       <AppenderRef ref="Console"/>
-    </logger>
+    </logger>-->
 
     <Root level="info" includeLocation="true">
-      <AppenderRef ref="infoLog"/>
+      <!--<AppenderRef ref="infoLog"/>-->
+      <AppenderRef ref="errorLog"/>
       <AppenderRef ref="Console"/>
     </Root>
   </Loggers>

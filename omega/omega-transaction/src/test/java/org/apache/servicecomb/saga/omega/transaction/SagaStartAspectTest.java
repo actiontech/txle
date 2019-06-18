@@ -32,6 +32,7 @@ import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.omega.context.IdGenerator;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.context.annotations.SagaStart;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandling;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -75,6 +76,11 @@ public class SagaStartAspectTest {
     @Override
     public String reportMessageToServer(KafkaMessage message) {
       return "";
+    }
+
+    @Override
+    public String reportAccidentToServer(AccidentHandling accidentHandling) {
+      return null;
     }
 
     @Override

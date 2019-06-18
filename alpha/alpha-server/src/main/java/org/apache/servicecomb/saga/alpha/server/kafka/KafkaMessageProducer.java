@@ -6,16 +6,15 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.RetriableException;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessageStatus;
-import org.apache.servicecomb.saga.alpha.server.accidentplatform.ServerAccidentPlatformService;
+import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
-import org.apache.servicecomb.saga.common.rmi.accidentplatform.AccidentType;
-import org.apache.servicecomb.saga.common.rmi.accidentplatform.IAccidentPlatformService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +39,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     private IKafkaMessageRepository kafkaMessageRepository;
 
     @Autowired
-    ServerAccidentPlatformService serverAccidentPlatformService;
+    AccidentHandlingService accidentHandlingService;
 
     @Autowired
     IConfigCenterService dbDegradationConfigService;
@@ -83,7 +82,8 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
 
     private void sendMessage(TxEvent event, List<KafkaMessage> messageList, List<Long> idList) {
         try {
-            ProducerRecord<String, String> record = new ProducerRecord<>(topic, new GsonBuilder().create().toJson(messageList));
+            String msgJson = new GsonBuilder().create().toJson(messageList);
+            ProducerRecord<String, String> record = new ProducerRecord<>(topic, msgJson);
             kafkaProducer.send(record, (metadata, exception) -> {
                 if (exception == null) {
                     LOG.info("Successfully to send Kafka message - globalTxId = [{}].", event.globalTxId());
@@ -98,11 +98,13 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                     }
                     // To report message to Accident Platform.
                     JsonObject jsonParams = new JsonObject();
-                    jsonParams.addProperty("type", AccidentType.SEND_MESSAGE_ERROR.toDescription());
-                    jsonParams.addProperty("globalTxId", event.globalTxId());
-                    jsonParams.addProperty("localTxId", event.localTxId());
-                    jsonParams.addProperty("instanceId", event.instanceId());
-                    serverAccidentPlatformService.reportMsgToAccidentPlatform(jsonParams.toString());
+                    jsonParams.addProperty("type", AccidentHandleType.SEND_MESSAGE_ERROR.toDescription());
+                    jsonParams.addProperty("globaltxid", event.globalTxId());
+                    jsonParams.addProperty("localtxid", event.localTxId());
+                    jsonParams.addProperty("instanceid", event.instanceId());
+                    jsonParams.addProperty("servicename", event.serviceName());
+                    jsonParams.addProperty("bizinfo", msgJson);
+                    accidentHandlingService.reportMsgToAccidentPlatform(jsonParams.toString());
 
                     // To update message's status to 'failed'.
                     kafkaMessageRepository.updateMessageStatusByIdList(idList, KafkaMessageStatus.FAILED);

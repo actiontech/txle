@@ -45,6 +45,7 @@ import org.apache.servicecomb.saga.omega.context.CompensationContext;
 import org.apache.servicecomb.saga.omega.context.IdGenerator;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.*;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandling;
 import org.apache.servicecomb.saga.omega.transaction.spring.TransactionInterceptionTest.MessageConfig;
 import org.apache.servicecomb.saga.omega.transaction.spring.annotations.OmegaContextAware;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
@@ -454,6 +455,11 @@ public class TransactionInterceptionTest {
         @Override
         public String reportMessageToServer(KafkaMessage message) {
           return "";
+        }
+
+        @Override
+        public String reportAccidentToServer(AccidentHandling accidentHandling) {
+          return null;
         }
 
         @Override

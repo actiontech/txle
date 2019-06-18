@@ -1,4 +1,4 @@
-package org.apache.servicecomb.saga.common.rmi.accidentplatform;
+package org.apache.servicecomb.saga.alpha.server.accidenthandling;
 
 /**
  * Accident Platform Interface.
@@ -6,6 +6,6 @@ package org.apache.servicecomb.saga.common.rmi.accidentplatform;
  * @author Gannalyo
  * @since 2018-08-27
  */
-public interface IAccidentPlatformService {
+public interface IAccidentHandlingService {
 	boolean reportMsgToAccidentPlatform(String jsonParams);
 }
