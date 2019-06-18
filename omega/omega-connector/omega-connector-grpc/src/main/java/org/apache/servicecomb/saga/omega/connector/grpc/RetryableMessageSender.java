@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.servicecomb.saga.omega.transaction.*;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandling;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 
 public class RetryableMessageSender implements MessageSender {
@@ -79,6 +80,15 @@ public class RetryableMessageSender implements MessageSender {
       return availableMessageSenders.take().reportMessageToServer(message);
     } catch (InterruptedException e) {
       throw new OmegaException("Failed to report kafka message " + message + " due to interruption", e);
+    }
+  }
+
+  @Override
+  public String reportAccidentToServer(AccidentHandling accidentHandling) {
+    try {
+      return availableMessageSenders.take().reportAccidentToServer(accidentHandling);
+    } catch (InterruptedException e) {
+      throw new OmegaException("Failed to report msg to the accident platform " + accidentHandling + " due to interruption", e);
     }
   }
 

@@ -30,9 +30,12 @@ import io.grpc.stub.StreamObserver;
 import org.apache.servicecomb.saga.alpha.core.OmegaCallback;
 import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
-import org.apache.servicecomb.saga.common.ConfigCenterType;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandling;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
+import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
@@ -42,7 +45,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.lang.invoke.MethodHandles;
-import java.util.*;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Collections.emptyMap;
@@ -57,11 +63,14 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
     private final Map<String, Map<String, OmegaCallback>> omegaCallbacks;
 
+    private final AccidentHandlingService accidentHandlingService;
+
     GrpcTxEventEndpointImpl(TxConsistentService txConsistentService,
-                            Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService) {
+                            Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, AccidentHandlingService accidentHandlingService) {
         this.txConsistentService = txConsistentService;
         this.omegaCallbacks = omegaCallbacks;
         this.dbDegradationConfigService = dbDegradationConfigService;
+        this.accidentHandlingService = accidentHandlingService;
     }
 
     @Override
@@ -198,6 +207,17 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         GrpcMessageAck MSG_ACK_TRUE = GrpcMessageAck.newBuilder().setStatus(true).build();
         GrpcMessageAck MSG_ACK_FALSE = GrpcMessageAck.newBuilder().setStatus(false).build();
         boolean result = txConsistentService.saveKafkaMessage(new KafkaMessage(message.getGlobaltxid(), message.getLocaltxid(), message.getDbdrivername(), message.getDburl(), message.getDbusername(), message.getTablename(), message.getOperation(), message.getIds()));
+        responseObserver.onNext(result ? MSG_ACK_TRUE : MSG_ACK_FALSE);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void onAccident(GrpcAccident accident, StreamObserver<GrpcAccidentAck> responseObserver) {
+        GrpcAccidentAck MSG_ACK_TRUE = GrpcAccidentAck.newBuilder().setStatus(true).build();
+        GrpcAccidentAck MSG_ACK_FALSE = GrpcAccidentAck.newBuilder().setStatus(false).build();
+        AccidentHandling accidentHandling = new AccidentHandling(accident.getServicename(), accident.getInstanceid(), accident.getGlobaltxid(), accident.getLocaltxid(), AccidentHandleType.convertTypeFromValue(accident.getType()), accident.getBizinfo());
+        // To report accident to Accident Platform.
+        boolean result = accidentHandlingService.reportMsgToAccidentPlatform(accidentHandling.toJsonString());
         responseObserver.onNext(result ? MSG_ACK_TRUE : MSG_ACK_FALSE);
         responseObserver.onCompleted();
     }

@@ -1,4 +1,4 @@
-package org.apache.servicecomb.saga.common.rmi.accidentplatform;
+package org.apache.servicecomb.saga.alpha.core.accidenthandling;
 
 import io.prometheus.client.Collector;
 import io.prometheus.client.Counter;

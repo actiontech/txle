@@ -30,6 +30,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
 import org.apache.servicecomb.saga.omega.transaction.*;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandling;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcConfigAck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -172,6 +173,11 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
   @Override
   public String reportMessageToServer(KafkaMessage message) {
     return senders.keySet().iterator().next().reportMessageToServer(message);
+  }
+
+  @Override
+  public String reportAccidentToServer(AccidentHandling accidentHandling) {
+    return senders.keySet().iterator().next().reportAccidentToServer(accidentHandling);
   }
 
   @Override

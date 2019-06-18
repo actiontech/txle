@@ -18,6 +18,7 @@
 syntax = "proto3";
 
 import "GrpcMessage.proto";
+import "GrpcAccident.proto";
 import "GrpcConfig.proto";
 option java_multiple_files = true;
 option java_package = "org.apache.servicecomb.saga.pack.contract.grpc";
@@ -28,6 +29,7 @@ service TxEventService {
   }
   rpc OnTxEvent (GrpcTxEvent) returns (GrpcAck) {}
   rpc OnMessage (GrpcMessage) returns (GrpcMessageAck) {}
+  rpc OnAccident (GrpcAccident) returns (GrpcAccidentAck) {}
   rpc OnReadConfig (GrpcConfig) returns (GrpcConfigAck) {}
   rpc OnDisconnected (GrpcServiceConfig) returns (GrpcAck) {
   }

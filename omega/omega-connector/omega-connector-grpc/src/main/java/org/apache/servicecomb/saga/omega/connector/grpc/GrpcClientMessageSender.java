@@ -29,6 +29,7 @@ import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
 import org.apache.servicecomb.saga.omega.context.UtxStaticConfig;
 import org.apache.servicecomb.saga.omega.transaction.*;
+import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandling;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent.Builder;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
@@ -146,6 +147,19 @@ public class GrpcClientMessageSender implements MessageSender {
             .setLocaltxid(message.getLocaltxid())
             .build();
     return blockingEventService.onMessage(grpcMessage).getStatus() + "";
+  }
+
+  @Override
+  public String reportAccidentToServer(AccidentHandling accident) {
+    GrpcAccident grpcAccident = GrpcAccident.newBuilder()
+            .setServicename(accident.getServicename())
+            .setInstanceid(accident.getInstanceid())
+            .setGlobaltxid(accident.getGlobaltxid())
+            .setLocaltxid(accident.getLocaltxid())
+            .setType(accident.getType())
+            .setBizinfo(accident.getBizinfo())
+            .build();
+    return blockingEventService.onAccident(grpcAccident).getStatus() + "";
   }
 
   @Override

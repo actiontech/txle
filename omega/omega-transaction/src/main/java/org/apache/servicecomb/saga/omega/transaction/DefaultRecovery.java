@@ -67,7 +67,10 @@ public class DefaultRecovery implements RecoveryPolicy {
       enabledTx = response.enabledTx();
 
       isProceed = true;
-      Object result = joinPoint.proceed();
+      Object result = null;
+      if (!response.aborted()) {
+        result = joinPoint.proceed();
+      }
 
       if (enabledTx) {
         if (response.aborted()) {

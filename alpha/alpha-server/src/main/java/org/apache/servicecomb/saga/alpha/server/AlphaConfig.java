@@ -19,10 +19,13 @@ package org.apache.servicecomb.saga.alpha.server;
 
 import brave.Tracing;
 import org.apache.servicecomb.saga.alpha.core.*;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingRepository;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
-import org.apache.servicecomb.saga.alpha.server.accidentplatform.ServerAccidentPlatformService;
+import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingEntityRepository;
+import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingRepositoryImpl;
+import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
@@ -104,8 +107,13 @@ class AlphaConfig {
   }
 
   @Bean
-  ServerAccidentPlatformService serverAccidentPlatformService(RestTemplate restTemplate) {
-    return new ServerAccidentPlatformService(accidentPlatformAddress, retries, interval, restTemplate);
+  AccidentHandlingService accidentPlatformService(RestTemplate restTemplate) {
+    return new AccidentHandlingService(accidentPlatformAddress, retries, interval, restTemplate);
+  }
+
+  @Bean
+  IAccidentHandlingRepository accidentHandlingRepository(AccidentHandlingEntityRepository accidentHandlingEntityRepository) {
+    return new AccidentHandlingRepositoryImpl(accidentHandlingEntityRepository);
   }
 
   @Bean
@@ -121,7 +129,8 @@ class AlphaConfig {
       IKafkaMessageProducer kafkaMessageProducer,
       IConfigCenterService dbDegradationConfigService,
       UtxMetrics utxMetrics,
-      Tracing tracing) {
+      Tracing tracing,
+      AccidentHandlingService accidentHandlingService) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
@@ -129,16 +138,16 @@ class AlphaConfig {
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
-    ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService, tracing);
+    ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService, tracing, accidentHandlingService);
     new Thread(startable::start).start();
 
     return consistentService;
   }
 
   private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService,
-                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing) {
+                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing, AccidentHandlingService accidentHandlingService) {
     return new GrpcStartable(serverConfig, tracing,
-        new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService));
+        new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService));
   }
   
   public TransactionRestApi transactionRestApi(TxConsistentService txConsistentService) {

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.apache.servicecomb.saga.pack.contract.grpc";
+option java_outer_classname = "AccidentProto";
+
+message GrpcAccidentAck {
+  bool status = 1;
+}
+
+message GrpcAccident {
+  string servicename = 1;
+  string instanceid = 2;
+  string globaltxid = 3;
+  string localtxid = 4;
+
+  int32 type = 5;
+  int32 status = 6;
+  string bizinfo = 7;
+  int64 createtime = 8;
+  int64 completetime = 9;
+}
+

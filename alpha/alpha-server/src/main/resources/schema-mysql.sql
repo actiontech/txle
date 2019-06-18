@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   UNIQUE KEY saga_globalid_localid_type (globalTxId, localTxId, type),
   INDEX saga_surrogateId_index (surrogateId),
   INDEX saga_tx_type_index (type)
-) DEFAULT CHARSET=utf8;
+) DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS Command (
   surrogateId bigint NOT NULL AUTO_INCREMENT,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS Command (
   category varchar(36) NOT NULL,
   PRIMARY KEY (surrogateId),
   INDEX saga_commands_index (surrogateId, eventId, globalTxId, localTxId, status)
-) DEFAULT CHARSET=utf8;
+) DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS TxTimeout (
   surrogateId bigint NOT NULL AUTO_INCREMENT,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS TxTimeout (
   category varchar(36) NOT NULL,
   PRIMARY KEY (surrogateId),
   INDEX saga_timeouts_index (surrogateId, expiryTime, globalTxId, localTxId, status)
-) DEFAULT CHARSET=utf8;
+) DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS Message (
   id bigint NOT NULL AUTO_INCREMENT,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS Message (
   PRIMARY KEY (id) USING BTREE,
   UNIQUE INDEX pk_id(id) USING BTREE,
   INDEX utx_globalTxId_index(globaltxid) USING BTREE
-) DEFAULT CHARSET=utf8;
+) DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS Config (
   id bigint NOT NULL AUTO_INCREMENT,
@@ -104,4 +104,18 @@ CREATE TABLE IF NOT EXISTS Config (
   PRIMARY KEY (id) USING BTREE,
   UNIQUE INDEX pk_id(id) USING BTREE,
 	INDEX index_type(type) USING BTREE
-) DEFAULT CHARSET=utf8;
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS Accident (
+  id bigint NOT NULL AUTO_INCREMENT,
+  servicename varchar(100),
+  instanceid varchar(100),
+  globaltxid varchar(36) NOT NULL,
+  localtxid varchar(36) NOT NULL,
+  type int(1) NOT NULL DEFAULT 0 COMMENT '1-rollback_error, 2-send_message_error',
+  status int(1) NOT NULL DEFAULT 0 COMMENT '0-sending, 1-send_ok, 2-send_fail, 3-successful, 4-failed',
+  bizinfo varchar(256) NOT NULL,
+  createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completetime datetime,
+  PRIMARY KEY (id)
+) DEFAULT CHARSET=utf8mb4;
