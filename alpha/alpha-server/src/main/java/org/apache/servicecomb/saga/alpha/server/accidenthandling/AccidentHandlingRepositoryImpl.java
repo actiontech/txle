@@ -23,7 +23,10 @@ public class AccidentHandlingRepositoryImpl implements IAccidentHandlingReposito
     @Override
     public boolean save(AccidentHandling accidentHandling) {
         try {
-            accidentHandlingEntityRepository.save(accidentHandling);
+            AccidentHandling savedAccident = accidentHandlingEntityRepository.save(accidentHandling);
+            if (savedAccident != null) {// 设置保存后的id
+                accidentHandling.setId(savedAccident.getId());
+            }
             return true;
         } catch (Exception e) {
             LOG.error("Failed to save accident handling.", e);

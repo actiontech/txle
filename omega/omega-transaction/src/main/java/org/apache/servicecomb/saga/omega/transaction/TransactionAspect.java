@@ -53,6 +53,8 @@ public class TransactionAspect {
     RecoveryPolicy recoveryPolicy = RecoveryPolicyFactory.getRecoveryPolicy(retries);
     try {
       return recoveryPolicy.apply(joinPoint, compensable, interceptor, context, localTxId, retries);
+    } catch (Exception e) {
+      throw e;
     } finally {
       context.setLocalTxId(localTxId);
       LOG.debug("Restored context back to {}", context);

@@ -132,15 +132,22 @@ public class TxConsistentService {
 						}
 					}
 
-					if (TxAbortedEvent.name().equals(type) && !globalTxId.equals(localTxId)) {
-						// 当出现非超时的异常情况时记录待补偿命令，超时异常由定时器负责
-						// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【后】，被检测为超时，则该失败的子事务又被回滚一次
-						// 解决办法：检测超时SQL追加【无TxAbortedEvent条件】
-						// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【前】，被检测为超时，则该失败的子事务又被回滚一次
-						// 解决办法：失败时本地会立即将global和local的id记录到缓存中，后续超时补偿会先对比该缓存，不存在再补偿
-						// 带有超时的子事务执行失败前，定时器检测到超时并且进行了补偿，之后子事务中执行失败，又进行了本地回滚，即多回滚了一次
-						// 解决办法：超时只对已完成的子事务进行补偿，未完成的子事务，如果后续失败了则无需任何操作，如果成功结束，则在结束时会检测全局事务异常或超时，如果全局事务已终止了，则回滚当前成功完成的子事务
-						commandRepository.saveWillCompensateCommandsForException(globalTxId, localTxId);
+					if (TxAbortedEvent.name().equals(type)) {
+						if (!globalTxId.equals(localTxId)) {
+							// 当出现非超时的异常情况时记录待补偿命令，超时异常由定时器负责
+							// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【后】，被检测为超时，则该失败的子事务又被回滚一次
+							// 解决办法：检测超时SQL追加【无TxAbortedEvent条件】
+							// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【前】，被检测为超时，则该失败的子事务又被回滚一次
+							// 解决办法：失败时本地会立即将global和local的id记录到缓存中，后续超时补偿会先对比该缓存，不存在再补偿
+							// 带有超时的子事务执行失败前，定时器检测到超时并且进行了补偿，之后子事务中执行失败，又进行了本地回滚，即多回滚了一次
+							// 解决办法：超时只对已完成的子事务进行补偿，未完成的子事务，如果后续失败了则无需任何操作，如果成功结束，则在结束时会检测全局事务异常或超时，如果全局事务已终止了，则回滚当前成功完成的子事务
+							commandRepository.saveWillCompensateCommandsForException(globalTxId, localTxId);
+						} else {
+							// 说明是全局事务异常终止
+							commandRepository.saveWillCompensateCommandsWhenGlobalTxAborted(globalTxId);
+							// To save SagaEndedEvent.
+							eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), new byte[0]));
+						}
 					}
 				} catch (Exception e) {
 					LOG.error("Failed to save event globalTxId {} localTxId {} type {}", globalTxId, localTxId, type, e);

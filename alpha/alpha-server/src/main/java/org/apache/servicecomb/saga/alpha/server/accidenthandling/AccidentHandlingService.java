@@ -5,10 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
-import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
-import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandling;
-import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingRepository;
-import org.apache.servicecomb.saga.alpha.core.accidenthandling.UtxAccidentMetrics;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.*;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.slf4j.Logger;
@@ -19,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -57,17 +55,23 @@ public class AccidentHandlingService implements IAccidentHandlingService {
         AtomicInteger invokeTimes = new AtomicInteger();
 
         try {
+            AccidentHandling savedAccident = parseAccidentJson(jsonParams);
+            if (result.get()) {
+                savedAccident.setStatus(AccidentHandleStatus.SEND_OK.toInteger());
+            }
             // To save accident to db.
-            saveAccidentHandling(parseAccidentJson(jsonParams));
+            saveAccidentHandling(savedAccident);
 
             final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
             scheduler.scheduleWithFixedDelay(() -> {
                 if (result.get()) {
+                    scheduler.shutdownNow();
                     UtxAccidentMetrics.countSuccessfulNumber();
-                    scheduler.shutdownNow();
+                    accidentHandlingRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_OK);
                 } else if (invokeTimes.incrementAndGet() > 1 + this.retries) {
-                    UtxAccidentMetrics.countFailedNumber();
                     scheduler.shutdownNow();
+                    UtxAccidentMetrics.countFailedNumber();
+                    accidentHandlingRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_FAIL);
                     LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
                 } else {
                     // To report accident to Accident Platform.
