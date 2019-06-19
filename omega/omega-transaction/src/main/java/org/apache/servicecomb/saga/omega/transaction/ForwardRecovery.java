@@ -73,6 +73,8 @@ public class ForwardRecovery extends DefaultRecovery {
       LOG.error(errorMessage);
       interceptor.onError(parentTxId, compensationMethodSignature(joinPoint, compensable, method), e);
       throw new OmegaException(errorMessage);
+    } catch (Exception e) {
+      throw e;
     }
   }
 }

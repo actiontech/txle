@@ -155,11 +155,12 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, long surrogateId);
 //  List<TxEvent> findFirstByTypeAndSurrogateIdGreaterThan(String type, Pageable pageable);
 
+  // 全局事务异常时，查询需要补偿的子事务。超时场景同全局事务异常场景。
   // 对于超时场景，仅补偿已完成且未被补偿过的子事务，因为未完成的子事务不确定最终是否会完成，如果最终为完成则会由客户端的本地事务回滚，如果最终成功完成，则是上报TxEndedEvent事件时对其进行补偿
   @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent'" +
           " AND EXISTS (SELECT 1 FROM TxEvent t1 WHERE t1.localTxId = t.localTxId AND t1.type = 'TxEndedEvent')" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.localTxId = t.localTxId AND t2.type = 'TxCompensatedEvent')")
-  List<TxEvent> findNeedCompensateEventForTimeout(String globalTxId);
+  List<TxEvent> findNeedCompensateEventForGlobalTxAborted(String globalTxId);
 
   // 其实和超时场景检测语句findNeedCompensateEventForTimeout应该是一样的
   @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId != ?2 AND t.type = 'TxStartedEvent'" +

@@ -62,6 +62,7 @@ public class CompensationContext {
           "Pre-checking for compensation method " + contextInternal.compensationMethod.toString()
               + " was somehow skipped, did you forget to configure compensable method checking on service startup?",
           e);
+      // 不在此处上报差错，是因为不便于收集业务信息
     } finally {
       omegaContext.setGlobalTxId(oldGlobalTxId);
       omegaContext.setLocalTxId(oldLocalTxId);

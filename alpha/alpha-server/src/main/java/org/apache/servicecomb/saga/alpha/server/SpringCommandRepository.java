@@ -108,12 +108,17 @@ public class SpringCommandRepository implements CommandRepository {
 
   @Override
   public void saveWillCompensateCommandsForTimeout(String globalTxId) {
-    saveWillCompensateCommands(eventRepository.findNeedCompensateEventForTimeout(globalTxId), "saveWillCompensateCommandsForTimeout");
+    saveWillCompensateCommands(eventRepository.findNeedCompensateEventForGlobalTxAborted(globalTxId), "saveWillCompensateCommandsForTimeout");
   }
 
   @Override
   public void saveWillCompensateCommandsForException(String globalTxId, String localTxId) {
     saveWillCompensateCommands(eventRepository.findNeedCompensateEventForException(globalTxId, localTxId), "saveWillCompensateCommandsForException");
+  }
+
+  @Override
+  public void saveWillCompensateCommandsWhenGlobalTxAborted(String globalTxId) {
+    saveWillCompensateCommands(eventRepository.findNeedCompensateEventForGlobalTxAborted(globalTxId), "saveWillCompensateCommandsWhenGlobalTxAborted");
   }
 
   @Override

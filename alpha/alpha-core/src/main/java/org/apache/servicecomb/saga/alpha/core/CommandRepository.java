@@ -29,6 +29,8 @@ public interface CommandRepository {
 
   void saveWillCompensateCommandsForException(String globalTxId, String localTxId);
 
+  void saveWillCompensateCommandsWhenGlobalTxAborted(String globalTxId);
+
   void saveWillCompensateCmdForCurSubTx(String globalTxId, String localTxId);
 
   void markCommandAsDone(String globalTxId, String localTxId);
