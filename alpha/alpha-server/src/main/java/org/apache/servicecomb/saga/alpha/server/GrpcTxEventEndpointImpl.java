@@ -215,7 +215,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
     public void onAccident(GrpcAccident accident, StreamObserver<GrpcAccidentAck> responseObserver) {
         GrpcAccidentAck MSG_ACK_TRUE = GrpcAccidentAck.newBuilder().setStatus(true).build();
         GrpcAccidentAck MSG_ACK_FALSE = GrpcAccidentAck.newBuilder().setStatus(false).build();
-        AccidentHandling accidentHandling = new AccidentHandling(accident.getServicename(), accident.getInstanceid(), accident.getGlobaltxid(), accident.getLocaltxid(), AccidentHandleType.convertTypeFromValue(accident.getType()), accident.getBizinfo());
+        AccidentHandling accidentHandling = new AccidentHandling(accident.getServicename(), accident.getInstanceid(), accident.getGlobaltxid(), accident.getLocaltxid(), AccidentHandleType.convertTypeFromValue(accident.getType()), accident.getBizinfo(), accident.getRemark());
         // To report accident to Accident Platform.
         boolean result = accidentHandlingService.reportMsgToAccidentPlatform(accidentHandling.toJsonString());
         responseObserver.onNext(result ? MSG_ACK_TRUE : MSG_ACK_FALSE);

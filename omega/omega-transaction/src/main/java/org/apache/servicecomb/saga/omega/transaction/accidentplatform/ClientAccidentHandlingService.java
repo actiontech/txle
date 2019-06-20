@@ -15,7 +15,7 @@ public class ClientAccidentHandlingService {
     public boolean reportMsgToAccidentPlatform(String jsonParams) {
         if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger()).getStatus()) {// 差错平台上报支持配置降级功能，未降级场景才进行上报
             JsonObject jsonObject = new JsonParser().parse(jsonParams).getAsJsonObject();
-            String serviceName = "", instanceId = "", globalTxId = "", localTxId = "",bizinfo = "";
+            String serviceName = "", instanceId = "", globalTxId = "", localTxId = "", bizinfo = "", remark = "";
             int type = 1;
             JsonElement jsonElement = jsonObject.get("servicename");
             if (jsonElement != null) {
@@ -41,7 +41,11 @@ public class ClientAccidentHandlingService {
             if (jsonElement != null) {
                 bizinfo = jsonElement.getAsString();
             }
-            AccidentHandling accident = new AccidentHandling(serviceName, instanceId, globalTxId, localTxId, type, bizinfo);
+            jsonElement = jsonObject.get("remark");
+            if (jsonElement != null) {
+                remark = jsonElement.getAsString();
+            }
+            AccidentHandling accident = new AccidentHandling(serviceName, instanceId, globalTxId, localTxId, type, bizinfo, remark);
             return "true".equals(sender.reportAccidentToServer(accident));
         }
         return false;

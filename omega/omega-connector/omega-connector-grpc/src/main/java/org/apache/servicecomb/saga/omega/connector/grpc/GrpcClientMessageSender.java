@@ -158,6 +158,7 @@ public class GrpcClientMessageSender implements MessageSender {
             .setLocaltxid(accident.getLocaltxid())
             .setType(accident.getType())
             .setBizinfo(accident.getBizinfo())
+            .setRemark(accident.getRemark())
             .build();
     return blockingEventService.onAccident(grpcAccident).getStatus() + "";
   }
