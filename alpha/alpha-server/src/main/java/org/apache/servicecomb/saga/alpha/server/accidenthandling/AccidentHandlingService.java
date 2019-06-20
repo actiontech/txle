@@ -56,9 +56,6 @@ public class AccidentHandlingService implements IAccidentHandlingService {
 
         try {
             AccidentHandling savedAccident = parseAccidentJson(jsonParams);
-            if (result.get()) {
-                savedAccident.setStatus(AccidentHandleStatus.SEND_OK.toInteger());
-            }
             // To save accident to db.
             saveAccidentHandling(savedAccident);
 
@@ -90,7 +87,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
 
     private AccidentHandling parseAccidentJson(String jsonParams) {
         JsonObject jsonObject = new JsonParser().parse(jsonParams).getAsJsonObject();
-        String serviceName = "", instanceId = "", globalTxId = "", localTxId = "", bizinfo = "";
+        String serviceName = "", instanceId = "", globalTxId = "", localTxId = "", bizinfo = "", remark = "";
         int type = 1;
         JsonElement jsonElement = jsonObject.get("servicename");
         if (jsonElement != null) {
@@ -116,7 +113,11 @@ public class AccidentHandlingService implements IAccidentHandlingService {
         if (jsonElement != null) {
             bizinfo = jsonElement.getAsString();
         }
-        return new AccidentHandling(serviceName, instanceId, globalTxId, localTxId, AccidentHandleType.convertTypeFromValue(type), bizinfo);
+        jsonElement = jsonObject.get("remark");
+        if (jsonElement != null) {
+            remark = jsonElement.getAsString();
+        }
+        return new AccidentHandling(serviceName, instanceId, globalTxId, localTxId, AccidentHandleType.convertTypeFromValue(type), bizinfo, remark);
     }
 
     private boolean saveAccidentHandling(AccidentHandling accident) {

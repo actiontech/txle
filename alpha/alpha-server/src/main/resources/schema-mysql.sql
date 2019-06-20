@@ -114,7 +114,8 @@ CREATE TABLE IF NOT EXISTS Accident (
   localtxid varchar(36) NOT NULL,
   type int(1) NOT NULL DEFAULT 0 COMMENT '1-rollback_error, 2-send_message_error',
   status int(1) NOT NULL DEFAULT 0 COMMENT '0-sending, 1-send_ok, 2-send_fail, 3-successful, 4-failed',
-  bizinfo varchar(256) NOT NULL,
+  bizinfo varchar(1000),
+  remark varchar(500),
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completetime datetime,
   PRIMARY KEY (id)

@@ -26,13 +26,14 @@ public class AccidentHandling {
     private int type;// 1-rollback_error, 2-send_msg_error
     private int status;// 0-init, 1-sending, 2-success, 3-fail
     private String bizinfo;
+    private String remark;
     private Date createtime;
     private Date completetime;
 
     private AccidentHandling() {
     }
 
-    public AccidentHandling(String servicename, String instanceid, String globaltxid, String localtxid, AccidentHandleType type, String bizinfo) {
+    public AccidentHandling(String servicename, String instanceid, String globaltxid, String localtxid, AccidentHandleType type, String bizinfo, String remark) {
         this.servicename = servicename;
         this.instanceid = instanceid;
         this.globaltxid = globaltxid;
@@ -40,6 +41,7 @@ public class AccidentHandling {
         this.type = type.toInteger();
         this.status = AccidentHandleStatus.SENDING.toInteger();
         this.bizinfo = bizinfo;
+        this.remark = remark;
         this.createtime = new Date(System.currentTimeMillis());
     }
 
@@ -105,6 +107,14 @@ public class AccidentHandling {
 
     public void setBizinfo(String bizinfo) {
         this.bizinfo = bizinfo;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
     }
 
     public Date getCreatetime() {
