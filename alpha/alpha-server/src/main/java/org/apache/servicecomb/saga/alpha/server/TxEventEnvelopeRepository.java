@@ -58,15 +58,10 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 //      + ")")
 //  List<TxEvent> findTimeoutEvents(Pageable pageable);
 
-  @Query(value = "SELECT * FROM TxEvent t "
-      + "WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') "
-      + "  AND t.expiryTime < ?1 AND NOT EXISTS( "
-      + "  SELECT t1.globalTxId FROM TxEvent t1 "
-      + "  WHERE t1.globalTxId = t.globalTxId "
-      + "    AND t1.localTxId = t.localTxId "
-      + "    AND t1.type != t.type)"
-      // 查询超时事件要去除带有异常的，因为这种情况是未超时先异常了，所以无需再处理
-      +"  AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.globalTxId = t.globalTxId AND t2.type = 'TxAbortedEvent')" + EventScanner.SCANNER_SQL, nativeQuery = true)
+  @Query(value = "SELECT * FROM TxEvent t WHERE t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?1" +
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type)" +
+          // 查询超时事件要去除带有异常的，因为这种情况是未超时先异常了，所以无需再处理
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.globalTxId = t.globalTxId AND t2.type = 'TxAbortedEvent')" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<TxEvent> findTimeoutEvents(Date currentDateTime);
 
   /**
@@ -157,14 +152,16 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 
   // 全局事务异常时，查询需要补偿的子事务。超时场景同全局事务异常场景。
   // 对于超时场景，仅补偿已完成且未被补偿过的子事务，因为未完成的子事务不确定最终是否会完成，如果最终为完成则会由客户端的本地事务回滚，如果最终成功完成，则是上报TxEndedEvent事件时对其进行补偿
+  // ps：语句中的t.globalTxId = t1.globalTxId条件不影响结果，但加此条件可触发saga_globalid_localid_type的联合索引，即不加会扫描无数条，加的话会直接一句联合索引定位到具体的一条
   @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent'" +
-          " AND EXISTS (SELECT 1 FROM TxEvent t1 WHERE t1.localTxId = t.localTxId AND t1.type = 'TxEndedEvent')" +
-          " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.localTxId = t.localTxId AND t2.type = 'TxCompensatedEvent')")
+          " AND EXISTS (SELECT 1 FROM TxEvent t1 WHERE t.globalTxId = t1.globalTxId AND t1.localTxId = t.localTxId AND t1.type = 'TxEndedEvent')" +
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t.globalTxId = t2.globalTxId AND t2.localTxId = t.localTxId AND t2.type = 'TxCompensatedEvent')")
   List<TxEvent> findNeedCompensateEventForGlobalTxAborted(String globalTxId);
 
   // 其实和超时场景检测语句findNeedCompensateEventForTimeout应该是一样的
+  // ps：语句中的t.globalTxId = t1.globalTxId条件不影响结果，但加此条件可触发saga_globalid_localid_type的联合索引，即不加会扫描无数条，加的话会直接一句联合索引定位到具体的一条
   @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId != ?2 AND t.type = 'TxStartedEvent'" +
-          " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.localTxId = t.localTxId AND t2.type = 'TxCompensatedEvent')")
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t.globalTxId = t2.globalTxId AND t2.localTxId = t.localTxId AND t2.type = 'TxCompensatedEvent')")
   List<TxEvent> findNeedCompensateEventForException(String globalTxId, String localTxId);
 
 //  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent') AND (t.type = 'TxCompensatedEvent' or (t.type = 'TxAbortedEvent' AND t.globalTxId != t.localTxId)) ORDER BY surrogateId", nativeQuery = true)
