@@ -37,6 +37,11 @@ class SpringTxEventRepository implements TxEventRepository {
   @Override
   public void save(TxEvent event) {
     eventRepo.save(event);
+    TxEvent saveEvent = eventRepo.save(event);
+    if (saveEvent != null) {
+      event.setSurrogateId(saveEvent.id());
+    }
+
   }
 
   @Override
@@ -45,9 +50,9 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public List<TxEvent> findTimeoutEvents() {
+  public List<TxEvent> findTimeoutEvents(long unendedMinEventId) {
 //    return eventRepo.findTimeoutEvents(SINGLE_TX_EVENT_REQUEST);
-    return eventRepo.findTimeoutEvents(new Date());
+    return eventRepo.findTimeoutEvents(unendedMinEventId, new Date());
   }
 
   @Override
@@ -72,8 +77,8 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public List<TxEvent> findSequentialCompensableEventOfUnended() {
-    return eventRepo.findSequentialCompensableEventOfUnended();
+  public List<TxEvent> findSequentialCompensableEventOfUnended(long unendedMinEventId) {
+    return eventRepo.findSequentialCompensableEventOfUnended(unendedMinEventId);
   }
 
   @Override
@@ -101,7 +106,12 @@ class SpringTxEventRepository implements TxEventRepository {
 		return eventRepo.findOne(id);
 	}
 
-	@Override
+  @Override
+  public List<String> selectAllTypeByGlobalTxId(String globalTxId) {
+    return eventRepo.selectAllTypeByGlobalTxId(globalTxId);
+  }
+
+  @Override
 	public List<TxEvent> selectPausedAndContinueEvent(String globalTxId) {
 		return eventRepo.selectPausedAndContinueEvent(globalTxId);
 	}
@@ -126,4 +136,13 @@ class SpringTxEventRepository implements TxEventRepository {
     return eventRepo.checkIsExistsTxCompensatedEvent(globalTxId, localTxId, type) > 0;
   }
 
+  @Override
+  public TxEvent selectAbortedTxEvent(String globalTxId) {
+    return eventRepo.selectAbortedTxEvent(globalTxId);
+  }
+
+  @Override
+  public boolean checkTxIsAborted(String globalTxId, String localTxId) {
+    return eventRepo.checkTxIsAborted(globalTxId, localTxId) > 0;
+  }
 }

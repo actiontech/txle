@@ -51,7 +51,7 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public List<TxEvent> findTimeoutEvents() {
+    public List<TxEvent> findTimeoutEvents(long unendedMinEventId) {
       return emptyList();
     }
 
@@ -80,7 +80,7 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public List<TxEvent> findSequentialCompensableEventOfUnended() {
+    public List<TxEvent> findSequentialCompensableEventOfUnended(long unendedMinEventId) {
       return null;
     }
 
@@ -107,8 +107,13 @@ public class TxConsistentServiceTest {
 	public TxEvent findOne(long id) {
 		return null;
 	}
-	
-	@Override
+
+    @Override
+    public List<String> selectAllTypeByGlobalTxId(String globalTxId) {
+      return null;
+    }
+
+    @Override
 	public List<TxEvent> selectPausedAndContinueEvent(String globalTxId) {
 		return null;
 	}
@@ -130,6 +135,16 @@ public class TxConsistentServiceTest {
 
     @Override
     public boolean checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type) {
+      return false;
+    }
+
+    @Override
+    public TxEvent selectAbortedTxEvent(String globalTxId) {
+      return null;
+    }
+
+    @Override
+    public boolean checkTxIsAborted(String globalTxId, String localTxId) {
       return false;
     }
   };

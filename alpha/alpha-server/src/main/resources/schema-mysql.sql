@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   PRIMARY KEY (surrogateId),
   INDEX saga_events_index (surrogateId, globalTxId, localTxId, type, expiryTime),
   INDEX saga_global_tx_index (globalTxId),
-  UNIQUE KEY saga_globalid_localid_type (globalTxId, localTxId, type),
+  INDEX KEY saga_globalid_localid_type (globalTxId, localTxId, type),
   INDEX saga_surrogateId_index (surrogateId),
   INDEX saga_tx_type_index (type)
 ) DEFAULT CHARSET=utf8mb4;

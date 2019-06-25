@@ -23,7 +23,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -45,6 +47,9 @@ public class EventScanner implements Runnable {
   private final int eventPollingInterval;
 
   private long nextEndedEventId;
+
+  public static ConcurrentHashMap<String, Long> unendedMinEvent = new ConcurrentHashMap();// 未完成的最小全局事务的id
+  private volatile long unendedMinEventId;
 
   public static final String SCANNER_SQL = " /**scanner_sql**/";
 
@@ -130,7 +135,7 @@ public class EventScanner implements Runnable {
   private void findTimeoutEvents() {
     // 查询未登记过的超时
     // SELECT t.surrogateId FROM TxTimeout t, TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type
-    eventRepository.findTimeoutEvents()
+    eventRepository.findTimeoutEvents(getMinUnendEventId())
         .forEach(event -> {
           CurrentThreadContext.put(event.globalTxId(), event);
           LOG.info("Found timeout event {}", event);
@@ -155,8 +160,8 @@ public class EventScanner implements Runnable {
         // 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
         commandRepository.saveWillCompensateCommandsForTimeout(abortedEvent.globalTxId());
 
-        boolean isRetried = eventRepository.checkIsRetriedEvent(abortedEvent.type());
-        utxMetrics.countTxNumber(abortedEvent, true, isRetried);
+//        boolean isRetried = eventRepository.checkIsRetriedEvent(abortedEvent.type());
+//        utxMetrics.countTxNumber(abortedEvent, true, isRetried);
 
 //      if (timeout.type().equals(TxStartedEvent.name())) {
 //        eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
@@ -198,7 +203,7 @@ public class EventScanner implements Runnable {
   private void updateCompensatedCommands() {
     // The 'findFirstCompensatedEventByIdGreaterThan' interface did not think about the 'SagaEndedEvent' type so that would do too many thing those were wasted.
     long a = System.currentTimeMillis();
-    List<TxEvent> compensatedUnendEventList = eventRepository.findSequentialCompensableEventOfUnended();
+    List<TxEvent> compensatedUnendEventList = eventRepository.findSequentialCompensableEventOfUnended(getMinUnendEventId());
     if (compensatedUnendEventList == null || compensatedUnendEventList.isEmpty()) return;
     LOG.info("Method 'find compensated(unend) event' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, compensatedUnendEventList == null ? 0 : compensatedUnendEventList.size());
     compensatedUnendEventList.forEach(event -> {
@@ -249,6 +254,7 @@ public class EventScanner implements Runnable {
       CurrentThreadContext.put(event.globalTxId(), event);
       TxEvent sagaEndedEvent = toSagaEndedEvent(event);
       eventRepository.save(sagaEndedEvent);
+      unendedMinEvent.remove(event.globalTxId());
       // To send message to Kafka.
       kafkaMessageProducer.send(sagaEndedEvent);
       LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
@@ -315,4 +321,18 @@ public class EventScanner implements Runnable {
         event.category()
     );
   }
+
+  private synchronized long getMinUnendEventId() {
+    Collection<Long> values = unendedMinEvent.values();
+    if (values != null && !values.isEmpty()) {
+      unendedMinEventId = values.iterator().next();
+      values.forEach(v -> {
+        if (v < unendedMinEventId) {
+          unendedMinEventId = v;
+        }
+      });
+    }
+    return unendedMinEventId;
+  }
+
 }

@@ -2,13 +2,15 @@ package org.apache.servicecomb.saga.alpha.server.configcenter;
 
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
-import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
+import org.apache.servicecomb.saga.alpha.server.restapi.CacheRestApi;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +50,14 @@ public class DBDegradationConfigService implements IConfigCenterService {
 
     @Override
     public boolean isEnabledTx(String instanceId, ConfigCenterType type) {
+        String configKey = instanceId + "_" + ConfigCenterStatus.Normal.toInteger() + "_" + type.toInteger();
+        Enumeration<String> configKeys = CacheRestApi.enabledConfigMap.keys();
+        while (configKeys.hasMoreElements()) {
+            if (configKey.equals(configKeys.nextElement())){
+                return CacheRestApi.enabledConfigMap.get(configKey);
+            }
+        }
+
         List<ConfigCenter> configCenterList = configCenterEntityRepository.selectConfigCenterByType(instanceId, ConfigCenterStatus.Normal.toInteger(), type.toInteger());
         if (configCenterList != null && !configCenterList.isEmpty()) {
             String value = "";
@@ -72,14 +82,17 @@ public class DBDegradationConfigService implements IConfigCenterService {
                         break;// cover the value of global config.
                     }
                 }
+                CacheRestApi.enabledConfigMap.put(configKey, UtxConstants.ENABLED.equals(value));
                 return UtxConstants.ENABLED.equals(value);
             }
         }
 
         // All of configs except fault-tolerant are enabled by default.
         if (ConfigCenterType.GlobalTxFaultTolerant.equals(type) || ConfigCenterType.CompensationFaultTolerant.equals(type) || ConfigCenterType.AutoCompensationFaultTolerant.equals(type)) {
+            CacheRestApi.enabledConfigMap.put(configKey, false);
             return false;
         }
+        CacheRestApi.enabledConfigMap.put(configKey, true);
         return true;
     }
 

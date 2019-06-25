@@ -128,7 +128,7 @@ public class TransactionRestApi {
 		switch (operation) {
 			case 0:
 				// To verify if current transaction was suspended.
-				boolean isPaused = txConsistentService.isGlobalTxPaused(globalTxId);
+				boolean isPaused = txConsistentService.isGlobalTxPaused(globalTxId, txEvent.type());
 				// The pause operation will not be executed when it is already paused.
 				if (isPaused) {
 					return "Fail to " + operation + " - current transaction was suspended, globalTxId [" + globalTxId + "].";
@@ -137,7 +137,7 @@ public class TransactionRestApi {
 				break;
 			case 1:
 				// To verify if current transaction was suspended.
-				isPaused = txConsistentService.isGlobalTxPaused(globalTxId);
+				isPaused = txConsistentService.isGlobalTxPaused(globalTxId, txEvent.type());
 				// The continue operation will not be executed when it is already not paused.
 				if (!isPaused) {
 					return "Fail to " + operation + " - current transaction was not suspended yet, globalTxId [" + globalTxId + "].";
