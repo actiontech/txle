@@ -57,7 +57,7 @@ public interface TxEventRepository {
    *
    * @return
    */
-  List<TxEvent> findTimeoutEvents();
+  List<TxEvent> findTimeoutEvents(long unendedMinEventId);
 
   TxEvent findTimeoutEventsBeforeEnding(String globalTxId);
 
@@ -103,7 +103,7 @@ public interface TxEventRepository {
    */
   List<TxEvent> findFirstUncompensatedEventByIdGreaterThan(long id, String type);
 
-  List<TxEvent> findSequentialCompensableEventOfUnended();
+  List<TxEvent> findSequentialCompensableEventOfUnended(long unendedMinEventId);
 
   /**
    * Delete duplicated {@link TxEvent}s which {@link TxEvent#type} equals param <code>type</code>.
@@ -120,6 +120,8 @@ public interface TxEventRepository {
 
   TxEvent findOne(long id);
 
+  List<String> selectAllTypeByGlobalTxId(String globalTxId);
+
   List<TxEvent> selectPausedAndContinueEvent(String globalTxId);
 
   long count();
@@ -129,5 +131,9 @@ public interface TxEventRepository {
   Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
   boolean checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type);
+
+  TxEvent selectAbortedTxEvent(String globalTxId);
+
+  boolean checkTxIsAborted(String globalTxId, String localTxId);
 
 }

@@ -174,6 +174,10 @@ public class TxEvent extends TxEventExtension {
     this.payloads = payloads;
   }
 
+  public void setSurrogateId(Long surrogateId) {
+    this.surrogateId = surrogateId;
+  }
+
   public String serviceName() {
     return serviceName;
   }
