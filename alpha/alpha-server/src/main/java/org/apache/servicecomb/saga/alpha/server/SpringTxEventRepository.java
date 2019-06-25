@@ -36,12 +36,10 @@ class SpringTxEventRepository implements TxEventRepository {
 
   @Override
   public void save(TxEvent event) {
-    eventRepo.save(event);
     TxEvent saveEvent = eventRepo.save(event);
     if (saveEvent != null) {
       event.setSurrogateId(saveEvent.id());
     }
-
   }
 
   @Override
