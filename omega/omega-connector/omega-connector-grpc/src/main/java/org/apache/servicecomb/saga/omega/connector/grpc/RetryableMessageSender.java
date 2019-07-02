@@ -62,6 +62,8 @@ public class RetryableMessageSender implements MessageSender {
       return availableMessageSenders.take().send(event);
     } catch (InterruptedException e) {
       throw new OmegaException("Failed to send event " + event + " due to interruption", e);
+    } catch (Exception e) {
+      throw e;
     }
   }
 
