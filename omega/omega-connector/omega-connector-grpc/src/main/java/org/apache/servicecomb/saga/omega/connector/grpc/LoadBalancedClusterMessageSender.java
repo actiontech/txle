@@ -200,13 +200,13 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
       } catch (Exception e) {
         LOG.error("Retry sending event {} due to failure", event, e);
 
-        // TODO 发送异常时，浏览器一直转圈圈
+        // TODO 发生异常时，浏览器一直转圈圈
         // very large latency on exception
         senders.put(messageSender, Long.MAX_VALUE);
       }
     } while (!Thread.currentThread().isInterrupted());
 
-    throw new OmegaException("Failed to send event " + event + " due to interruption");
+    throw new OmegaException("Failed to send event " + event + " due to interruption.");
   }
 
   private void scheduleReconnectTask(int reconnectDelay) {
@@ -280,7 +280,8 @@ class FastestSender implements MessageSenderPicker {
       }
     }
     if (sender == null) {
-      return defaultSender.get();
+//      return defaultSender.get();
+      return messageSenders.keySet().iterator().next();
     } else {
       return sender;
     }
