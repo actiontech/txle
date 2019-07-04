@@ -37,6 +37,7 @@ import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEvent
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class GrpcClientMessageSender implements MessageSender {
   private final String target;
@@ -60,7 +61,7 @@ public class GrpcClientMessageSender implements MessageSender {
       MessageHandler handler) {
     this.target = address;
     this.asyncEventService = TxEventServiceGrpc.newStub(channel);
-    this.blockingEventService = TxEventServiceGrpc.newBlockingStub(channel);
+    this.blockingEventService = TxEventServiceGrpc.newBlockingStub(channel);//.withDeadlineAfter(20, TimeUnit.SECONDS); // 这个应该是GRPC客户端和服务端的连接超时设置，如果设置的话，一旦超时则整个连接将不可用，应给通道内的每个请求设置超时时间
     this.serializer = serializer;
     this.deserializer = deserializer;
 

@@ -198,11 +198,12 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
       } catch (OmegaException e) {
         throw e;
       } catch (Exception e) {
-        LOG.error("Retry sending event {} due to failure", event, e);
+        LOG.error("Retry sending event {} due to failure, messageSender = {}", event, messageSender, e);
 
         // TODO 发生异常时，浏览器一直转圈圈
         // very large latency on exception
         senders.put(messageSender, Long.MAX_VALUE);
+        try {Thread.sleep(10000);} catch (InterruptedException e1) {}
       }
     } while (!Thread.currentThread().isInterrupted());
 
