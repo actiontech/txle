@@ -17,17 +17,21 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
+import org.apache.servicecomb.saga.alpha.core.TxEvent;
+import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.apache.servicecomb.saga.alpha.core.TxEvent;
-import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
-import org.springframework.data.domain.PageRequest;
-
 class SpringTxEventRepository implements TxEventRepository {
-  private static final PageRequest SINGLE_TX_EVENT_REQUEST = new PageRequest(0, 1);
+  private static final Logger LOG = LoggerFactory.getLogger(SpringTxEventRepository.class);
+
   private final TxEventEnvelopeRepository eventRepo;
 
   SpringTxEventRepository(TxEventEnvelopeRepository eventRepo) {
@@ -143,4 +147,60 @@ class SpringTxEventRepository implements TxEventRepository {
   public boolean checkTxIsAborted(String globalTxId, String localTxId) {
     return eventRepo.checkTxIsAborted(globalTxId, localTxId) > 0;
   }
+
+  @Override
+  public List<TxEvent> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+    // TODO 检测是否有非数字，如果有非数字则过滤掉数字类型字段
+    // TODO 检测如果是字符“-”，则视为无searchText处理，因为每一行的日期都含有“-”，或者是当已完成的查询
+    try {
+      pageIndex = pageIndex < 1 ? 0 : pageIndex;
+      pageSize = pageSize < 1 ? 100 : pageSize;
+
+      Sort.Direction sd = Sort.Direction.DESC;
+      if (orderName == null || orderName.length() == 0) {
+        orderName = "creationTime";
+      }
+      if ("asc".equalsIgnoreCase(direction)) {
+        sd = Sort.Direction.ASC;
+      }
+
+      PageRequest pageRequest = new PageRequest(pageIndex, pageSize, sd, orderName);
+      if (searchText == null || searchText.length() == 0) {
+        return eventRepo.findTxList(pageRequest);
+      }
+      return eventRepo.findTxList(pageRequest, searchText);
+    } catch (Exception e) {
+      LOG.error("Failed to find the list of Global Transaction. params {pageIndex: [{}], pageSize: [{}], orderName: [{}], direction: [{}], searchText: [{}]}.", pageIndex, pageSize, orderName, direction, searchText, e);
+    }
+    return null;
+  }
+
+  @Override
+  public List<TxEvent> selectTxEventByGlobalTxIds(List<String> globalTxIdList) {
+    return eventRepo.selectTxEventByGlobalTxIds(globalTxIdList);
+  }
+
+  @Override
+  public long findTxListCount(String searchText) {
+    if (searchText == null || searchText.length() == 0) {
+      return eventRepo.findTxListCount();
+    }
+    return eventRepo.findTxListCount(searchText);
+  }
+
+  @Override
+  public List<TxEvent> selectSpecialColumnsOfTxEventByGlobalTxIds(List<String> globalTxIdList) {
+    return eventRepo.selectSpecialColumnsOfTxEventByGlobalTxIds(globalTxIdList);
+  }
+
+  @Override
+  public List<TxEvent> selectUnendedTxEvents(long unendedMinEventId) {
+    return eventRepo.selectUnendedTxEvents(unendedMinEventId);
+  }
+
+  @Override
+  public long selectMinUnendedTxEventId(long unendedMinEventId) {
+    return eventRepo.selectMinUnendedTxEventId(unendedMinEventId);
+  }
+
 }

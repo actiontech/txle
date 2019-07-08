@@ -147,6 +147,37 @@ public class TxConsistentServiceTest {
     public boolean checkTxIsAborted(String globalTxId, String localTxId) {
       return false;
     }
+
+    @Override
+    public List<TxEvent> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+      return null;
+    }
+
+    @Override
+    public List<TxEvent> selectTxEventByGlobalTxIds(List<String> globalTxIdList) {
+      return null;
+    }
+
+    @Override
+    public long findTxListCount(String searchText) {
+      return 0;
+    }
+
+    @Override
+    public List<TxEvent> selectSpecialColumnsOfTxEventByGlobalTxIds(List<String> globalTxIdList) {
+      return null;
+    }
+
+    @Override
+    public List<TxEvent> selectUnendedTxEvents(long unendedMinEventId) {
+      return null;
+    }
+
+    @Override
+    public long selectMinUnendedTxEventId(long unendedMinEventId) {
+      return 0;
+    }
+
   };
 
   private final String globalTxId = UUID.randomUUID().toString();
