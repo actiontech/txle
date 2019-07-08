@@ -334,8 +334,9 @@ public class EventScanner implements Runnable {
       long currentMinid = eventRepository.selectMinUnendedTxEventId(unendedMinEventId);
       if (unendedMinEventId < currentMinid) {
         unendedMinEventId = currentMinid;
+      } else if (currentMinid == 0 || currentMinid == unendedMinEventId) {
+        unendedMinEventIdSelectCount = 0;
       }
-      System.err.println("u__________unendedMinEventId = " + unendedMinEventId);
     } catch (Exception e) {
       LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to get the min id of global transaction which is not ended.", e);
     }

@@ -233,7 +233,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query("FROM TxEvent t WHERE t.surrogateId > ?1 AND t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent')")
   List<TxEvent> selectUnendedTxEvents(long unendedMinEventId);
 
-  @Query("SELECT coalesce(min(t.surrogateId), 0) FROM TxEvent t WHERE t.surrogateId > ?1 AND t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent')")
+  @Query("SELECT coalesce(min(t.surrogateId), 0) FROM TxEvent t WHERE t.surrogateId > ?1 AND t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.surrogateId > ?1 AND t1.type = 'SagaEndedEvent')")
   long selectMinUnendedTxEventId(long unendedMinEventId);
 
 }
