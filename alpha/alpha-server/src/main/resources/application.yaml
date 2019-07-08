@@ -63,6 +63,9 @@ spring:
 #    driver-class-name: com.mysql.jdbc.driver
     platform: mysql
     continue-on-error: true
+#    自动执行schema和data可参考org.springframework.boot.autoconfigure.jdbc.DataSourceInitializer文件
+#    schema: classpath:schema-mysql.sql
+#    data: classpath:data-mysql.sql
   jpa:
     properties:
       eclipselink:

@@ -23,4 +23,6 @@ public interface IConfigCenterService {
     boolean deleteConfigCenter(long id);
 
     List<ConfigCenter> selectClientConfigCenterList(String instanceId);
+
+    List<ConfigCenter> selectConfigCenterByType(String instanceId, int status, int type);
 }

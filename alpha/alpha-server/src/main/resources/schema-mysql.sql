@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   payloads blob,
   retries int(11) NOT NULL DEFAULT '0',
   retryMethod varchar(256) DEFAULT NULL,
-  category varchar(36) NOT NULL,
+  category varchar(100),
   PRIMARY KEY (surrogateId),
   INDEX saga_events_index (surrogateId, globalTxId, localTxId, type, expiryTime),
   INDEX saga_global_tx_index (globalTxId),
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS Command (
   status varchar(12),
   lastModified datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   version bigint NOT NULL,
-  category varchar(36) NOT NULL,
+  category varchar(100),
   PRIMARY KEY (surrogateId),
   INDEX saga_commands_index (surrogateId, eventId, globalTxId, localTxId, status)
 ) DEFAULT CHARSET=utf8mb4;
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS TxTimeout (
   expiryTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status varchar(12),
   version bigint NOT NULL,
-  category varchar(36) NOT NULL,
+  category varchar(100),
   PRIMARY KEY (surrogateId),
   INDEX saga_timeouts_index (surrogateId, expiryTime, globalTxId, localTxId, status)
 ) DEFAULT CHARSET=utf8mb4;
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS Config (
   id bigint NOT NULL AUTO_INCREMENT,
   servicename varchar(100),
   instanceid varchar(100),
-  type int(2) NOT NULL DEFAULT 0 COMMENT '1-globaltx, 2-compensation, 3-autocompensation, 4-bizinfotokafka, 5-txmonitor, 6-alert, 7-schedule, 8-globaltxfaulttolerant, 9-compensationfaulttolerant, 10-autocompensationfaulttolerant, 50-accidentreport, 51-sqlmonitor  if values are less than 50, then configs for server, otherwise configs for client.',
+  type int(2) NOT NULL DEFAULT 0 COMMENT '1-globaltx, 2-compensation, 3-autocompensation, 4-bizinfotokafka, 5-txmonitor, 6-alert, 7-schedule, 8-globaltxfaulttolerant, 9-compensationfaulttolerant, 10-autocompensationfaulttolerant, 11-pauseglobaltx, 50-accidentreport, 51-sqlmonitor  if values are less than 50, then configs for server, otherwise configs for client.',
   status int(1) NOT NULL DEFAULT 0 COMMENT '0-normal, 1-historical, 2-dumped',
   ability int(1) NOT NULL DEFAULT 1 COMMENT '0-do not provide ability, 1-provide ability     ps: the client''s ability inherits the global ability.',
   value varchar(100) NOT NULL,
@@ -118,5 +118,21 @@ CREATE TABLE IF NOT EXISTS Accident (
   remark varchar(500),
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completetime datetime,
+  PRIMARY KEY (id)
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS TableField (
+  id bigint NOT NULL AUTO_INCREMENT,
+  tablename varchar(50) NOT NULL,
+  field varchar(50) NOT NULL,
+  fieldname varchar(50) NOT NULL,
+  type varchar(20) NOT NULL,
+  fieldlength int(8) NOT NULL,
+  decimalpoint int(1) NOT NULL DEFAULT 0,
+  notnull varchar(5) NOT NULL DEFAULT 'false' COMMENT 'true/false',
+  display varchar(5) NOT NULL DEFAULT 'false' COMMENT 'true/false',
+  showorder int(4) NOT NULL,
+  comment varchar(500),
+  createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4;
