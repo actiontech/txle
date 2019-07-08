@@ -19,7 +19,10 @@ package org.apache.servicecomb.saga.alpha.core;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -30,7 +33,7 @@ import javax.persistence.Transient;
 
 @Entity
 @Table(name = "TxEvent")
-public class TxEvent extends TxEventExtension {
+public class TxEvent/* extends TxEventExtension*/ {
   @Transient
   public static final long MAX_TIMESTAMP = 253402214400000L; // 9999-12-31 00:00:00
 
@@ -174,6 +177,36 @@ public class TxEvent extends TxEventExtension {
     this.payloads = payloads;
   }
 
+ public TxEvent(Long surrogateId, String globalTxId, String serviceName, String instanceId, String category, Date expiryTime, int retries, Date creationTime) {
+    this.surrogateId = surrogateId;
+    this.globalTxId = globalTxId;
+    this.serviceName = serviceName;
+    this.instanceId = instanceId;
+    this.category = category;
+    this.expiryTime = expiryTime;
+    this.retries = retries;
+    this.creationTime = creationTime;
+  }
+
+    public TxEvent(Long surrogateId, String globalTxId, String localTxId, String serviceName, String instanceId, String type, String category, Date expiryTime, int retries, Date creationTime) {
+        this.surrogateId = surrogateId;
+        this.globalTxId = globalTxId;
+        this.localTxId = localTxId;
+        this.serviceName = serviceName;
+        this.instanceId = instanceId;
+        this.type = type;
+        this.category = category;
+        this.expiryTime = expiryTime;
+        this.retries = retries;
+        this.creationTime = creationTime;
+    }
+
+ public TxEvent(Long surrogateId, String globalTxId, Date creationTime) {
+    this.surrogateId = surrogateId;
+    this.globalTxId = globalTxId;
+    this.creationTime = creationTime;
+  }
+
   public void setSurrogateId(Long surrogateId) {
     this.surrogateId = surrogateId;
   }
@@ -251,5 +284,25 @@ public class TxEvent extends TxEventExtension {
         ", category='" + category + '\'' +
         ", retries=" + retries +
         '}';
+  }
+
+  public Map<String, Object> toMap() {
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+      Map<String, Object> map = new HashMap<>();
+      map.put("surrogateId", this.id());
+      map.put("serviceName", this.serviceName());
+      map.put("instanceId", this.instanceId());
+      map.put("creationTime", sdf.format(this.creationTime()));
+      map.put("globalTxId", this.globalTxId());
+      map.put("localTxId", this.localTxId());
+      map.put("parentTxId", this.parentTxId());
+      map.put("type", this.type());
+      map.put("compensationMethod", this.compensationMethod());
+      map.put("expiryTime", sdf.format(this.expiryTime()));
+      map.put("retryMethod", this.retryMethod());
+      map.put("retries", this.retries());
+      map.put("category", this.category());
+      map.put("payloads", this.payloads());
+      return map;
   }
 }

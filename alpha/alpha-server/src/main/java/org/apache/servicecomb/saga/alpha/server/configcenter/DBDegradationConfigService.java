@@ -61,10 +61,10 @@ public class DBDegradationConfigService implements IConfigCenterService {
         List<ConfigCenter> configCenterList = configCenterEntityRepository.selectConfigCenterByType(instanceId, ConfigCenterStatus.Normal.toInteger(), type.toInteger());
         if (configCenterList != null && !configCenterList.isEmpty()) {
             String value = "";
-            boolean isExistsCongis = false;
+            boolean isExistsConfigs = false;
             for (ConfigCenter config : configCenterList) {
                 if (config.getInstanceid() == null || config.getInstanceid().trim().length() == 0) {
-                    isExistsCongis = true;
+                    isExistsConfigs = true;
                     if (config.getAbility() == UtxConstants.NO) {
                         return false;
                     }
@@ -72,7 +72,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
                     break;
                 }
             }
-            if (isExistsCongis) {// 强制每个配置必须有全局配置才生效
+            if (isExistsConfigs) {// 强制每个配置必须有全局配置才生效
                 for (ConfigCenter config : configCenterList) {
                     if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0) {
                         if (config.getAbility() == UtxConstants.NO) {
@@ -88,7 +88,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
         }
 
         // All of configs except fault-tolerant are enabled by default.
-        if (ConfigCenterType.GlobalTxFaultTolerant.equals(type) || ConfigCenterType.CompensationFaultTolerant.equals(type) || ConfigCenterType.AutoCompensationFaultTolerant.equals(type)) {
+        if (ConfigCenterType.PauseGlobalTx.equals(type) || ConfigCenterType.GlobalTxFaultTolerant.equals(type) || ConfigCenterType.CompensationFaultTolerant.equals(type) || ConfigCenterType.AutoCompensationFaultTolerant.equals(type)) {
             CacheRestApi.enabledConfigMap.put(configKey, false);
             return false;
         }
@@ -120,5 +120,10 @@ public class DBDegradationConfigService implements IConfigCenterService {
     @Override
     public List<ConfigCenter> selectClientConfigCenterList(String instanceId) {
         return configCenterEntityRepository.selectClientConfigCenterList(instanceId, ConfigCenterStatus.Normal.toInteger());
+    }
+
+    @Override
+    public List<ConfigCenter> selectConfigCenterByType(String instanceId, int status, int type) {
+        return configCenterEntityRepository.selectConfigCenterByType(instanceId, status, type);
     }
 }

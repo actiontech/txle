@@ -166,7 +166,7 @@ class AlphaConfig {
 
   @PostConstruct
   void init() {
-    new PendingTaskRunner(pendingCompensations, delay).run();
+//    new PendingTaskRunner(pendingCompensations, delay).run();
   }
 
   @PreDestroy

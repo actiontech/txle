@@ -56,4 +56,9 @@ public class ZkDegradationConfigService implements IConfigCenterService {
     public List<ConfigCenter> selectClientConfigCenterList(String instanceId) {
         return null;
     }
+
+    @Override
+    public List<ConfigCenter> selectConfigCenterByType(String instanceId, int status, int type) {
+        return null;
+    }
 }
