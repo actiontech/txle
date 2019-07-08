@@ -17,16 +17,15 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import java.util.*;
-
-import javax.transaction.Transactional;
-
 import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+
+import javax.transaction.Transactional;
+import java.util.*;
 
 interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   List<TxEvent> findByGlobalTxId(String globalTxId);
@@ -209,5 +208,32 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 
   @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = 'TxStartedEvent' AND T.retries = 0) T1", nativeQuery = true)
   long checkTxIsAborted(String globalTxId, String localTxId);
+
+  @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.serviceName, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime)" +
+          " FROM TxEvent T WHERE T.type = 'SagaStartedEvent'")
+  List<TxEvent> findTxList(Pageable pageable);
+
+  @Query("FROM TxEvent T WHERE T.globalTxId IN ?1 ")
+  List<TxEvent> selectTxEventByGlobalTxIds(List<String> globalTxIdList);
+
+  @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.serviceName, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime)" +
+          " FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND CONCAT(T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
+  List<TxEvent> findTxList(Pageable pageable, String searchText);
+
+  @Query("SELECT COUNT(1) FROM TxEvent T WHERE T.type = 'SagaStartedEvent'")
+  long findTxListCount();
+
+  @Query("SELECT COUNT(1) FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND CONCAT(T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
+  long findTxListCount(String searchText);
+
+  @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.localTxId, T.serviceName, T.instanceId, T.type, T.category, T.expiryTime, T.retries, T.creationTime)" +
+          " FROM TxEvent T WHERE T.globalTxId IN ?1 ")
+  List<TxEvent> selectSpecialColumnsOfTxEventByGlobalTxIds(List<String> globalTxIdList);
+
+  @Query("FROM TxEvent t WHERE t.surrogateId > ?1 AND t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent')")
+  List<TxEvent> selectUnendedTxEvents(long unendedMinEventId);
+
+  @Query("SELECT coalesce(min(t.surrogateId), 0) FROM TxEvent t WHERE t.surrogateId > ?1 AND t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.type = 'SagaEndedEvent')")
+  long selectMinUnendedTxEventId(long unendedMinEventId);
 
 }

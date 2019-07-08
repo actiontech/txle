@@ -23,9 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -48,8 +46,12 @@ public class EventScanner implements Runnable {
 
   private long nextEndedEventId;
 
-  public static ConcurrentHashMap<String, Long> unendedMinEvent = new ConcurrentHashMap();// 未完成的最小全局事务的id
-  private volatile long unendedMinEventId;
+  // 未完成的最小全局事务的id  使用HashMap即使及时移除其中大部分元素，内存也不会及时释放，最终导致内存耗费过高，若尝试软引用/弱引用则无法保证数据准确性
+//  public static ConcurrentHashMap<String, Long> unendedMinEvent = new ConcurrentHashMap<>();
+  // 不能简单地获取已完成的最大id，因为会存在部分id小的还未完成的场景，如id：1、2、3，可能3完成了，但2也许还未完成
+  private static volatile long unendedMinEventId;
+  // 需要查询未完成最小id的次数，如果值为0则不需要查询，初始值为1，即系统启动后先查询最小id
+  public static int unendedMinEventIdSelectCount = 1;
 
   public static final String SCANNER_SQL = " /**scanner_sql**/";
 
@@ -97,7 +99,7 @@ public class EventScanner implements Runnable {
                 abortTimeoutEvents();
               } catch (Exception e) {
                 // to avoid stopping this scheduler in case of exception By Gannalyo
-                LOG.error(UtxConstants.LOG_ERROR_PREFIX + "EventScanner.pollEvents.scheduleWithFixedDelay run abortively.", e);
+                LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to detect timeout in scheduler.", e);
               }
             },
             0,
@@ -115,9 +117,11 @@ public class EventScanner implements Runnable {
 						updateCompensatedCommands();
 //						deleteDuplicateSagaEndedEvents();
 //						updateTransactionStatus();
+
+                      getMinUnendedEventId();
 					} catch (Exception e) {
 						// to avoid stopping this scheduler in case of exception By Gannalyo
-						LOG.error(UtxConstants.LOG_ERROR_PREFIX + "EventScanner.pollEvents.scheduleWithFixedDelay run abortively.", e);
+						LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to execute method 'compensate' in scheduler.", e);
 					}
 				},
         0,
@@ -135,7 +139,7 @@ public class EventScanner implements Runnable {
   private void findTimeoutEvents() {
     // 查询未登记过的超时
     // SELECT t.surrogateId FROM TxTimeout t, TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type
-    eventRepository.findTimeoutEvents(getMinUnendEventId())
+    eventRepository.findTimeoutEvents(unendedMinEventId)
         .forEach(event -> {
           CurrentThreadContext.put(event.globalTxId(), event);
           LOG.info("Found timeout event {}", event);
@@ -203,7 +207,7 @@ public class EventScanner implements Runnable {
   private void updateCompensatedCommands() {
     // The 'findFirstCompensatedEventByIdGreaterThan' interface did not think about the 'SagaEndedEvent' type so that would do too many thing those were wasted.
     long a = System.currentTimeMillis();
-    List<TxEvent> compensatedUnendEventList = eventRepository.findSequentialCompensableEventOfUnended(getMinUnendEventId());
+    List<TxEvent> compensatedUnendEventList = eventRepository.findSequentialCompensableEventOfUnended(unendedMinEventId);
     if (compensatedUnendEventList == null || compensatedUnendEventList.isEmpty()) return;
     LOG.info("Method 'find compensated(unend) event' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, compensatedUnendEventList == null ? 0 : compensatedUnendEventList.size());
     compensatedUnendEventList.forEach(event -> {
@@ -254,7 +258,6 @@ public class EventScanner implements Runnable {
       CurrentThreadContext.put(event.globalTxId(), event);
       TxEvent sagaEndedEvent = toSagaEndedEvent(event);
       eventRepository.save(sagaEndedEvent);
-      unendedMinEvent.remove(event.globalTxId());
       // To send message to Kafka.
       kafkaMessageProducer.send(sagaEndedEvent);
       LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
@@ -322,16 +325,23 @@ public class EventScanner implements Runnable {
     );
   }
 
-  private synchronized long getMinUnendEventId() {
-    Collection<Long> values = unendedMinEvent.values();
-    if (values != null && !values.isEmpty()) {
-      unendedMinEventId = values.iterator().next();
-      values.forEach(v -> {
-        if (v < unendedMinEventId) {
-          unendedMinEventId = v;
-        }
-      });
+  private void getMinUnendedEventId() {
+    try {
+      if (unendedMinEventIdSelectCount == 0) return;
+      unendedMinEventIdSelectCount--;
+      // 上面的方法，既能保证准确性，又不节省性能开销，但对性能的开销会越来越大，且也不太适合ServerCluster场景
+      // 不保证是未完成最小的，但保证比最小未完成的还小。即：id：1、2、3...10，如果2未完成，此时定时器执行该方法，则返回2，之后2立即结束，3-7结束，8-10执行，此时再次检测，min id仍是2，而不是7/8，相当于多查询了几条数据，但保证足够的准确性。
+      long currentMinid = eventRepository.selectMinUnendedTxEventId(unendedMinEventId);
+      if (unendedMinEventId < currentMinid) {
+        unendedMinEventId = currentMinid;
+      }
+      System.err.println("u__________unendedMinEventId = " + unendedMinEventId);
+    } catch (Exception e) {
+      LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to get the min id of global transaction which is not ended.", e);
     }
+  }
+
+  public static long getUnendedMinEventId() {
     return unendedMinEventId;
   }
 

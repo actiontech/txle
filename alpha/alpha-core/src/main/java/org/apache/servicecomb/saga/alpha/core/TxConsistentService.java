@@ -17,9 +17,11 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +33,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.apache.servicecomb.saga.alpha.core.EventScanner.unendedMinEvent;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
 import static org.apache.servicecomb.saga.common.EventType.*;
 
@@ -47,6 +48,9 @@ public class TxConsistentService {
 
   @Autowired
   private IKafkaMessageRepository kafkaMessageRepository;
+
+  @Autowired
+  private IConfigCenterService configCenterService;
 
 	@Autowired
 	UtxMetrics utxMetrics;
@@ -106,12 +110,10 @@ public class TxConsistentService {
 				try {
 					eventRepository.save(event);
 					if (SagaStartedEvent.name().equals(type)) {
-						unendedMinEvent.put(globalTxId, event.id());
-					} else if (SagaEndedEvent.name().equals(type)) {
-						unendedMinEvent.remove(globalTxId);
-					}
+					    // 当有新的全局事务时，设置最小id查询次数加1，即需要查询最小事件id
+                        EventScanner.unendedMinEventIdSelectCount++;
+                    }
 
-					// if (TxEndedEvent.name().equals(type) || SagaEndedEvent.name().equals(type)) {// 子事务都执行完成了，即将结束全局事件时无需再检测超时，因为即使此处检测到超时也无需回滚所有正常执行完成的子事务，直接结束即可
 					if (TxEndedEvent.name().equals(type)) {// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
 						// 若定时器检测超时后结束了当前全局事务，但超时子事务的才刚刚完成，此时检测全局事务是否已经终止，如果终止，则补偿当前刚刚完成的子事务
 						if (isGlobalTxAborted(event)) {
@@ -156,7 +158,6 @@ public class TxConsistentService {
 								commandRepository.saveWillCompensateCommandsWhenGlobalTxAborted(globalTxId);
 								// To save SagaEndedEvent.
 								eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), new byte[0]));
-								unendedMinEvent.remove(globalTxId);
 							}
 						}
 					}
@@ -199,6 +200,11 @@ public class TxConsistentService {
 		}
 		boolean isPaused = false;
 		try {
+			boolean enabledTx = configCenterService.isEnabledTx(null, ConfigCenterType.PauseGlobalTx);
+			if (enabledTx) {
+				return true;
+			}
+
 			// 由于暂停事务可能性极小且selectPausedAndContinueEvent查询较慢，故先快速查询是否有暂停或暂停自动恢复的事件
 			List<String> typeList = eventRepository.selectAllTypeByGlobalTxId(globalTxId);
 			if (typeList == null || typeList.isEmpty()) {
