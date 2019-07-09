@@ -105,10 +105,9 @@ public class DBDegradationConfigService implements IConfigCenterService {
     public boolean updateConfigCenter(ConfigCenter config) {
         ConfigCenter existsConfig = configCenterEntityRepository.findOne(config.getId());
         if (existsConfig != null) {
-            configCenterEntityRepository.save(existsConfig);
-            config.setId(null);
+            return configCenterEntityRepository.save(existsConfig) != null;
         }
-        return configCenterEntityRepository.save(config) != null;
+        return false;
     }
 
     @Override

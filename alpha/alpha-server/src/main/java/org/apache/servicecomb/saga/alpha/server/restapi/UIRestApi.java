@@ -72,7 +72,7 @@ public class UIRestApi {
                 rv.setData(gson.toJson(tableFieldEntityList));
             }
         } catch (Exception e) {
-            rv.setMessage("Failed to get columns from " + tableDesc + ". Error: " + e.getMessage());
+            rv.setMessage("Failed to get columns from " + tableDesc + ".");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
@@ -116,7 +116,7 @@ public class UIRestApi {
                 rv.setTotal(eventRepository.findTxListCount(searchText));
             }
         } catch (Exception e) {
-            rv.setMessage("Failed to find the default list of Global Transaction. Error: " + e.getMessage());
+            rv.setMessage("Failed to find the default list of Global Transaction.");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
@@ -193,7 +193,7 @@ public class UIRestApi {
                 }
             }
         } catch (Exception e) {
-            rv.setMessage("Failed to find the default list of Sub Transaction. Error: " + e.getMessage());
+            rv.setMessage("Failed to find the default list of Sub Transaction.");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
@@ -286,7 +286,7 @@ public class UIRestApi {
             // To filter which have been over.
             List<TxEvent> txEventList = eventRepository.selectTxEventByGlobalTxIds(globalTxIdList);
             if (txEventList != null && !txEventList.isEmpty()) {
-                AtomicReference<String> operationAdjective = new AtomicReference<>("terminated");
+                AtomicReference<String> operationAdjective = new AtomicReference<>("pause".equals(operation) ? "suspended" : "recover".equals(operation) ? "normal" : "terminated");
                 txEventList.forEach(event -> {
                     if (SagaEndedEvent.name().equals(event.type())) {
                         globalTxIdList.remove(event.globalTxId());// 移除已结束的
@@ -295,10 +295,8 @@ public class UIRestApi {
                         if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
                             if ("pause".equals(operation) && pauseContinueEventList.size() % 2 == 1) {// 移除暂停的
                                 globalTxIdList.remove(event.globalTxId());
-                                operationAdjective.set("suspended");
                             } else if ("recover".equals(operation) && pauseContinueEventList.size() % 2 == 0) {// 移除非暂停的
                                 globalTxIdList.remove(event.globalTxId());
-                                operationAdjective.set("normal");
                             }
                         }
                     }
@@ -327,15 +325,15 @@ public class UIRestApi {
                 }
             });
         } catch (Exception e) {
-            rv.setMessage("Failed to " + operation + " global transactions, param [" + globalTxIds + "]. Error: " + e.getMessage());
+            rv.setMessage("Failed to " + operation + " global transactions, param [" + globalTxIds + "].");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
         return ResponseEntity.ok(rv);
     }
 
-    @GetMapping("/pauseAllTransaction")
-    public ResponseEntity<ReturnValue> pauseAllTransaction() {
+    @GetMapping("/pauseAllGlobalTransactions")
+    public ResponseEntity<ReturnValue> pauseAllGlobalTransactions() {
         ReturnValue rv = new ReturnValue();
         try {
             // 检测是否已暂停全局事务
@@ -375,7 +373,7 @@ public class UIRestApi {
                 });
             }
         } catch (Exception e) {
-            rv.setMessage("Failed to pause all global transactions. Error: " + e.getMessage());
+            rv.setMessage("Failed to pause all global transactions.");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
@@ -423,7 +421,7 @@ public class UIRestApi {
                 });
             }
         } catch (Exception e) {
-            rv.setMessage("Failed to recover all global transactions. Error: " + e.getMessage());
+            rv.setMessage("Failed to recover all global transactions.");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
@@ -434,19 +432,21 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> degradeGlobalTransaction() {
         ReturnValue rv = new ReturnValue();
         try {
-            boolean enabledTx = dbDegradationConfigService.isEnabledTx(null, ConfigCenterType.GlobalTxFaultTolerant);
-            if (enabledTx) {
+            boolean enabledTx = dbDegradationConfigService.isEnabledTx(null, ConfigCenterType.GlobalTx);
+            if (!enabledTx) {
                 rv.setMessage("Sever has been degraded for the Global Transaction.");
                 return ResponseEntity.ok(rv);
             }
             String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
-            boolean enabled = dbDegradationConfigService.createConfigCenter(new ConfigCenter(null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTxFaultTolerant, "enabled", ip_port + " - degradeGlobalTransaction"));
+            boolean enabled = dbDegradationConfigService.createConfigCenter(new ConfigCenter(null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTx, "disabled", ip_port + " - degradeGlobalTransaction"));
             if (!enabled) {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+            } else {
+                CacheRestApi.clearByKey("null_" + ConfigCenterStatus.Normal.toInteger() + "_" + ConfigCenterType.GlobalTx.toInteger());
             }
         } catch (Exception e) {
-            rv.setMessage("Failed to degrade global transaction. Error: " + e.getMessage());
+            rv.setMessage("Failed to degrade global transaction.");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
@@ -457,7 +457,7 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> startGlobalTransaction() {
         ReturnValue rv = new ReturnValue();
         try {
-            List<ConfigCenter> configCenterList = dbDegradationConfigService.selectConfigCenterByType(null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.GlobalTxFaultTolerant.toInteger());
+            List<ConfigCenter> configCenterList = dbDegradationConfigService.selectConfigCenterByType(null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.GlobalTx.toInteger());
             if (configCenterList == null || configCenterList.isEmpty()) {
                 rv.setMessage("Sever has been started for the Global Transaction.");
                 return ResponseEntity.ok(rv);
@@ -468,12 +468,15 @@ public class UIRestApi {
             if (!dbDegradationConfigService.updateConfigCenter(configCenter)) {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+            } else {
+                CacheRestApi.clearByKey("null_" + ConfigCenterStatus.Normal.toInteger() + "_" + ConfigCenterType.GlobalTx.toInteger());
             }
         } catch (Exception e) {
-            rv.setMessage("Failed to start global transaction. Error: " + e.getMessage());
+            rv.setMessage("Failed to start global transaction.");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
         return ResponseEntity.ok(rv);
     }
+
 }
