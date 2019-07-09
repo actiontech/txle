@@ -24,7 +24,7 @@ import static org.apache.servicecomb.saga.common.EventType.*;
  */
 public class UtxMetrics extends Collector {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UtxMetrics.class);
+    private final Logger LOG = LoggerFactory.getLogger(UtxMetrics.class);
 
     @Autowired
     IConfigCenterService dbDegradationConfigService;
@@ -32,52 +32,52 @@ public class UtxMetrics extends Collector {
     // TODO The value of 'Counter' will become zero after restarting current application.
     // ps: Support cluster mode, in the cluster cases, to distinguish every instance by labelNames. Please view the prometheus.yml
     // Such as: utx_transaction_total{instance=~"utx8099",job=~"utx"} or utx_transaction_total{instance=~"utx8099",job=~"utx"}, summary is: sum(utx_transaction_total{job=~"utx"})
-    private static final Counter UTX_TRANSACTION_TOTAL = buildCounter("utx_transaction_total", "Total number of transactions.");
-    private static final Counter UTX_TRANSACTION_SUCCESSFUL_TOTAL = buildCounter("utx_transaction_successful_total", "Total number of successful transactions.");
-    private static final Counter UTX_TRANSACTION_FAILED_TOTAL = buildCounter("utx_transaction_failed_total", "Total number of transactions which had abnormity occurs.");// 发生异常的数量
-    private static final Counter UTX_TRANSACTION_ROLLBACKED_TOTAL = buildCounter("utx_transaction_rollbacked_total", "Total number of rollbacked transactions.");
-    private static final Counter UTX_TRANSACTION_RETRIED_TOTAL = buildCounter("utx_transaction_retried_total", "Total number of retried transactions..");
-    private static final Counter UTX_TRANSACTION_TIMEOUT_TOTAL = buildCounter("utx_transaction_timeout_total", "Total number of timeout transactions.");
-    private static final Counter UTX_TRANSACTION_PAUSED_TOTAL = buildCounter("utx_transaction_paused_total", "Total number of paused transactions.");
-    private static final Counter UTX_TRANSACTION_CONTINUED_TOTAL = buildCounter("utx_transaction_continued_total", "Total number of continued transactions.");
-    private static final Counter UTX_TRANSACTION_AUTOCONTINUED_TOTAL = buildCounter("utx_transaction_autocontinued_total", "Total number of auto-continued transactions.");
+    private final Counter UTX_TRANSACTION_TOTAL = buildCounter("utx_transaction_total", "Total number of transactions.");
+    private final Counter UTX_TRANSACTION_SUCCESSFUL_TOTAL = buildCounter("utx_transaction_successful_total", "Total number of successful transactions.");
+    private final Counter UTX_TRANSACTION_FAILED_TOTAL = buildCounter("utx_transaction_failed_total", "Total number of transactions which had abnormity occurs.");// 发生异常的数量
+    private final Counter UTX_TRANSACTION_ROLLBACKED_TOTAL = buildCounter("utx_transaction_rollbacked_total", "Total number of rollbacked transactions.");
+    private final Counter UTX_TRANSACTION_RETRIED_TOTAL = buildCounter("utx_transaction_retried_total", "Total number of retried transactions..");
+    private final Counter UTX_TRANSACTION_TIMEOUT_TOTAL = buildCounter("utx_transaction_timeout_total", "Total number of timeout transactions.");
+    private final Counter UTX_TRANSACTION_PAUSED_TOTAL = buildCounter("utx_transaction_paused_total", "Total number of paused transactions.");
+    private final Counter UTX_TRANSACTION_CONTINUED_TOTAL = buildCounter("utx_transaction_continued_total", "Total number of continued transactions.");
+    private final Counter UTX_TRANSACTION_AUTOCONTINUED_TOTAL = buildCounter("utx_transaction_autocontinued_total", "Total number of auto-continued transactions.");
 
-    private static final Counter UTX_TRANSACTION_CHILD_TOTAL = buildCounter("utx_transaction_child_total", "Total number of child transactions.");
-    private static final Set<String> localTxIdSet = new HashSet<>();// To support retry situation.
+    private final Counter UTX_TRANSACTION_CHILD_TOTAL = buildCounter("utx_transaction_child_total", "Total number of child transactions.");
+    private final Set<String> localTxIdSet = new HashSet<>();// To support retry situation.
 
     // mark duration
     // To store 'globalTxId' or 'localTxId' for aborted events, it is the aim to avoid counting repeat event number. Do not need to pay more attention on restart, cluster and concurrence.
-    private static final Map<String, Gauge.Timer> txIdAndGaugeTimer = new HashMap<>();
+    private final Map<String, Gauge.Timer> txIdAndGaugeTimer = new HashMap<>();
     // Total seconds spent for someone transaction. Ps: It will show one row only if you search this metric in 'http://ip:9090/graph'.
     // But, Prometheus will record every metric in different times, and you can search, like 'utx_transaction_time_seconds_total[5m]', then it will show many rows to you.
-    private static final Gauge UTX_TRANSACTION_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_time_seconds_total", "Total seconds spent executing the global transaction.");
-    private static final Gauge UTX_TRANSACTION_CHILD_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_child_time_seconds_total", "Total seconds spent executing the child transaction.");
+    private final Gauge UTX_TRANSACTION_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_time_seconds_total", "Total seconds spent executing the global transaction.");
+    private final Gauge UTX_TRANSACTION_CHILD_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_child_time_seconds_total", "Total seconds spent executing the child transaction.");
 
     // To avoid to count repeatedly for the same tx and type.
-    private static final Map<String, Set<String>> globalTxIdAndTypes = new HashMap<>();
-    private static final String[] labelNames = new String[]{"business", "category"};
+    private final Map<String, Set<String>> globalTxIdAndTypes = new HashMap<>();
+//    private final String[] labelNames = new String[]{"business", "category"};
 
     // mark duration, guarantee start and end have the same timer. Do not use txIdAndGaugeTimer, because the globalTxId is able to be null.
-    private static final ThreadLocal<Gauge.Timer> gaugeTimer = new ThreadLocal<>();
-    private static final Gauge UTX_SQL_TIME_SECONDS_TOTAL = buildGaugeForSql("utx_sql_time_seconds_total", "Total seconds spent executing sql.");
-    private static final Counter UTX_SQL_TOTAL = buildCounterForSql("utx_sql_total", "SQL total number.");
+    private final ThreadLocal<Gauge.Timer> gaugeTimer = new ThreadLocal<>();
+    private final Gauge UTX_SQL_TIME_SECONDS_TOTAL = buildGaugeForSql("utx_sql_time_seconds_total", "Total seconds spent executing sql.");
+    private final Counter UTX_SQL_TOTAL = buildCounterForSql("utx_sql_total", "SQL total number.");
 
-    private static boolean isEnableMonitorServer = false;// if the property 'utx.prometheus.metrics.port' has a valid value, then it is true. true: enable monitor, false: disable monitor
+    private boolean isEnableMonitorServer = false;// if the property 'utx.prometheus.metrics.port' has a valid value, then it is true. true: enable monitor, false: disable monitor
 
-    private static Counter buildCounter(String name, String help) {
+    private Counter buildCounter(String name, String help) {
 //        return Counter.build(name, help).labelNames(labelNames).register();// got an error in using the labelNames variable case.
         return Counter.build(name, help).labelNames("business", "category").register();
     }
 
-    private static Gauge buildGauge(String name, String help) {
+    private Gauge buildGauge(String name, String help) {
         return Gauge.build(name, help).labelNames("business", "category").register();
     }
 
-    private static Gauge buildGaugeForSql(String name, String help) {
+    private Gauge buildGaugeForSql(String name, String help) {
         return Gauge.build(name, help).labelNames("bizsql", "business", "category").register();
     }
 
-    private static Counter buildCounterForSql(String name, String help) {
+    private Counter buildCounterForSql(String name, String help) {
         return Counter.build(name, help).labelNames("bizsql", "business", "category").register();
     }
 
@@ -168,8 +168,12 @@ public class UtxMetrics extends Collector {
         if (TxStartedEvent.name().equals(event.type()) && !localTxIdSet.contains(event.localTxId())) {
             UTX_TRANSACTION_CHILD_TOTAL.labels(event.serviceName(), event.category()).inc();
             localTxIdSet.add(event.localTxId());
-        } else if (TxEndedEvent.name().equals(event.type())) {
+        } else if (TxEndedEvent.name().equals(event.type()) || SagaEndedEvent.name().equals(event.type()) || TxAbortedEvent.name().equals(event.type())) {
             localTxIdSet.remove(event.localTxId());
+        }
+
+        if (localTxIdSet.isEmpty()) {
+            localTxIdSet.clear();// 释放内存，非常重要。remove无法是否内存，容易导致OOM。
         }
     }
 

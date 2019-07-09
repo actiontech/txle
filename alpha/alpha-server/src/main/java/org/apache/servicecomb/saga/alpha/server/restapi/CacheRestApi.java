@@ -16,4 +16,9 @@ public class CacheRestApi {
         return HttpStatus.OK.toString();
     }
 
+    public static String clearByKey(String key) {
+        enabledConfigMap.remove(key);
+        return HttpStatus.OK.toString();
+    }
+
 }
