@@ -167,7 +167,9 @@ public class UtxMetrics extends Collector {
         if (!isEnableMonitor(event)) return;
         if (TxStartedEvent.name().equals(event.type()) && !localTxIdSet.contains(event.localTxId())) {
             UTX_TRANSACTION_CHILD_TOTAL.labels(event.serviceName(), event.category()).inc();
-            localTxIdSet.add(event.localTxId());
+            if (event.retries() > 0) {// localTxIdSet主要是针对超时场景，所以仅添加超时的子事务标识即可
+                localTxIdSet.add(event.localTxId());
+            }
         } else if (TxEndedEvent.name().equals(event.type()) || SagaEndedEvent.name().equals(event.type()) || TxAbortedEvent.name().equals(event.type())) {
             localTxIdSet.remove(event.localTxId());
         }
