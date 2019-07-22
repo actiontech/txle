@@ -101,6 +101,7 @@ public class GrpcClientMessageSender implements MessageSender {
       }
     } catch (Exception e) {}
 
+//    blockingEventService.withDeadlineAfter(5, TimeUnit.SECONDS);// TODO 设置本次通信的超时时间
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
 	while (grpcAck.getPaused()) {// It's a manual operation to pause transaction, so it can accept to pause for one minute.
       try {Thread.sleep(UtxStaticConfig.getIntegerConfig("utx.transaction.pause-check-interval", 60) * 1000);} catch (InterruptedException e) {}

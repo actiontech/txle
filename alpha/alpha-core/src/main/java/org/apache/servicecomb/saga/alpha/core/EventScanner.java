@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
@@ -51,7 +52,7 @@ public class EventScanner implements Runnable {
   // 不能简单地获取已完成的最大id，因为会存在部分id小的还未完成的场景，如id：1、2、3，可能3完成了，但2也许还未完成
   private static volatile long unendedMinEventId;
   // 需要查询未完成最小id的次数，如果值为0则不需要查询，初始值为1，即系统启动后先查询最小id
-  public static int unendedMinEventIdSelectCount = 1;
+  public static AtomicInteger unendedMinEventIdSelectCount = new AtomicInteger(1);
 
   public static final String SCANNER_SQL = " /**scanner_sql**/";
 
@@ -327,15 +328,15 @@ public class EventScanner implements Runnable {
 
   private void getMinUnendedEventId() {
     try {
-      if (unendedMinEventIdSelectCount == 0) return;
-      unendedMinEventIdSelectCount--;
+      if (unendedMinEventIdSelectCount.get() == 0) return;
+      unendedMinEventIdSelectCount.decrementAndGet();
       // 上面的方法，既能保证准确性，又不节省性能开销，但对性能的开销会越来越大，且也不太适合ServerCluster场景
       // 不保证是未完成最小的，但保证比最小未完成的还小。即：id：1、2、3...10，如果2未完成，此时定时器执行该方法，则返回2，之后2立即结束，3-7结束，8-10执行，此时再次检测，min id仍是2，而不是7/8，相当于多查询了几条数据，但保证足够的准确性。
       long currentMinid = eventRepository.selectMinUnendedTxEventId(unendedMinEventId);
       if (unendedMinEventId < currentMinid) {
         unendedMinEventId = currentMinid;
       } else if (currentMinid == 0 || currentMinid == unendedMinEventId) {
-        unendedMinEventIdSelectCount = 0;
+        unendedMinEventIdSelectCount.set(0);
       }
     } catch (Exception e) {
       LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to get the min id of global transaction which is not ended.", e);

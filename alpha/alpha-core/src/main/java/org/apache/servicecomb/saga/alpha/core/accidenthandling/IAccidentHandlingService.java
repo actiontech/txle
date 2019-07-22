@@ -1,6 +1,7 @@
 package org.apache.servicecomb.saga.alpha.core.accidenthandling;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Accident Handling Repository.
@@ -8,7 +9,7 @@ import java.util.List;
  * @author Gannalyo
  * @date 2019/06/14
  */
-public interface IAccidentHandlingRepository {
+public interface IAccidentHandlingService {
 
     boolean save(AccidentHandling accidentHandling);
 
@@ -18,4 +19,9 @@ public interface IAccidentHandlingRepository {
 
     boolean updateAccidentStatusByIdList(List<Long> idList, AccidentHandleStatus status);
 
+    boolean reportMsgToAccidentPlatform(String jsonParams);
+
+    List<Map<String, Object>> findAccidentList(int pageIndex, int pageSize, String orderName, String direction, String searchText);
+
+    long findAccidentCount(String searchText);
 }

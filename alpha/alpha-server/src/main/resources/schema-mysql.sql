@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   INDEX saga_globalid_localid_type (globalTxId, localTxId, type),
   INDEX saga_surrogateId_index (surrogateId),
   INDEX saga_tx_type_index (type)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS Command (
   surrogateId bigint NOT NULL AUTO_INCREMENT,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS Command (
   category varchar(100),
   PRIMARY KEY (surrogateId),
   INDEX saga_commands_index (surrogateId, eventId, globalTxId, localTxId, status)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS TxTimeout (
   surrogateId bigint NOT NULL AUTO_INCREMENT,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS TxTimeout (
   category varchar(100),
   PRIMARY KEY (surrogateId),
   INDEX saga_timeouts_index (surrogateId, expiryTime, globalTxId, localTxId, status)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS Message (
   id bigint NOT NULL AUTO_INCREMENT,
@@ -89,12 +89,13 @@ CREATE TABLE IF NOT EXISTS Message (
   PRIMARY KEY (id) USING BTREE,
   UNIQUE INDEX pk_id(id) USING BTREE,
   INDEX utx_globalTxId_index(globaltxid) USING BTREE
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS Config (
   id bigint NOT NULL AUTO_INCREMENT,
   servicename varchar(100),
   instanceid varchar(100),
+  category varchar(100),
   type int(2) NOT NULL DEFAULT 0 COMMENT '1-globaltx, 2-compensation, 3-autocompensation, 4-bizinfotokafka, 5-txmonitor, 6-alert, 7-schedule, 8-globaltxfaulttolerant, 9-compensationfaulttolerant, 10-autocompensationfaulttolerant, 11-pauseglobaltx, 50-accidentreport, 51-sqlmonitor  if values are less than 50, then configs for server, otherwise configs for client.',
   status int(1) NOT NULL DEFAULT 0 COMMENT '0-normal, 1-historical, 2-dumped',
   ability int(1) NOT NULL DEFAULT 1 COMMENT '0-do not provide ability, 1-provide ability     ps: the client''s ability inherits the global ability.',
@@ -104,7 +105,7 @@ CREATE TABLE IF NOT EXISTS Config (
   PRIMARY KEY (id) USING BTREE,
   UNIQUE INDEX pk_id(id) USING BTREE,
 	INDEX index_type(type) USING BTREE
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS Accident (
   id bigint NOT NULL AUTO_INCREMENT,
@@ -119,7 +120,7 @@ CREATE TABLE IF NOT EXISTS Accident (
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completetime datetime,
   PRIMARY KEY (id)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS TableField (
   id bigint NOT NULL AUTO_INCREMENT,
@@ -135,4 +136,36 @@ CREATE TABLE IF NOT EXISTS TableField (
   comment varchar(500),
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
+
+CREATE TABLE IF NOT EXISTS DataDictionary (
+  id bigint NOT NULL AUTO_INCREMENT,
+  name varchar(50) NOT NULL,
+  code varchar(50) NOT NULL,
+  remark varchar(500),
+  createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) DEFAULT CHARSET=utf8mb4 $$
+
+CREATE TABLE IF NOT EXISTS DataDictionaryItem (
+  id bigint NOT NULL AUTO_INCREMENT,
+  ddcode varchar(50) NOT NULL,
+  name varchar(50) NOT NULL,
+  code varchar(50) NOT NULL,
+  value varchar(50) NOT NULL,
+  showorder int(2) NOT NULL DEFAULT 1,
+  visible int(1) NOT NULL DEFAULT 1,
+  remark varchar(500),
+  createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) DEFAULT CHARSET=utf8mb4 $$
+
+-- 创建函数，主要用于检索数据列表时兼容一些状态或类型值
+DROP FUNCTION IF EXISTS TXLE_DECODE;$$
+CREATE FUNCTION TXLE_DECODE(P_KEY VARCHAR(50), P VARCHAR(10))
+RETURNS VARCHAR(50)
+BEGIN
+  DECLARE v_name VARCHAR(50);
+  SELECT name INTO v_name FROM DataDictionaryItem WHERE value = P AND ddcode = P_KEY;
+  RETURN v_name;
+END $$

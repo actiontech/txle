@@ -58,7 +58,7 @@ spring:
     username: root
     password: 123456
 #    url: jdbc:mysql://10.186.61.3:3306/utx?useSSL=false
-    url: jdbc:mysql://10.186.61.3:3306/utx?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
+    url: jdbc:mysql://10.186.61.3:3306/utx?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
 #    driver-class-name    it'll get an error if open it, and don't know why so far.
 #    driver-class-name: com.mysql.jdbc.driver
     platform: mysql
@@ -66,6 +66,7 @@ spring:
 #    自动执行schema和data可参考org.springframework.boot.autoconfigure.jdbc.DataSourceInitializer文件
 #    schema: classpath:schema-mysql.sql
 #    data: classpath:data-mysql.sql
+    separator: $$
   jpa:
     properties:
       eclipselink:

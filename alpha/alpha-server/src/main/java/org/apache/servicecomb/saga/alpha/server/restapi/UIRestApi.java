@@ -1,13 +1,17 @@
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.google.gson.Gson;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.google.gson.GsonBuilder;
 import org.apache.servicecomb.saga.alpha.core.*;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
+import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.server.TableFieldRepository;
-import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.common.ReturnValue;
@@ -19,11 +23,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.apache.servicecomb.saga.common.EventType.*;
+import static org.apache.servicecomb.saga.common.EventType.SagaEndedEvent;
 
 @RestController
 public class UIRestApi {
@@ -37,12 +41,16 @@ public class UIRestApi {
     private TxEventRepository eventRepository;
 
     @Autowired
-    private DBDegradationConfigService dbDegradationConfigService;
+    private IConfigCenterService configCenterService;
+
+    @Autowired
+    private IDataDictionaryService dataDictionaryService;
 
     @Autowired
     UtxMetrics utxMetrics;
 
-    private final Gson gson = new GsonBuilder().create();
+    @Autowired
+    IAccidentHandlingService accidentHandlingService;
 
     public UIRestApi(TableFieldRepository tableFieldRepository, TxEventRepository eventRepository) {
         this.tableFieldRepository = tableFieldRepository;
@@ -69,7 +77,7 @@ public class UIRestApi {
         try {
             List<TableFieldEntity> tableFieldEntityList = tableFieldRepository.selectTableFieldsByName(tableName);
             if (tableFieldEntityList != null && !tableFieldEntityList.isEmpty()) {
-                rv.setData(gson.toJson(tableFieldEntityList));
+                rv.setData(JSONObject.parseArray(JSON.toJSONString(tableFieldEntityList)));
             }
         } catch (Exception e) {
             rv.setMessage("Failed to get columns from " + tableDesc + ".");
@@ -80,40 +88,27 @@ public class UIRestApi {
         return ResponseEntity.ok(rv);
     }
 
-    @GetMapping(value = "/globalTransactions")
-    public ResponseEntity<ReturnValue> findTxList() {
-        return findTxList(0, 100, "", "", "");
-    }
-
-    @GetMapping(value = "/globalTransactions/{pageIndex}/{pageSize}/{searchText}")
-    public ResponseEntity<ReturnValue> findTxList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String searchText) {
-        if (searchText != null) searchText = searchText.trim();
-        return findTxList(pageIndex, pageSize, "", "", searchText);
+    @GetMapping(value = "/globalTransactions/{pageIndex}/{pageSize}/{orderName}/{direction}")
+    public ResponseEntity<ReturnValue> findTxList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String orderName, @PathVariable String direction) {
+        return findTxList(pageIndex, pageSize, orderName, direction, "");
     }
 
     @GetMapping(value = "/globalTransactions/{pageIndex}/{pageSize}/{orderName}/{direction}/{searchText}")
     public ResponseEntity<ReturnValue> findTxList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String orderName, @PathVariable String direction, @PathVariable String searchText) {
         ReturnValue rv = new ReturnValue();
         try {
-            // 确定本次分页查询的全局事务
-            List<TxEvent> txStartedEventList = eventRepository.findTxList(pageIndex, pageSize, orderName, direction, searchText);
+            // 后台的pageIndex默认从0开始，前端调用处为了直观从1开始，所以此处--pageIndex，若pageIndex<1则置为0
+            List<Map<String, Object>> txStartedEventList = eventRepository.findTxList(--pageIndex, pageSize, convertToEventEntityFieldName(orderName), direction, searchText);
             if (txStartedEventList != null && !txStartedEventList.isEmpty()) {
-                List<Map<String, Object>> resultTxEventList = new LinkedList<>();
-
-                List<String> globalTxIdList = new ArrayList<>();
-                txStartedEventList.forEach(event -> {
-                    globalTxIdList.add(event.globalTxId());
-                    resultTxEventList.add(event.toMap());
+                List<Map<String, Object>> resultList = new LinkedList<>();
+                txStartedEventList.forEach(map -> {
+                    Map<String, Object> resultMap = new HashMap<>();
+                    map.keySet().forEach(key -> resultMap.put(key.toLowerCase(), map.get(key)));
+                    resultList.add(resultMap);
                 });
-
-                List<TxEvent> txEventList = eventRepository.selectTxEventByGlobalTxIds(globalTxIdList);
-                if (txEventList != null && !txEventList.isEmpty()) {
-                    // 计算全局事务的状态
-                    computeGlobalTxStatus(txEventList, resultTxEventList);
-                }
-
-                rv.setData(gson.toJson(resultTxEventList));
-                rv.setTotal(eventRepository.findTxListCount(searchText));
+                txStartedEventList.clear();// 释放内存
+                rv.setData(JSONObject.parseArray(JSON.toJSONString(resultList, SerializerFeature.WriteMapNullValue)));
+                rv.setTotal(eventRepository.findTxCount(searchText));
             }
         } catch (Exception e) {
             rv.setMessage("Failed to find the default list of Global Transaction.");
@@ -123,73 +118,42 @@ public class UIRestApi {
         return ResponseEntity.ok(rv);
     }
 
-    // 计算全局事务的状态
-    private void computeGlobalTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
-        // 0-运行中，1-运行异常，2-暂停，3-正常结束，4-异常结束
-        resultTxEventList.forEach(txMap -> txMap.put("status", 0));
-
-        txEventList.forEach(event -> {
-            if (TxAbortedEvent.name().equals(event.type())) {
-                for (Map<String, Object> txMap : resultTxEventList) {
-                    if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
-                        txMap.put("status", 1);// 异常状态
-                        break;
-                    }
-                }
-            }
-        });
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        txEventList.forEach(event -> {
-            if (SagaEndedEvent.name().equals(event.type())) {
-                for (Map<String, Object> txMap : resultTxEventList) {
-                    if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
-                        txMap.put("endTime", sdf.format(event.creationTime()));// ****设置结束时间****
-                        if (Integer.parseInt(txMap.get("status").toString()) == 0) {
-                            txMap.put("status", 3);// 正常结束
-                        } else {
-                            txMap.put("status", 4);// 异常结束
-                        }
-                        break;
-                    }
-                }
-            }
-        });
-
-        resultTxEventList.forEach(txMap -> {
-            if (Integer.parseInt(txMap.get("status").toString()) == 0) {// 正常状态场景才去验证是否暂停
-                txEventList.forEach(event -> {
-                    if (event.globalTxId().equals(txMap.get("globalTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
-                        List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
-                        if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-                            if (pauseContinueEventList.size() % 2 == 1) {// 暂停状态
-                                txMap.put("status", 2);// 暂停
-                            }
-                        }
-                    }
-                });
-            }
-        });
+    // 前端获取字段名称时统一为小写，但jpa实体为驼峰式，故此处转义
+    // 除TxEvent、Command和Timeout外，其它所有数据表(含新)均为小写字段名称
+    private String convertToEventEntityFieldName(String fieldName) {
+        if ("surrogateId".equalsIgnoreCase(fieldName)) return "surrogateId";
+        if ("serviceName".equalsIgnoreCase(fieldName)) return "serviceName";
+        if ("instanceId".equalsIgnoreCase(fieldName)) return "instanceId";
+        if ("creationTime".equalsIgnoreCase(fieldName)) return "creationTime";
+        if ("globalTxId".equalsIgnoreCase(fieldName)) return "globalTxId";
+        if ("localTxId".equalsIgnoreCase(fieldName)) return "localTxId";
+        if ("parentTxId".equalsIgnoreCase(fieldName)) return "parentTxId";
+        if ("compensationMethod".equalsIgnoreCase(fieldName)) return "compensationMethod";
+        if ("expiryTime".equalsIgnoreCase(fieldName)) return "expiryTime";
+        if ("retryMethod".equalsIgnoreCase(fieldName)) return "retryMethod";
+        return fieldName;
     }
 
     @PostMapping(value = "/subTransactions")
-    public ResponseEntity<ReturnValue> findSubTxList(@RequestBody String globalTxIds) {
+    public ResponseEntity<ReturnValue> findSubTxList(@RequestBody JSONObject jsonParams) {
         ReturnValue rv = new ReturnValue();
         try {
+            if (jsonParams == null) {
+                rv.setMessage("The identifications of Global Transactions are empty.");
+                return ResponseEntity.badRequest().body(rv);
+            }
+            String globalTxIds = jsonParams.getString("globalTxIds");
             if (globalTxIds != null && globalTxIds.length() > 0) {
-                List<String> globalTxIdList = Arrays.asList(globalTxIds.split(","));
-                List<TxEvent> txEventList = eventRepository.selectSpecialColumnsOfTxEventByGlobalTxIds(globalTxIdList);
-                if (txEventList != null && !txEventList.isEmpty()) {
-                    List<Map<String, Object>> resultTxEventList = new LinkedList<>();
-                    txEventList.forEach(event -> {
-                        if (TxStartedEvent.name().equals(event.type())) {
-                            resultTxEventList.add(event.toMap());
-                        }
+                List<Map<String, Object>> subTxList = eventRepository.findSubTxList(globalTxIds);
+                if (subTxList != null && !subTxList.isEmpty()) {
+                    List<Map<String, Object>> resultList = new LinkedList<>();
+                    subTxList.forEach(map -> {
+                        Map<String, Object> resultMap = new HashMap<>();
+                        map.keySet().forEach(key -> resultMap.put(key.toLowerCase(), map.get(key)));
+                        resultList.add(resultMap);
                     });
-
-                    computeSubTxStatus(txEventList, resultTxEventList);
-
-                    rv.setData(gson.toJson(resultTxEventList));
+                    subTxList.clear();// 释放内存
+                    rv.setData(JSONObject.parseArray(JSON.toJSONString(resultList, SerializerFeature.WriteMapNullValue)));
                 }
             }
         } catch (Exception e) {
@@ -198,55 +162,6 @@ public class UIRestApi {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         }
         return ResponseEntity.ok(rv);
-    }
-
-    // 计算子事务的状态
-    private void computeSubTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
-        // 0-运行中，1-运行异常，2-暂停，3-正常结束，4-异常结束
-        resultTxEventList.forEach(txMap -> txMap.put("status", 0));
-
-        txEventList.forEach(event -> {
-            if (TxAbortedEvent.name().equals(event.type())) {
-                for (Map<String, Object> txMap : resultTxEventList) {
-                    if (event.localTxId().equals(txMap.get("localTxId").toString())) {
-                        txMap.put("status", 1);// 异常状态
-                        break;
-                    }
-                }
-            }
-        });
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        txEventList.forEach(event -> {
-            if (TxEndedEvent.name().equals(event.type())) {
-                for (Map<String, Object> txMap : resultTxEventList) {
-                    if (event.localTxId().equals(txMap.get("localTxId").toString())) {
-                        txMap.put("endTime", sdf.format(event.creationTime()));// ****设置结束时间****
-                        if (Integer.parseInt(txMap.get("status").toString()) == 0) {
-                            txMap.put("status", 3);// 正常结束
-                        } else {
-                            txMap.put("status", 4);// 异常结束
-                        }
-                        break;
-                    }
-                }
-            }
-        });
-
-        resultTxEventList.forEach(txMap -> {
-            if (Integer.parseInt(txMap.get("status").toString()) == 0) {// 正常状态场景才去验证是否暂停
-                txEventList.forEach(event -> {
-                    if (event.localTxId().equals(txMap.get("localTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
-                        List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
-                        if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-                            if (pauseContinueEventList.size() % 2 == 1) {// 暂停状态
-                                txMap.put("status", 2);// 暂停
-                            }
-                        }
-                    }
-                });
-            }
-        });
     }
 
     @PostMapping("/pauseGlobalTransactions")
@@ -318,7 +233,7 @@ public class UIRestApi {
                     }
                     TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
                     eventRepository.save(pausedEvent);
-                    if ("terminate".equals(operation)) {
+                    if ("terminate".equals(operation)) {// TODO 终止后应进行补偿
                         eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null));
                     }
                     utxMetrics.countTxNumber(event, false, false);
@@ -337,14 +252,14 @@ public class UIRestApi {
         ReturnValue rv = new ReturnValue();
         try {
             // 检测是否已暂停全局事务
-            List<ConfigCenter> configCenterList = dbDegradationConfigService.selectConfigCenterByType(null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.PauseGlobalTx.toInteger());
+            List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.PauseGlobalTx.toInteger());
             if (configCenterList != null && !configCenterList.isEmpty()) {
                 return ResponseEntity.ok(rv);
             }
 
             // 1.暂停全局事务配置
             String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
-            dbDegradationConfigService.createConfigCenter(new ConfigCenter(null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ip_port + " - pauseAllTransaction"));
+            configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ip_port + " - pauseAllTransaction"));
 
             // 2.对未结束且未暂停的全局事务逐一设置暂停事件，不会出现某全局事务还未等设置暂停事件就结束的情况，因为上面先生成了暂停配置
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
@@ -385,11 +300,11 @@ public class UIRestApi {
         ReturnValue rv = new ReturnValue();
         try {
             // 1.去除暂停全局事务配置
-            List<ConfigCenter> configCenterList = dbDegradationConfigService.selectConfigCenterByType(null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.PauseGlobalTx.toInteger());
+            List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.PauseGlobalTx.toInteger());
             if (configCenterList != null && !configCenterList.isEmpty()) {
                 ConfigCenter configCenter = configCenterList.get(0);
                 configCenter.setStatus(ConfigCenterStatus.Historical.toInteger());
-                dbDegradationConfigService.updateConfigCenter(configCenter);
+                configCenterService.updateConfigCenter(configCenter);
                 return ResponseEntity.ok(rv);
             }
 
@@ -431,14 +346,14 @@ public class UIRestApi {
     @GetMapping("/degradeGlobalTransaction")
     public ResponseEntity<ReturnValue> degradeGlobalTransaction() {
         ReturnValue rv = new ReturnValue();
-        try {
-            boolean enabledTx = dbDegradationConfigService.isEnabledTx(null, ConfigCenterType.GlobalTx);
+        try {// 已经开启但未结束的全局事务在执行过程中遇到全局事务服务降级，则本全局事务中后续的业务按照无全局事务运行，因为服务降级的目的不是为了保证全局事务，而是为了保证主业务能正常继续运行
+            boolean enabledTx = configCenterService.isEnabledTx(null, null, ConfigCenterType.GlobalTx);
             if (!enabledTx) {
                 rv.setMessage("Sever has been degraded for the Global Transaction.");
                 return ResponseEntity.ok(rv);
             }
             String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
-            boolean enabled = dbDegradationConfigService.createConfigCenter(new ConfigCenter(null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTx, "disabled", ip_port + " - degradeGlobalTransaction"));
+            boolean enabled = configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTx, "disabled", ip_port + " - degradeGlobalTransaction"));
             if (!enabled) {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
@@ -457,7 +372,7 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> startGlobalTransaction() {
         ReturnValue rv = new ReturnValue();
         try {
-            List<ConfigCenter> configCenterList = dbDegradationConfigService.selectConfigCenterByType(null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.GlobalTx.toInteger());
+            List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.GlobalTx.toInteger());
             if (configCenterList == null || configCenterList.isEmpty()) {
                 rv.setMessage("Sever has been started for the Global Transaction.");
                 return ResponseEntity.ok(rv);
@@ -465,7 +380,7 @@ public class UIRestApi {
 
             ConfigCenter configCenter = configCenterList.get(0);
             configCenter.setStatus(ConfigCenterStatus.Historical.toInteger());
-            if (!dbDegradationConfigService.updateConfigCenter(configCenter)) {
+            if (!configCenterService.updateConfigCenter(configCenter)) {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
@@ -479,4 +394,210 @@ public class UIRestApi {
         return ResponseEntity.ok(rv);
     }
 
+    @GetMapping("/findDataDictionaryByKey/{dataDictKey}")
+    public ResponseEntity<ReturnValue> findDataDictionaryByKey(@PathVariable String dataDictKey) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList(dataDictKey);
+            if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
+                LinkedHashMap<String, String> dataDictionaryNameValue = new LinkedHashMap<>();
+                dataDictionaryItemList.forEach(dataDictionaryItem -> dataDictionaryNameValue.put(dataDictionaryItem.getName(), dataDictionaryItem.getValue()));
+                rv.setData(dataDictionaryNameValue);
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to find Data Dictionary by key [" + dataDictKey + "].");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @GetMapping("/findGlobalTxServerNames")
+    public ResponseEntity<ReturnValue> findGlobalTxServerNames() {
+        ReturnValue rv = new ReturnValue();
+        try {
+            List<String> serverNames = dataDictionaryService.selectGlobalTxServerNames();
+            if (serverNames == null || serverNames.isEmpty()) {
+                rv.setMessage("Server Names are empty, key.");
+            } else {
+                rv.setData(serverNames);
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to find server names.");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @GetMapping("/findGlobalTxServerInstanceIds/{serverName}")
+    public ResponseEntity<ReturnValue> findGlobalTxServerInstanceIds(@PathVariable String serverName) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            List<String> serverInstanceIds = dataDictionaryService.selectGlobalTxServerInstanceIds(serverName);
+            if (serverInstanceIds == null || serverInstanceIds.isEmpty()) {
+                rv.setMessage("Server Instance Ids are empty, key.");
+            } else {
+                rv.setData(serverInstanceIds);
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to find server instance ids.");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @GetMapping("/findGlobalTxServerCategories/{serverName}/{instanceId:.+}")
+    public ResponseEntity<ReturnValue> findGlobalTxServerCategories(@PathVariable String serverName, @PathVariable String instanceId) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            List<String> serverCategories = dataDictionaryService.selectGlobalTxServerCategories(serverName, instanceId);
+            if (serverCategories == null || serverCategories.isEmpty()) {
+                rv.setMessage("Server Categories are empty, key.");
+            } else {
+                rv.setData(serverCategories);
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to find server categories.");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @GetMapping(value = "/accidents/{pageIndex}/{pageSize}/{orderName}/{direction}")
+    public ResponseEntity<ReturnValue> findAccidentList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String orderName, @PathVariable String direction) {
+        return findAccidentList(pageIndex, pageSize, orderName, direction, "");
+    }
+
+    @GetMapping(value = "/accidents/{pageIndex}/{pageSize}/{orderName}/{direction}/{searchText}")
+    public ResponseEntity<ReturnValue> findAccidentList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String orderName, @PathVariable String direction, @PathVariable String searchText) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            List<Map<String, Object>> accidentList = accidentHandlingService.findAccidentList(--pageIndex, pageSize, orderName, direction, searchText);
+            if (accidentList != null && !accidentList.isEmpty()) {
+                rv.setData(JSONObject.parseArray(JSON.toJSONString(accidentList, SerializerFeature.WriteMapNullValue)));
+                rv.setTotal(accidentHandlingService.findAccidentCount(searchText));
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to find the default list of Accident Handling.");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @GetMapping(value = "/configs/{pageIndex}/{pageSize}/{orderName}/{direction}")
+    public ResponseEntity<ReturnValue> findConfigList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String orderName, @PathVariable String direction) {
+        return findConfigList(pageIndex, pageSize, orderName, direction, "");
+    }
+
+    @GetMapping(value = "/configs/{pageIndex}/{pageSize}/{orderName}/{direction}/{searchText}")
+    public ResponseEntity<ReturnValue> findConfigList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String orderName, @PathVariable String direction, @PathVariable String searchText) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            List<Map<String, Object>> configList = configCenterService.findConfigList(--pageIndex, pageSize, orderName, direction, searchText);
+            if (configList != null && !configList.isEmpty()) {
+                rv.setData(JSONObject.parseArray(JSON.toJSONString(configList, SerializerFeature.WriteMapNullValue)));
+                rv.setTotal(configCenterService.findConfigCount(searchText));
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to find the default list of Config Center.");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @PostMapping(value = "/config")
+    public ResponseEntity<ReturnValue> addConfig(@RequestBody ConfigCenter config) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            rv.setData(false);
+            if (configCenterService.createConfigCenter(config)) {
+                rv.setData(true);
+            } else {
+                rv.setMessage("Failed to insert Config Center. [" + new GsonBuilder().create().toJson(config) + "]");
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to insert Config Center. [" + new GsonBuilder().create().toJson(config) + "]");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @PutMapping(value = "/config")
+    public ResponseEntity<ReturnValue> updateConfig(@RequestBody ConfigCenter config) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            rv.setData(false);
+            if (configCenterService.updateConfigCenter(config)) {
+                rv.setData(true);
+            } else {
+                rv.setMessage("Failed to update Config Center. [" + new GsonBuilder().create().toJson(config) + "]");
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to update Config Center. [" + new GsonBuilder().create().toJson(config) + "]");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
+
+    @DeleteMapping(value = "/config")
+    public ResponseEntity<ReturnValue> deleteConfig(@RequestBody JSONObject jsonConfigIds) {
+        ReturnValue rv = new ReturnValue();
+        try {
+            rv.setData(false);
+            if (jsonConfigIds == null) {
+                rv.setMessage("The identifications of Config Center are empty.");
+                return ResponseEntity.badRequest().body(rv);
+            } else {
+                AtomicInteger result = new AtomicInteger();
+                StringBuilder failedIds = new StringBuilder();
+                String configIds = jsonConfigIds.getString("configIds");
+                if (configIds == null || configIds.trim().length() == 0) {
+                    rv.setMessage("The identifications of Config Center are empty.");
+                    return ResponseEntity.badRequest().body(rv);
+                }
+                List<String> configIdList = Arrays.asList(configIds.split(","));
+                if (configIdList != null && !configIdList.isEmpty()) {
+                    configIdList.forEach(id -> {
+                        long configId = -1;
+                        try {
+                            configId = Long.parseLong(id.trim());
+                            if (configCenterService.deleteConfigCenter(configId)) {
+                                result.incrementAndGet();
+                            }
+                        } catch (Exception e) {
+                            ConfigCenter config = null;
+                            if (configId > -1) {
+                                if (failedIds.length() == 0) {
+                                    failedIds.append(configId);
+                                } else {
+                                    failedIds.append("," + configId);
+                                }
+                                config = configCenterService.findOne(configId);
+                            }
+                            LOG.error("Failed to delete config [{}].", config == null ? id : configId, e);
+                        }
+                    });
+                    if (result.get() == 0) {
+                        rv.setMessage("Failed to delete configs [" + jsonConfigIds + "].");
+                    } else if (result.get() < configIdList.size()) {
+                        rv.setMessage("Failed to delete some configs [" + failedIds + "].");
+                    } else {
+                        rv.setData(true);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            rv.setMessage("Failed to delete configs [" + jsonConfigIds + "].");
+            LOG.error(rv.getMessage(), e);
+            return ResponseEntity.badRequest().body(rv);
+        }
+        return ResponseEntity.ok(rv);
+    }
 }

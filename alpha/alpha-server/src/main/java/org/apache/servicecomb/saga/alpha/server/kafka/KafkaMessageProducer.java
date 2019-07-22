@@ -7,12 +7,12 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.RetriableException;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessageStatus;
-import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     private IKafkaMessageRepository kafkaMessageRepository;
 
     @Autowired
-    AccidentHandlingService accidentHandlingService;
+    IAccidentHandlingService accidentHandlingService;
 
     @Autowired
     IConfigCenterService dbDegradationConfigService;
@@ -55,7 +55,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     public void send(TxEvent event) {
         long a = System.currentTimeMillis();
         try {
-            boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.BizInfoToKafka);
+            boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), event.category(), ConfigCenterType.BizInfoToKafka);
             if (enabled && EventType.SagaEndedEvent.name().equals(event.type())) {
                 List<KafkaMessage> messageList = kafkaMessageRepository.findMessageListByGlobalTxId(event.globalTxId(), KafkaMessageStatus.INIT.toInteger());
                 if (messageList != null && !messageList.isEmpty()) {

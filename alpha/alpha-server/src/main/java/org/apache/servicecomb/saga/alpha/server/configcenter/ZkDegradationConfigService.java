@@ -18,7 +18,7 @@ public class ZkDegradationConfigService implements IConfigCenterService {
     }
 
     @Override
-    public List<ConfigCenter> selectConfigCenterList(String instanceId) {
+    public List<ConfigCenter> selectConfigCenterList(String instanceId, String category) {
         return null;
     }
 
@@ -33,7 +33,7 @@ public class ZkDegradationConfigService implements IConfigCenterService {
     }
 
     @Override
-    public boolean isEnabledTx(String instanceId, ConfigCenterType type) {
+    public boolean isEnabledTx(String instanceId, String category, ConfigCenterType type) {
         return false;
     }
 
@@ -53,12 +53,27 @@ public class ZkDegradationConfigService implements IConfigCenterService {
     }
 
     @Override
-    public List<ConfigCenter> selectClientConfigCenterList(String instanceId) {
+    public List<ConfigCenter> selectClientConfigCenterList(String instanceId, String category) {
         return null;
     }
 
     @Override
-    public List<ConfigCenter> selectConfigCenterByType(String instanceId, int status, int type) {
+    public List<ConfigCenter> selectConfigCenterByType(String instanceId, String category, int status, int type) {
+        return null;
+    }
+
+    @Override
+    public List<Map<String, Object>> findConfigList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+        return null;
+    }
+
+    @Override
+    public long findConfigCount(String searchText) {
+        return 0;
+    }
+
+    @Override
+    public ConfigCenter findOne(long id) {
         return null;
     }
 }

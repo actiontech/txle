@@ -5,19 +5,27 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
-import org.apache.servicecomb.saga.alpha.core.accidenthandling.*;
+import org.apache.servicecomb.saga.alpha.core.UtxMetrics;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleStatus;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandling;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
-import java.util.Optional;
+import java.lang.invoke.MethodHandles;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +33,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AccidentHandlingService implements IAccidentHandlingService {
-    private static final Logger LOG = LoggerFactory.getLogger(AccidentHandlingService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    private static final PageRequest pageRequest = new PageRequest(0, 100);
     private final String accidentPlatformAddress;
     private final int retries;
     private final int interval;// default is 1s
@@ -38,13 +47,48 @@ public class AccidentHandlingService implements IAccidentHandlingService {
     TxEventRepository eventRepository;
 
     @Autowired
-    IAccidentHandlingRepository accidentHandlingRepository;
+    UtxMetrics utxMetrics;
 
-    public AccidentHandlingService(String accidentPlatformAddress, int retries, int interval, RestTemplate restTemplate) {
+    @Autowired
+    private IDataDictionaryService dataDictionaryService;
+
+    private AccidentHandlingEntityRepository accidentHandlingEntityRepository;
+
+    public AccidentHandlingService(AccidentHandlingEntityRepository accidentHandlingEntityRepository, String accidentPlatformAddress, int retries, int interval, RestTemplate restTemplate) {
+        this.accidentHandlingEntityRepository = accidentHandlingEntityRepository;
         this.accidentPlatformAddress = accidentPlatformAddress;
         this.retries = retries < 0 ? 0 : retries;
         this.interval = interval < 1 ? 1 : interval;
         this.restTemplate = restTemplate;
+    }
+
+    @Override
+    public boolean save(AccidentHandling accidentHandling) {
+        try {
+            AccidentHandling savedAccident = accidentHandlingEntityRepository.save(accidentHandling);
+            if (savedAccident != null) {// 设置保存后的id
+                accidentHandling.setId(savedAccident.getId());
+            }
+            return true;
+        } catch (Exception e) {
+            LOG.error("Failed to save accident handling.", e);
+        }
+        return false;
+    }
+
+    @Override
+    public List<AccidentHandling> findAccidentHandlingList() {
+        return accidentHandlingEntityRepository.findAccidentHandlingList(pageRequest);
+    }
+
+    @Override
+    public List<AccidentHandling> findAccidentHandlingList(AccidentHandleStatus status) {
+        return accidentHandlingEntityRepository.findAccidentListByStatus(status.toInteger());
+    }
+
+    @Override
+    public boolean updateAccidentStatusByIdList(List<Long> idList, AccidentHandleStatus status) {
+        return accidentHandlingEntityRepository.updateAccidentStatusByIdList(idList, status.toInteger()) > 0;
     }
 
     @Override
@@ -63,12 +107,12 @@ public class AccidentHandlingService implements IAccidentHandlingService {
             scheduler.scheduleWithFixedDelay(() -> {
                 if (result.get()) {
                     scheduler.shutdownNow();
-                    UtxAccidentMetrics.countSuccessfulNumber();
-                    accidentHandlingRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_OK);
+                    utxMetrics.countSuccessfulNumber();
+                    accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_OK.toInteger());
                 } else if (invokeTimes.incrementAndGet() > 1 + this.retries) {
                     scheduler.shutdownNow();
-                    UtxAccidentMetrics.countFailedNumber();
-                    accidentHandlingRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_FAIL);
+                    utxMetrics.countFailedNumber();
+                    accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_FAIL.toInteger());
                     LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
                 } else {
                     // To report accident to Accident Platform.
@@ -78,11 +122,68 @@ public class AccidentHandlingService implements IAccidentHandlingService {
             }, 0, interval, TimeUnit.SECONDS);
         } catch (Exception e) {
             LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
-            UtxAccidentMetrics.countFailedNumber();
+            utxMetrics.countFailedNumber();
         }
         LOG.info("Method 'AccidentPlatformService.reportMsgToAccidentPlatform' took {} milliseconds.", System.currentTimeMillis() - a);
 
         return result.get();
+    }
+
+    @Override
+    public List<Map<String, Object>> findAccidentList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+        List<AccidentHandling> accidentList = this.searchAccidentList(pageIndex, pageSize, orderName, direction, searchText);
+        if (accidentList != null && !accidentList.isEmpty()) {
+            List<Map<String, Object>> resultAccidentList = new LinkedList<>();
+
+            Map<String, String> typeValueName = new HashMap<>();
+            List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("accident-handle-type");
+            if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
+                dataDictionaryItemList.forEach(dd -> typeValueName.put(dd.getValue(), dd.getName()));
+            }
+
+            Map<String, String> statusValueName = new HashMap<>();
+            dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("accident-handle-status");
+            if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
+                dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));
+            }
+
+            accidentList.forEach(accident -> resultAccidentList.add(accident.toMap(typeValueName.get(String.valueOf(accident.getType())), statusValueName.get(String.valueOf(accident.getStatus())))));
+
+            return resultAccidentList;
+        }
+        return null;
+    }
+
+    private List<AccidentHandling> searchAccidentList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+        try {
+            pageIndex = pageIndex < 1 ? 0 : pageIndex;
+            pageSize = pageSize < 1 ? 100 : pageSize;
+
+            Sort.Direction sd = Sort.Direction.DESC;
+            if (orderName == null || orderName.length() == 0) {
+                orderName = "completetime";
+            }
+            if ("asc".equalsIgnoreCase(direction)) {
+                sd = Sort.Direction.ASC;
+            }
+
+            PageRequest pageRequest = new PageRequest(pageIndex, pageSize, sd, orderName);
+            if (searchText == null || searchText.length() == 0) {
+                return accidentHandlingEntityRepository.findAccidentList(pageRequest);
+            }
+            return accidentHandlingEntityRepository.findAccidentList(pageRequest, searchText);
+        } catch (Exception e) {
+            LOG.error("Failed to find the list of Accident Handling. params {pageIndex: [{}], pageSize: [{}], orderName: [{}], direction: [{}], searchText: [{}]}.", pageIndex, pageSize, orderName, direction, searchText, e);
+        }
+        return null;
+    }
+
+    @Override
+    public long findAccidentCount(String searchText) {
+        if (searchText == null || searchText.length() == 0) {
+            return accidentHandlingEntityRepository.findAccidentCount();
+        }
+        return accidentHandlingEntityRepository.findAccidentCount(searchText);
     }
 
     private AccidentHandling parseAccidentJson(String jsonParams) {
@@ -129,7 +230,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
                     accident.setInstanceid(event.get().instanceId());
                 }
             }
-            return accidentHandlingRepository.save(accident);
+            return accidentHandlingEntityRepository.save(accident) != null;
         } catch (Exception e) {// That's not too important for main business to throw an exception.
             LOG.error("Failed to save accident to db, accident [{}].", accident, e);
         }
@@ -150,5 +251,4 @@ public class AccidentHandlingService implements IAccidentHandlingService {
         }
         return result;
     }
-
 }

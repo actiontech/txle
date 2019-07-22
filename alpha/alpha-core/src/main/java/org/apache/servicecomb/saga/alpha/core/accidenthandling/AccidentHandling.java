@@ -3,7 +3,10 @@ package org.apache.servicecomb.saga.alpha.core.accidenthandling;
 import com.google.gson.GsonBuilder;
 
 import javax.persistence.*;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Accident Handling.
@@ -135,5 +138,24 @@ public class AccidentHandling {
 
     public String toJsonString() {
         return new GsonBuilder().create().toJson(this);
+    }
+
+    public Map<String, Object> toMap(String typeDesc, String statusDesc) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", this.id);
+        map.put("servicename", this.servicename);
+        map.put("instanceid", this.instanceid);
+        map.put("globaltxid", this.globaltxid);
+        map.put("localtxid", this.localtxid);
+        map.put("type_db", this.type);
+        map.put("type", typeDesc);
+        map.put("status_db", this.status);
+        map.put("status", statusDesc);
+        map.put("bizinfo", this.bizinfo);
+        map.put("remark", this.remark);
+        map.put("createtime", sdf.format(this.createtime));
+        map.put("completetime", this.completetime == null ? null : sdf.format(this.completetime));
+        return map;
     }
 }

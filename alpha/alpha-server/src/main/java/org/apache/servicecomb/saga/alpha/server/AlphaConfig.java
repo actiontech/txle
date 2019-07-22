@@ -19,15 +19,17 @@ package org.apache.servicecomb.saga.alpha.server;
 
 import brave.Tracing;
 import org.apache.servicecomb.saga.alpha.core.*;
-import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingRepository;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingEntityRepository;
-import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingRepositoryImpl;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
+import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionaryEntityRepository;
+import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionaryService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
@@ -102,18 +104,16 @@ class AlphaConfig {
   IConfigCenterService dbDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) { return new DBDegradationConfigService(configCenterEntityRepository); }
 
   @Bean
+  IDataDictionaryService dataDictionaryService(DataDictionaryEntityRepository dataDictionaryEntityRepository) { return new DataDictionaryService(dataDictionaryEntityRepository); }
+
+  @Bean
   UtxJpaRepositoryInterceptor utxJpaRepositoryInterceptor() {
     return new UtxJpaRepositoryInterceptor();
   }
 
   @Bean
-  AccidentHandlingService accidentPlatformService(RestTemplate restTemplate) {
-    return new AccidentHandlingService(accidentPlatformAddress, retries, interval, restTemplate);
-  }
-
-  @Bean
-  IAccidentHandlingRepository accidentHandlingRepository(AccidentHandlingEntityRepository accidentHandlingEntityRepository) {
-    return new AccidentHandlingRepositoryImpl(accidentHandlingEntityRepository);
+  IAccidentHandlingService accidentHandlingRepository(AccidentHandlingEntityRepository accidentHandlingEntityRepository, RestTemplate restTemplate) {
+    return new AccidentHandlingService(accidentHandlingEntityRepository, accidentPlatformAddress, retries, interval, restTemplate);
   }
 
   @Bean
@@ -130,7 +130,7 @@ class AlphaConfig {
       IConfigCenterService dbDegradationConfigService,
       UtxMetrics utxMetrics,
       Tracing tracing,
-      AccidentHandlingService accidentHandlingService) {
+      IAccidentHandlingService accidentHandlingService) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
@@ -145,7 +145,7 @@ class AlphaConfig {
   }
 
   private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService,
-                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing, AccidentHandlingService accidentHandlingService) {
+                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing, IAccidentHandlingService accidentHandlingService) {
     return new GrpcStartable(serverConfig, tracing,
         new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService));
   }
