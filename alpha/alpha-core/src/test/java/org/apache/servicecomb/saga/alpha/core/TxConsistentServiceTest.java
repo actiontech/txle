@@ -149,7 +149,7 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public List<TxEvent> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+    public List<Map<String, Object>> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
       return null;
     }
 
@@ -159,8 +159,13 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public long findTxListCount(String searchText) {
+    public long findTxCount(String searchText) {
       return 0;
+    }
+
+    @Override
+    public List<Map<String, Object>> findSubTxList(String globalTxIds) {
+      return null;
     }
 
     @Override

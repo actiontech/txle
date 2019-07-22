@@ -22,4 +22,16 @@ public interface AccidentHandlingEntityRepository extends CrudRepository<Acciden
     @Query("UPDATE AccidentHandling T SET T.status = ?2 WHERE T.id IN ?1")
     int updateAccidentStatusByIdList(List<Long> idList, int status);
 
+    @Query("FROM AccidentHandling T")
+    List<AccidentHandling> findAccidentList(Pageable pageable);
+
+    @Query("FROM AccidentHandling T WHERE FUNCTION('CONCAT_WS', ',', T.globaltxid, T.localtxid, T.servicename, T.bizinfo, FUNCTION('TXLE_DECODE', 'accident-handle-type', T.type), FUNCTION('TXLE_DECODE', 'accident-handle-status', T.status), T.createtime, T.completetime) LIKE CONCAT('%', ?1, '%')")
+    List<AccidentHandling> findAccidentList(Pageable pageable, String searchText);
+
+    @Query("SELECT COUNT(1) FROM AccidentHandling T")
+    long findAccidentCount();
+
+    @Query("SELECT COUNT(1) FROM AccidentHandling T WHERE FUNCTION('CONCAT_WS', ',', T.globaltxid, T.localtxid, T.servicename, T.bizinfo, FUNCTION('TXLE_DECODE', 'accident-handle-type', T.type), FUNCTION('TXLE_DECODE', 'accident-handle-status', T.status), T.createtime, T.completetime) LIKE CONCAT('%', ?1, '%')")
+    long findAccidentCount(String searchText);
+
 }

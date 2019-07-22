@@ -20,6 +20,7 @@ package org.apache.servicecomb.saga.alpha.core;
 import org.apache.servicecomb.saga.common.EventType;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -136,11 +137,13 @@ public interface TxEventRepository {
 
   boolean checkTxIsAborted(String globalTxId, String localTxId);
 
-  List<TxEvent> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText);
+  List<Map<String, Object>> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText);
 
   List<TxEvent> selectTxEventByGlobalTxIds(List<String> globalTxIdList);
 
-  long findTxListCount(String searchText);
+  long findTxCount(String searchText);
+
+  List<Map<String, Object>> findSubTxList(String globalTxIds);
 
   List<TxEvent> selectSpecialColumnsOfTxEventByGlobalTxIds(List<String> globalTxIdList);
 

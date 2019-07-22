@@ -61,6 +61,8 @@ public class UtxMetrics extends Collector {
     private final ThreadLocal<Gauge.Timer> gaugeTimer = new ThreadLocal<>();
     private final Gauge UTX_SQL_TIME_SECONDS_TOTAL = buildGaugeForSql("utx_sql_time_seconds_total", "Total seconds spent executing sql.");
     private final Counter UTX_SQL_TOTAL = buildCounterForSql("utx_sql_total", "SQL total number.");
+    private final Gauge UTX_REPORT_ACCIDENT_SUCCESSFUL_TOTAL = buildGauge("utx_report_accident_successful_total", "Successful total number for reporting accident.");
+    private final Gauge UTX_REPORT_ACCIDENT_FAILED_TOTAL = buildGauge("utx_report_accident_failed_total", "Failed total number for reporting accident.");
 
     private boolean isEnableMonitorServer = false;// if the property 'utx.prometheus.metrics.port' has a valid value, then it is true. true: enable monitor, false: disable monitor
 
@@ -117,6 +119,9 @@ public class UtxMetrics extends Collector {
             Set<String> eventTypesOfCurrentTx = globalTxIdAndTypes.get(event.globalTxId());
             if (eventTypesOfCurrentTx == null) {
                 eventTypesOfCurrentTx = new HashSet<>();
+            }
+            if (globalTxIdAndTypes.isEmpty()) {
+                globalTxIdAndTypes.clear();// 释放内存
             }
             String type = event.type(), serviceName = event.serviceName(), category = event.category();
             if (!eventTypesOfCurrentTx.contains(type)) {
@@ -175,6 +180,7 @@ public class UtxMetrics extends Collector {
         }
 
         if (localTxIdSet.isEmpty()) {
+            LOG.info("The 'localTxIdSet' variable is empty, and it will be collected when JVM executes GC at the next time.");
             localTxIdSet.clear();// 释放内存，非常重要。remove无法是否内存，容易导致OOM。
         }
     }
@@ -248,7 +254,15 @@ public class UtxMetrics extends Collector {
 
     private boolean isEnableMonitor(TxEvent event) {
         if (!isEnableMonitorServer) return false;
-        return dbDegradationConfigService.isEnabledTx(event.instanceId(), ConfigCenterType.TxMonitor);
+        return dbDegradationConfigService.isEnabledTx(event.instanceId(), event.category(), ConfigCenterType.TxMonitor);
+    }
+
+    public void countSuccessfulNumber() {
+        UTX_REPORT_ACCIDENT_SUCCESSFUL_TOTAL.inc();
+    }
+
+    public synchronized void countFailedNumber() {
+        UTX_REPORT_ACCIDENT_FAILED_TOTAL.inc();
     }
 
 }

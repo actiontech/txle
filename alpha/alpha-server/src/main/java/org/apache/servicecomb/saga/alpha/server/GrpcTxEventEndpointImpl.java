@@ -32,9 +32,9 @@ import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandling;
+import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
-import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.common.UtxConstants;
@@ -63,10 +63,10 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
     private final Map<String, Map<String, OmegaCallback>> omegaCallbacks;
 
-    private final AccidentHandlingService accidentHandlingService;
+    private final IAccidentHandlingService accidentHandlingService;
 
     GrpcTxEventEndpointImpl(TxConsistentService txConsistentService,
-                            Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, AccidentHandlingService accidentHandlingService) {
+                            Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, IAccidentHandlingService accidentHandlingService) {
         this.txConsistentService = txConsistentService;
         this.omegaCallbacks = omegaCallbacks;
         this.dbDegradationConfigService = dbDegradationConfigService;
@@ -119,14 +119,14 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         boolean result = true;
         try {
             if (EventType.SagaStartedEvent.name().equals(message.getType())) {
-                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.GlobalTx);
+                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
             } else if (EventType.TxStartedEvent.name().equals(message.getType())) {
-                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.GlobalTx);
+                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
                 if (result) {// If the global transaction was not enabled, then two child transactions were regarded as disabled.
                     if (!UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                        result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.Compensation);
+                        result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.Compensation);
                     } else if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                        result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), ConfigCenterType.AutoCompensation);
+                        result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.AutoCompensation);
                     }
                 }
             }
@@ -265,7 +265,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
     public void onReadConfig(GrpcConfig config, StreamObserver<GrpcConfigAck> responseObserver) {
         boolean isEnabledConfig = false;
         try {
-            isEnabledConfig = dbDegradationConfigService.isEnabledTx(config.getInstanceId(), ConfigCenterType.convertTypeFromValue(config.getType()));
+            isEnabledConfig = dbDegradationConfigService.isEnabledTx(config.getInstanceId(), config.getCategory(), ConfigCenterType.convertTypeFromValue(config.getType()));
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onReadConfig'.", e);
         } finally {

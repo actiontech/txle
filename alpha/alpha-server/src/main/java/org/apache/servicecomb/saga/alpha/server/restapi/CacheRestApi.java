@@ -18,6 +18,9 @@ public class CacheRestApi {
 
     public static String clearByKey(String key) {
         enabledConfigMap.remove(key);
+        if (enabledConfigMap.isEmpty()) {
+            enabledConfigMap.clear();// 释放内存
+        }
         return HttpStatus.OK.toString();
     }
 

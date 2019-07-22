@@ -18,6 +18,8 @@
 package org.apache.servicecomb.saga.alpha.core;
 
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
@@ -27,10 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
@@ -55,7 +54,11 @@ public class TxConsistentService {
 	@Autowired
 	UtxMetrics utxMetrics;
 
+	@Autowired
+	private IDataDictionaryService dataDictionaryService;
+
   private final List<String> types = Arrays.asList(TxStartedEvent.name(), SagaEndedEvent.name());
+  private final Set<String> serverNameIdCategory = new HashSet<>();
 
   public TxConsistentService(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository) {
     this.eventRepository = eventRepository;
@@ -111,10 +114,13 @@ public class TxConsistentService {
 					eventRepository.save(event);
 					if (SagaStartedEvent.name().equals(type)) {
 					    // 当有新的全局事务时，设置最小id查询次数加1，即需要查询最小事件id
-                        EventScanner.unendedMinEventIdSelectCount++;
-                    }
+                        EventScanner.unendedMinEventIdSelectCount.incrementAndGet();
+						this.putServerNameIdCategory(event);
+					} else if (TxStartedEvent.name().equals(type)) {
+						this.putServerNameIdCategory(event);
+					}
 
-					if (TxEndedEvent.name().equals(type)) {// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
+						if (TxEndedEvent.name().equals(type)) {// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
 						// 若定时器检测超时后结束了当前全局事务，但超时子事务的才刚刚完成，此时检测全局事务是否已经终止，如果终止，则补偿当前刚刚完成的子事务
 						if (isGlobalTxAborted(event)) {
 							commandRepository.saveWillCompensateCmdForCurSubTx(globalTxId, localTxId);
@@ -200,7 +206,7 @@ public class TxConsistentService {
 		}
 		boolean isPaused = false;
 		try {
-			boolean enabledTx = configCenterService.isEnabledTx(null, ConfigCenterType.PauseGlobalTx);
+			boolean enabledTx = configCenterService.isEnabledTx(null, null, ConfigCenterType.PauseGlobalTx);
 			if (enabledTx) {
 				return true;
 			}
@@ -283,5 +289,18 @@ public class TxConsistentService {
 				"",
 				timeout.category(),
 				("Transaction timeout").getBytes());
+	}
+
+	private void putServerNameIdCategory(TxEvent event) {
+		final String globalTxServer = "global-tx-server-info";
+		final String server_nic = event.serviceName() + "__" + event.instanceId() + "__" + event.category();
+		boolean result = serverNameIdCategory.add(server_nic);
+		if (result) {
+			new Thread(() -> {
+				int showOrder = dataDictionaryService.selectMaxShowOrder(globalTxServer);
+				final DataDictionaryItem ddItem = new DataDictionaryItem(globalTxServer, event.serviceName(), event.instanceId(), event.category(), showOrder + 1, 1, "");
+				dataDictionaryService.createDataDictionary(ddItem);
+			}).start();
+		}
 	}
 }

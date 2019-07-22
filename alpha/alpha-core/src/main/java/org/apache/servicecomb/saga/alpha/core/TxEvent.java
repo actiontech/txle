@@ -289,20 +289,20 @@ public class TxEvent/* extends TxEventExtension*/ {
   public Map<String, Object> toMap() {
       SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
       Map<String, Object> map = new HashMap<>();
-      map.put("surrogateId", this.id());
-      map.put("serviceName", this.serviceName());
-      map.put("instanceId", this.instanceId());
-      map.put("creationTime", sdf.format(this.creationTime()));
-      map.put("globalTxId", this.globalTxId());
-      map.put("localTxId", this.localTxId());
-      map.put("parentTxId", this.parentTxId());
-      map.put("type", this.type());
-      map.put("compensationMethod", this.compensationMethod());
-      map.put("expiryTime", sdf.format(this.expiryTime()));
-      map.put("retryMethod", this.retryMethod());
-      map.put("retries", this.retries());
-      map.put("category", this.category());
-      map.put("payloads", this.payloads());
+      map.put("surrogateId", this.surrogateId);
+      map.put("serviceName", this.serviceName);
+      map.put("instanceId", this.instanceId);
+      map.put("creationTime", sdf.format(this.creationTime));
+      map.put("globalTxId", this.globalTxId);
+      map.put("localTxId", this.localTxId);
+      map.put("parentTxId", this.parentTxId);
+      map.put("type", this.type);
+      map.put("compensationMethod", this.compensationMethod);
+      map.put("expiryTime", sdf.format(this.expiryTime));
+      map.put("retryMethod", this.retryMethod);
+      map.put("retries", this.retries);
+      map.put("category", this.category);
+      map.put("payloads", this.payloads);
       return map;
   }
 }

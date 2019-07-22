@@ -216,14 +216,15 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query("FROM TxEvent T WHERE T.globalTxId IN ?1 ")
   List<TxEvent> selectTxEventByGlobalTxIds(List<String> globalTxIdList);
 
+  // FUNCTION('CONCAT_WS', ',', field1, field2...   以逗号分割，并支持字段值为null，当字段值为null时会视为空字符串
   @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.serviceName, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime)" +
-          " FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND CONCAT(T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
+          " FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND FUNCTION('CONCAT_WS', ',', T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
   List<TxEvent> findTxList(Pageable pageable, String searchText);
 
   @Query("SELECT COUNT(1) FROM TxEvent T WHERE T.type = 'SagaStartedEvent'")
   long findTxListCount();
 
-  @Query("SELECT COUNT(1) FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND CONCAT(T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
+  @Query("SELECT COUNT(1) FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND FUNCTION('CONCAT_WS', ',', T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
   long findTxListCount(String searchText);
 
   @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.localTxId, T.serviceName, T.instanceId, T.type, T.category, T.expiryTime, T.retries, T.creationTime)" +

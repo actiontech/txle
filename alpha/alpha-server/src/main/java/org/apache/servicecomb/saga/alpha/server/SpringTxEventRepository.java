@@ -17,22 +17,29 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
+import org.apache.servicecomb.saga.alpha.core.AdditionalEventType;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
+import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static org.apache.servicecomb.saga.common.EventType.*;
 
 class SpringTxEventRepository implements TxEventRepository {
   private static final Logger LOG = LoggerFactory.getLogger(SpringTxEventRepository.class);
 
   private final TxEventEnvelopeRepository eventRepo;
+
+  @Autowired
+  private IDataDictionaryService dataDictionaryService;
 
   SpringTxEventRepository(TxEventEnvelopeRepository eventRepo) {
     this.eventRepo = eventRepo;
@@ -149,7 +156,30 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public List<TxEvent> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+  public List<Map<String, Object>> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+    // 确定本次分页查询的全局事务
+    List<TxEvent> txStartedEventList = this.searchTxList(pageIndex, pageSize, orderName, direction, searchText);
+    if (txStartedEventList != null && !txStartedEventList.isEmpty()) {
+      List<Map<String, Object>> resultTxEventList = new LinkedList<>();
+
+      List<String> globalTxIdList = new ArrayList<>();
+      txStartedEventList.forEach(event -> {
+        globalTxIdList.add(event.globalTxId());
+        resultTxEventList.add(event.toMap());
+      });
+
+      List<TxEvent> txEventList = eventRepo.selectTxEventByGlobalTxIds(globalTxIdList);
+      if (txEventList != null && !txEventList.isEmpty()) {
+        // 计算全局事务的状态
+        computeGlobalTxStatus(txEventList, resultTxEventList);
+      }
+
+      return resultTxEventList;
+    }
+    return null;
+  }
+
+  private List<TxEvent> searchTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
     // TODO 检测是否有非数字，如果有非数字则过滤掉数字类型字段
     // TODO 检测如果是字符“-”，则视为无searchText处理，因为每一行的日期都含有“-”，或者是当已完成的查询
     try {
@@ -181,11 +211,32 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public long findTxListCount(String searchText) {
+  public long findTxCount(String searchText) {
     if (searchText == null || searchText.length() == 0) {
       return eventRepo.findTxListCount();
     }
     return eventRepo.findTxListCount(searchText);
+  }
+
+  @Override
+  public List<Map<String, Object>> findSubTxList(String globalTxIds) {
+      if (globalTxIds != null && globalTxIds.length() > 0) {
+          List<String> globalTxIdList = Arrays.asList(globalTxIds.split(","));
+          List<TxEvent> txEventList = eventRepo.selectSpecialColumnsOfTxEventByGlobalTxIds(globalTxIdList);
+          if (txEventList != null && !txEventList.isEmpty()) {
+              List<Map<String, Object>> resultTxEventList = new LinkedList<>();
+              txEventList.forEach(event -> {
+                  if (TxStartedEvent.name().equals(event.type())) {
+                      resultTxEventList.add(event.toMap());
+                  }
+              });
+
+              computeSubTxStatus(txEventList, resultTxEventList);
+
+              return resultTxEventList;
+          }
+      }
+      return null;
   }
 
   @Override
@@ -201,6 +252,130 @@ class SpringTxEventRepository implements TxEventRepository {
   @Override
   public long selectMinUnendedTxEventId(long unendedMinEventId) {
     return eventRepo.selectMinUnendedTxEventId(unendedMinEventId);
+  }
+
+  // 计算全局事务的状态
+  private void computeGlobalTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
+    Map<String, String> statusValueName = new HashMap<>();
+    List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("global-tx-status");
+    if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
+      dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));
+    }
+
+    // 0-运行中，1-运行异常，2-暂停，3-正常结束，4-异常结束
+    resultTxEventList.forEach(txMap -> {
+      txMap.put("status_db", 0);
+      txMap.put("status", statusValueName.get("0"));
+    });
+
+    txEventList.forEach(event -> {
+      if (TxAbortedEvent.name().equals(event.type())) {
+        for (Map<String, Object> txMap : resultTxEventList) {
+          if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
+            txMap.put("status_db", 1);// 异常状态
+            txMap.put("status", statusValueName.get("1"));
+            break;
+          }
+        }
+      }
+    });
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    txEventList.forEach(event -> {
+      if (SagaEndedEvent.name().equals(event.type())) {
+        for (Map<String, Object> txMap : resultTxEventList) {
+          if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
+            txMap.put("endTime", sdf.format(event.creationTime()));// ****设置结束时间****
+            if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
+              txMap.put("status_db", 3);// 正常结束
+              txMap.put("status", statusValueName.get("3"));
+            } else {
+              txMap.put("status_db", 4);// 异常结束
+              txMap.put("status", statusValueName.get("4"));
+            }
+            break;
+          }
+        }
+      }
+    });
+
+    resultTxEventList.forEach(txMap -> {
+      if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {// 正常状态场景才去验证是否暂停
+        txEventList.forEach(event -> {
+          if (event.globalTxId().equals(txMap.get("globalTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
+            List<TxEvent> pauseContinueEventList = eventRepo.selectPausedAndContinueEvent(event.globalTxId());
+            if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
+              if (pauseContinueEventList.size() % 2 == 1) {// 暂停状态
+                txMap.put("status_db", 2);// 暂停
+                txMap.put("status", statusValueName.get("2"));
+              }
+            }
+          }
+        });
+      }
+    });
+  }
+
+  // 计算子事务的状态
+  private void computeSubTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
+    Map<String, String> statusValueName = new HashMap<>();
+    List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("global-tx-status");
+    if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
+      dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));
+    }
+
+    // 0-运行中，1-运行异常，2-暂停，3-正常结束，4-异常结束
+    resultTxEventList.forEach(txMap -> {
+      txMap.put("status_db", 0);
+      txMap.put("status", statusValueName.get("0"));
+    });
+
+    txEventList.forEach(event -> {
+      if (TxAbortedEvent.name().equals(event.type())) {
+        for (Map<String, Object> txMap : resultTxEventList) {
+          if (event.localTxId().equals(txMap.get("localTxId").toString())) {
+            txMap.put("status_db", 1);// 异常状态
+            txMap.put("status", statusValueName.get("1"));
+            break;
+          }
+        }
+      }
+    });
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    txEventList.forEach(event -> {
+      if (TxEndedEvent.name().equals(event.type())) {
+        for (Map<String, Object> txMap : resultTxEventList) {
+          if (event.localTxId().equals(txMap.get("localTxId").toString())) {
+            txMap.put("endTime", sdf.format(event.creationTime()));// ****设置结束时间****
+            if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
+              txMap.put("status_db", 3);// 正常结束
+              txMap.put("status", statusValueName.get("3"));
+            } else {
+              txMap.put("status_db", 4);// 异常结束
+              txMap.put("status", statusValueName.get("4"));
+            }
+            break;
+          }
+        }
+      }
+    });
+
+    resultTxEventList.forEach(txMap -> {
+      if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {// 正常状态场景才去验证是否暂停
+        txEventList.forEach(event -> {
+          if (event.localTxId().equals(txMap.get("localTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
+            List<TxEvent> pauseContinueEventList = eventRepo.selectPausedAndContinueEvent(event.globalTxId());
+            if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
+              if (pauseContinueEventList.size() % 2 == 1) {// 暂停状态
+                txMap.put("status_db", 2);// 暂停
+                txMap.put("status", statusValueName.get("2"));
+              }
+            }
+          }
+        });
+      }
+    });
   }
 
 }
