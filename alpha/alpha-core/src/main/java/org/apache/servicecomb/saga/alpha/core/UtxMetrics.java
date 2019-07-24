@@ -207,6 +207,9 @@ public class UtxMetrics extends Collector {
         if (gaugeTimer != null) {
             gaugeTimer.setDuration();
             txIdAndGaugeTimer.remove(globalOrLocalTxId);
+            if (txIdAndGaugeTimer.isEmpty()) {
+                txIdAndGaugeTimer.clear();// 释放内存
+            }
         }
     }
 
