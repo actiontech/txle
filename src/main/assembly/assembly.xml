@@ -28,6 +28,10 @@
 			</includes>
 			<fileMode>0755</fileMode>
 		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/static</directory>
+			<outputDirectory>/static</outputDirectory>
+		</fileSet>
 	</fileSets>
 	<files>
 		<!-- 打包时把LICENSE和NOTICE文件放在根目录 -->
