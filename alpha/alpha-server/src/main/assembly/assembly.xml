@@ -13,10 +13,10 @@
 		<!-- 需要包含的文件与输出的路径 -->
 		<fileSet>
 			<directory>src/main/resources</directory>
-			<excludes>
+			<!--<excludes>
 				<exclude>*.sql</exclude>
 				<exclude>ssl.properties</exclude>
-			</excludes>
+			</excludes>-->
 			<outputDirectory>/conf</outputDirectory>
 		</fileSet>
 		<fileSet>
