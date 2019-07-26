@@ -123,6 +123,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
     @Override
     public boolean createConfigCenter(ConfigCenter config) {
         config.setUpdatetime(new Date());
+        CacheRestApi.enabledConfigMap.clear();
         return configCenterEntityRepository.save(config) != null;
     }
 
@@ -131,6 +132,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
         ConfigCenter existsConfig = configCenterEntityRepository.findOne(config.getId());
         if (existsConfig != null) {
             config.setUpdatetime(new Date());
+            CacheRestApi.enabledConfigMap.clear();
             return configCenterEntityRepository.save(config) != null;
         }
         return false;
@@ -139,6 +141,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
     @Override
     public boolean deleteConfigCenter(long id) {
         configCenterEntityRepository.delete(id);
+        CacheRestApi.enabledConfigMap.clear();
         return true;
     }
 
