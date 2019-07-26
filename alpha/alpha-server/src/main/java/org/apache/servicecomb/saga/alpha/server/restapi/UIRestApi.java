@@ -236,6 +236,7 @@ public class UIRestApi {
                     if ("terminate".equals(operation)) {// TODO 终止后应进行补偿
                         eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null));
                     }
+                    CacheRestApi.enabledConfigMap.clear();
                     utxMetrics.countTxNumber(event, false, false);
                 }
             });
@@ -287,6 +288,7 @@ public class UIRestApi {
                     }
                 });
             }
+            CacheRestApi.enabledConfigMap.clear();
         } catch (Exception e) {
             rv.setMessage("Failed to pause all global transactions.");
             LOG.error(rv.getMessage(), e);
@@ -305,6 +307,7 @@ public class UIRestApi {
                 ConfigCenter configCenter = configCenterList.get(0);
                 configCenter.setStatus(ConfigCenterStatus.Historical.toInteger());
                 configCenterService.updateConfigCenter(configCenter);
+                CacheRestApi.enabledConfigMap.clear();
                 return ResponseEntity.ok(rv);
             }
 
@@ -331,6 +334,7 @@ public class UIRestApi {
                     if (globalTxIdList.contains(event.globalTxId())) {
                         TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
+                        CacheRestApi.enabledConfigMap.clear();
                         utxMetrics.countTxNumber(event, false, false);
                     }
                 });
@@ -358,7 +362,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                CacheRestApi.clearByKey("null_" + ConfigCenterStatus.Normal.toInteger() + "_" + ConfigCenterType.GlobalTx.toInteger());
+                CacheRestApi.enabledConfigMap.clear();
             }
         } catch (Exception e) {
             rv.setMessage("Failed to degrade global transaction.");
@@ -384,7 +388,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                CacheRestApi.clearByKey("null_" + ConfigCenterStatus.Normal.toInteger() + "_" + ConfigCenterType.GlobalTx.toInteger());
+                CacheRestApi.enabledConfigMap.clear();
             }
         } catch (Exception e) {
             rv.setMessage("Failed to start global transaction.");

@@ -198,9 +198,9 @@ public class DBDegradationConfigService implements IConfigCenterService {
 
             PageRequest pageRequest = new PageRequest(pageIndex, pageSize, sd, orderName);
             if (searchText == null || searchText.length() == 0) {
-                return configCenterEntityRepository.findConfigList(pageRequest);
+                return configCenterEntityRepository.findConfigList(pageRequest, ConfigCenterStatus.Normal.toInteger());
             }
-            return configCenterEntityRepository.findConfigList(pageRequest, searchText);
+            return configCenterEntityRepository.findConfigList(pageRequest, ConfigCenterStatus.Normal.toInteger(), searchText);
         } catch (Exception e) {
             LOG.error("Failed to find the list of Config Center. params {pageIndex: [{}], pageSize: [{}], orderName: [{}], direction: [{}], searchText: [{}]}.", pageIndex, pageSize, orderName, direction, searchText, e);
         }

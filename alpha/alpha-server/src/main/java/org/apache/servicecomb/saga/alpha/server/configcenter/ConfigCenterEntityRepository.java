@@ -27,11 +27,11 @@ public interface ConfigCenterEntityRepository extends CrudRepository<ConfigCente
     @Query("SELECT T FROM ConfigCenter T WHERE T.status = ?3 AND T.type >= 50 AND ((T.instanceid = ?1 AND (T.category = ?2 OR T.category IS NULL)) OR T.instanceid IS NULL)")
     List<ConfigCenter> selectClientConfigCenterList(String instanceId, String category, int status);
 
-    @Query("FROM ConfigCenter T")
-    List<ConfigCenter> findConfigList(Pageable pageable);
+    @Query("FROM ConfigCenter T WHERE T.status = ?1")
+    List<ConfigCenter> findConfigList(Pageable pageable, int status);
 
-    @Query("FROM ConfigCenter T WHERE FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status), FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
-    List<ConfigCenter> findConfigList(Pageable pageable, String searchText);
+    @Query("FROM ConfigCenter T WHERE T.status = ?1 AND FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status), FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
+    List<ConfigCenter> findConfigList(Pageable pageable, int status, String searchText);
 
     @Query("SELECT COUNT(1) FROM ConfigCenter T")
     long findConfigCount();
