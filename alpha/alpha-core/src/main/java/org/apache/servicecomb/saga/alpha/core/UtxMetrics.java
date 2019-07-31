@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.servicecomb.saga.common.EventType.*;
 
@@ -47,14 +48,14 @@ public class UtxMetrics extends Collector {
 
     // mark duration
     // To store 'globalTxId' or 'localTxId' for aborted events, it is the aim to avoid counting repeat event number. Do not need to pay more attention on restart, cluster and concurrence.
-    private final Map<String, Gauge.Timer> txIdAndGaugeTimer = new HashMap<>();
+    private final Map<String, Gauge.Timer> txIdAndGaugeTimer = new ConcurrentHashMap<>();
     // Total seconds spent for someone transaction. Ps: It will show one row only if you search this metric in 'http://ip:9090/graph'.
     // But, Prometheus will record every metric in different times, and you can search, like 'utx_transaction_time_seconds_total[5m]', then it will show many rows to you.
     private final Gauge UTX_TRANSACTION_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_time_seconds_total", "Total seconds spent executing the global transaction.");
     private final Gauge UTX_TRANSACTION_CHILD_TIME_SECONDS_TOTAL = buildGauge("utx_transaction_child_time_seconds_total", "Total seconds spent executing the child transaction.");
 
     // To avoid to count repeatedly for the same tx and type.
-    private final Map<String, Set<String>> globalTxIdAndTypes = new HashMap<>();
+    private final Map<String, Set<String>> globalTxIdAndTypes = new ConcurrentHashMap<>();
 //    private final String[] labelNames = new String[]{"business", "category"};
 
     // mark duration, guarantee start and end have the same timer. Do not use txIdAndGaugeTimer, because the globalTxId is able to be null.

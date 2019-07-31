@@ -183,6 +183,16 @@ public class TxConsistentServiceTest {
       return 0;
     }
 
+    @Override
+    public Date selectMinDateInTxEvent() {
+      return null;
+    }
+
+    @Override
+    public List<Long> selectEndedEventIdsWithinSomePeriod(int pageIndex, int pageSize, Date startTime, Date endTime) {
+      return null;
+    }
+
   };
 
   private final String globalTxId = UUID.randomUUID().toString();

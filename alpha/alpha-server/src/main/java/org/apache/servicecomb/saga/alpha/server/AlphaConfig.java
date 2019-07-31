@@ -23,6 +23,7 @@ import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandling
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
+import org.apache.servicecomb.saga.alpha.core.datatransfer.IDataTransferService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
@@ -30,6 +31,8 @@ import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityR
 import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
 import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionaryEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionaryService;
+import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferRepository;
+import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
@@ -38,6 +41,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
@@ -47,6 +51,7 @@ import java.util.concurrent.*;
 
 @EntityScan(basePackages = "org.apache.servicecomb.saga.alpha")
 @Import({KafkaProducerConfig.class, TracingConfiguration.class})
+@EnableScheduling
 @Configuration
 class AlphaConfig {
   private final BlockingQueue<Runnable> pendingCompensations = new LinkedBlockingQueue<>();
@@ -117,6 +122,11 @@ class AlphaConfig {
   }
 
   @Bean
+  IDataTransferService dataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
+    return new DataTransferService(dataTransferRepository, txEventRepository);
+  }
+
+  @Bean
   TxConsistentService txConsistentService(
       @Value("${alpha.event.pollingInterval:500}") int eventPollingInterval,
       GrpcServerConfig serverConfig,
@@ -173,4 +183,5 @@ class AlphaConfig {
   void shutdown() {
     scheduler.shutdownNow();
   }
+
 }

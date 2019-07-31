@@ -237,4 +237,11 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query("SELECT coalesce(min(t.surrogateId), 0) FROM TxEvent t WHERE t.surrogateId > ?1 AND t.globalTxId NOT IN (SELECT t1.globalTxId FROM TxEvent t1 WHERE t1.surrogateId > ?1 AND t1.type = 'SagaEndedEvent')")
   long selectMinUnendedTxEventId(long unendedMinEventId);
 
+//  @Query(value = "SELECT creationTime FROM TxEvent LIMIT 1", nativeQuery = true)
+  @Query(value = "SELECT min(creationTime) FROM TxEvent", nativeQuery = true)
+  Date selectMinDateInTxEvent();
+
+  @Query("SELECT T.surrogateId FROM TxEvent T WHERE T.creationTime BETWEEN ?1 AND ?2 AND EXISTS (SELECT 1 FROM TxEvent T1 WHERE T1.type = 'SagaEndedEvent' AND FUNCTION('TO_DAYS', CURRENT_TIMESTAMP) - FUNCTION('TO_DAYS', T1.creationTime) > 10 AND T.globalTxId = T1.globalTxId)")
+  List<Long> selectEndedEventIdsWithinSomePeriod(Pageable pageable, Date startTime, Date endTime);
+
 }

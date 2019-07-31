@@ -19,10 +19,7 @@ package org.apache.servicecomb.saga.alpha.core;
 
 import org.apache.servicecomb.saga.common.EventType;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Repository for {@link TxEvent}
@@ -150,5 +147,9 @@ public interface TxEventRepository {
   List<TxEvent> selectUnendedTxEvents(long unendedMinEventId);
 
   long selectMinUnendedTxEventId(long unendedMinEventId);
+
+  Date selectMinDateInTxEvent();
+
+  List<Long> selectEndedEventIdsWithinSomePeriod(int pageIndex, int pageSize, Date startTime, Date endTime);
 
 }
