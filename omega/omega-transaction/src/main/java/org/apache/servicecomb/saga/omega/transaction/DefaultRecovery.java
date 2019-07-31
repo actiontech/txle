@@ -18,7 +18,6 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
 import org.apache.servicecomb.saga.common.ConfigCenterType;
-import org.apache.servicecomb.saga.common.UtxConstants;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
@@ -87,7 +86,7 @@ public class DefaultRecovery implements RecoveryPolicy {
     } catch (InvalidTransactionException ite) {
       throw  ite;
     } catch (Throwable throwable) {
-      boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.CompensationFaultTolerant.toInteger()).getStatus();
+      boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.CompensationFaultTolerant.toInteger(), context.category()).getStatus();
       if (enabledTx && !isFaultTolerant) {
         interceptor.onError(parentTxId, compensationSignature, throwable);
       }

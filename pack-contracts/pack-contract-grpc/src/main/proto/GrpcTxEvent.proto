@@ -38,6 +38,7 @@ service TxEventService {
 message GrpcServiceConfig {
   string serviceName = 1;
   string instanceId = 2;
+  string category = 3;
 }
 
 message GrpcAck {

@@ -39,5 +39,5 @@ public interface MessageSender {
 
   String reportAccidentToServer(AccidentHandling accidentHandling);
 
-  GrpcConfigAck readConfigFromServer(int type);
+  GrpcConfigAck readConfigFromServer(int type, String category);
 }

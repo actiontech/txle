@@ -95,9 +95,9 @@ public class RetryableMessageSender implements MessageSender {
   }
 
   @Override
-  public GrpcConfigAck readConfigFromServer(int type) {
+  public GrpcConfigAck readConfigFromServer(int type, String category) {
     try {
-      return availableMessageSenders.take().readConfigFromServer(type);
+      return availableMessageSenders.take().readConfigFromServer(type, category);
     } catch (InterruptedException e) {
       throw new OmegaException("Failed to read config (type = " + type + ") from server.", e);
     }

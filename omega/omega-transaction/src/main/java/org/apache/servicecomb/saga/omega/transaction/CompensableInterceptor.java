@@ -56,7 +56,7 @@ class CompensableInterceptor implements EventAwareInterceptor {
 
   private void readConfigFromServer() {
     try {
-      CompensableSqlMetrics.setIsMonitorSql(sender.readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger()).getStatus());
+      CompensableSqlMetrics.setIsMonitorSql(sender.readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger(), context.category()).getStatus());
     } catch (Exception e) {
       LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to execute method 'readConfigFromServer'.", e);
     }

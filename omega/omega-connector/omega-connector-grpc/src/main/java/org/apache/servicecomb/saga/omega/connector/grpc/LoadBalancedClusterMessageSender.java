@@ -181,8 +181,8 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
   }
 
   @Override
-  public GrpcConfigAck readConfigFromServer(int type) {
-    return senders.keySet().iterator().next().readConfigFromServer(type);
+  public GrpcConfigAck readConfigFromServer(int type, String category) {
+    return senders.keySet().iterator().next().readConfigFromServer(type,category);
   }
 
   AlphaResponse send(TxEvent event, MessageSenderPicker messageSenderPicker) {
