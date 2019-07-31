@@ -463,7 +463,7 @@ public class TransactionInterceptionTest {
         }
 
         @Override
-        public GrpcConfigAck readConfigFromServer(int type) {
+        public GrpcConfigAck readConfigFromServer(int type, String category) {
           return null;
         }
       };

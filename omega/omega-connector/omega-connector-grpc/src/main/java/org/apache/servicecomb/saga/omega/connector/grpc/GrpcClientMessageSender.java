@@ -37,7 +37,6 @@ import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEvent
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 public class GrpcClientMessageSender implements MessageSender {
   private final String target;
@@ -67,7 +66,7 @@ public class GrpcClientMessageSender implements MessageSender {
 
     this.compensateStreamObserver =
         new GrpcCompensateStreamObserver(handler, errorHandlerFactory.getHandler(this), deserializer);
-    this.serviceConfig = serviceConfig(serviceConfig.serviceName(), serviceConfig.instanceId());
+    this.serviceConfig = serviceConfig(serviceConfig.serviceName(), serviceConfig.instanceId(), "");
   }
 
   @Override
@@ -166,8 +165,8 @@ public class GrpcClientMessageSender implements MessageSender {
   }
 
   @Override
-  public GrpcConfigAck readConfigFromServer(int type) {
-    return blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setType(type).build());
+  public GrpcConfigAck readConfigFromServer(int type, String category) {
+    return blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setCategory(category).setType(type).build());
   }
 
   private GrpcTxEvent convertEvent(TxEvent event) {
@@ -191,10 +190,11 @@ public class GrpcClientMessageSender implements MessageSender {
     return builder.build();
   }
 
-  private GrpcServiceConfig serviceConfig(String serviceName, String instanceId) {
+  private GrpcServiceConfig serviceConfig(String serviceName, String instanceId, String category) {
     return GrpcServiceConfig.newBuilder()
         .setServiceName(serviceName)
         .setInstanceId(instanceId)
+        .setCategory(category)
         .build();
   }
 }

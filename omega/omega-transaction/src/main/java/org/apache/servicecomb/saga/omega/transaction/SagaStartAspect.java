@@ -56,7 +56,7 @@ public class SagaStartAspect {
       AlphaResponse alphaResponse = sagaStartAnnotationProcessor.preIntercept(context.globalTxId(), method.toString(), sagaStart.timeout(), "", 0);
       LOG.debug("Initialized context {} before execution of method {}", context, method.toString());
       if (!alphaResponse.enabledTx()) {
-        CompensableSqlMetrics.setIsMonitorSql(ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger()).getStatus());
+        CompensableSqlMetrics.setIsMonitorSql(ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger(), context.category()).getStatus());
       }
 
       isProceed = true;// no matter following result.
@@ -69,7 +69,7 @@ public class SagaStartAspect {
 
       return result;
     } catch (Throwable throwable) {
-      boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.GlobalTxFaultTolerant.toInteger()).getStatus();
+      boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.GlobalTxFaultTolerant.toInteger(), context.category()).getStatus();
       // We don't need to handle the OmegaException here
       if (!(throwable instanceof OmegaException) && !isFaultTolerant) {
         try {

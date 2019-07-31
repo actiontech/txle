@@ -13,8 +13,8 @@ public class ClientAccidentHandlingService {
     private MessageSender sender;
 
     public boolean reportMsgToAccidentPlatform(String jsonParams) {
-        if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger()).getStatus()) {// 差错平台上报支持配置降级功能，未降级场景才进行上报
-            JsonObject jsonObject = new JsonParser().parse(jsonParams).getAsJsonObject();
+        JsonObject jsonObject = new JsonParser().parse(jsonParams).getAsJsonObject();
+        if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger(), jsonObject.get("category").getAsString()).getStatus()) {// 差错平台上报支持配置降级功能，未降级场景才进行上报
             String serviceName = "", instanceId = "", globalTxId = "", localTxId = "", bizinfo = "", remark = "";
             int type = 1;
             JsonElement jsonElement = jsonObject.get("servicename");

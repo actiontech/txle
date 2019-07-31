@@ -75,7 +75,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 		} catch (Throwable e) {
 			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to proceed business, context {}, method {}", context, method.toString(), e);
 
-			boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.CompensationFaultTolerant.toInteger()).getStatus();
+			boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.CompensationFaultTolerant.toInteger(), context.category()).getStatus();
 			if (enabledTx && !isFaultTolerant) {
 				interceptor.onError(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD, e);
 			}
