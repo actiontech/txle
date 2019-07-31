@@ -1,4 +1,7 @@
 -- *** 所有英文数据值无特殊说明均小写，便于调用处操作 ***
+-- 初始化部分配置
+INSERT INTO Config VALUES (1, null, null, null, 12, 0,	1, '1',	'历史表间隔规则。值：0-日，1-月，2-季，3-年。注：不转储10天内的数据。', now());
+
 -- TxEvent数据表字段配置信息
 INSERT INTO TableField VALUES (5, 'txevent', 'surrogateid', '主键', 'bigint', 20, 0, 'true', '', 5, '', now());
 INSERT INTO TableField VALUES (10, 'txevent', 'globaltxid', '全局事务标识', 'varchar', 36, 0, 'true', 'true', 10, '', now());
@@ -54,41 +57,42 @@ INSERT INTO DataDictionary VALUES (7, '差错处理状态', 'accident-handle-sta
 INSERT INTO DataDictionary VALUES (8, '全局事务服务信息', 'global-tx-server-info', '', now());
 
 -- DataDictionaryItem数据表内容初始化信息
-INSERT INTO DataDictionaryItem VALUES (1, 'global-tx-status', '运行中', 'gts-running', '0', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (2, 'global-tx-status', '运行异常', 'gts-aborted', '1', 10, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (3, 'global-tx-status', '暂停', 'gts-suspended', '2', 15, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (4, 'global-tx-status', '正常结束', 'gts-over', '3', 20, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (5, 'global-tx-status', '异常结束', 'gts-terminated', '4', 25, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (10, 'global-tx-status', '运行中', 'gts-running', '0', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (20, 'global-tx-status', '运行异常', 'gts-aborted', '1', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (30, 'global-tx-status', '暂停', 'gts-suspended', '2', 15, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (40, 'global-tx-status', '正常结束', 'gts-over', '3', 20, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (50, 'global-tx-status', '异常结束', 'gts-terminated', '4', 25, 1, '', now());
 
-INSERT INTO DataDictionaryItem VALUES (6, 'config-center-type', '全局事务', 'cct-global-tx', '1', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (7, 'config-center-type', '手动补偿', 'cct-compensation', '2', 10, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (8, 'config-center-type', '自动补偿', 'cct-auto-compensation', '3', 15, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (9, 'config-center-type', '业务信息上报', 'cct-bizinfo-to-kafka', '4', 20, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (10, 'config-center-type', '事务监控', 'cct-tx-monitor', '5', 25, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (11, 'config-center-type', '告警', 'cct-alert', '6', 30, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (12, 'config-center-type', '定时任务', 'cct-schedule', '7', 35, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (13, 'config-center-type', '全局事务容错', 'cct-global-tx-fault-tolerant', '8', 40, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (14, 'config-center-type', '手动补偿容错', 'cct-compensation-fault-tolerant', '9', 45, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (15, 'config-center-type', '自动补偿容错', 'cct-auto-compensation-fault-tolerant', '10', 50, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (16, 'config-center-type', '暂停全局事务', 'cct-pause-global-tx', '11', 55, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (17, 'config-center-type', '差错上报', 'cct-accident-report', '50', 60, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (18, 'config-center-type', 'SQL监控', 'cct-sql-monitor', '51', 65, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (60, 'config-center-type', '全局事务', 'cct-global-tx', '1', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (70, 'config-center-type', '手动补偿', 'cct-compensation', '2', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (80, 'config-center-type', '自动补偿', 'cct-auto-compensation', '3', 15, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (90, 'config-center-type', '业务信息上报', 'cct-bizinfo-to-kafka', '4', 20, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (100, 'config-center-type', '事务监控', 'cct-tx-monitor', '5', 25, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (110, 'config-center-type', '告警', 'cct-alert', '6', 30, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (120, 'config-center-type', '定时任务', 'cct-schedule', '7', 35, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (130, 'config-center-type', '全局事务容错', 'cct-global-tx-fault-tolerant', '8', 40, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (140, 'config-center-type', '手动补偿容错', 'cct-compensation-fault-tolerant', '9', 45, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (150, 'config-center-type', '自动补偿容错', 'cct-auto-compensation-fault-tolerant', '10', 50, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (160, 'config-center-type', '暂停全局事务', 'cct-pause-global-tx', '11', 55, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (161, 'config-center-type', '历史表间隔规则', 'cct-history-table-interval-rule', '12', 56, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (170, 'config-center-type', '差错上报', 'cct-accident-report', '50', 60, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (180, 'config-center-type', 'SQL监控', 'cct-sql-monitor', '51', 65, 1, '', now());
 
-INSERT INTO DataDictionaryItem VALUES (19, 'config-center-status', '正常', 'ccs-normal', '0', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (20, 'config-center-status', '历史', 'ccs-history', '1', 10, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (21, 'config-center-status', '废弃', 'ccs-dumped', '2', 15, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (190, 'config-center-status', '正常', 'ccs-normal', '0', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (200, 'config-center-status', '历史', 'ccs-history', '1', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (210, 'config-center-status', '废弃', 'ccs-dumped', '2', 15, 1, '', now());
 
-INSERT INTO DataDictionaryItem VALUES (22, 'config-center-ability', '有', 'cca-yes', '1', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (23, 'config-center-ability', '无', 'cca-no', '0', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (220, 'config-center-ability', '有', 'cca-yes', '1', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (230, 'config-center-ability', '无', 'cca-no', '0', 10, 1, '', now());
 
-INSERT INTO DataDictionaryItem VALUES (24, 'config-center-value', '启用', 'ccv-enabled', 'enabled', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (25, 'config-center-value', '禁用', 'ccv-disabled', 'disabled', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (240, 'config-center-value', '启用', 'ccv-enabled', 'enabled', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (250, 'config-center-value', '禁用', 'ccv-disabled', 'disabled', 10, 1, '', now());
 
-INSERT INTO DataDictionaryItem VALUES (26, 'accident-handle-type', '回滚失败', 'aht-rollback-error', '1', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (27, 'accident-handle-type', '上报信息至Kafka失败', 'aht-send-message-error', '2', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (260, 'accident-handle-type', '回滚失败', 'aht-rollback-error', '1', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (270, 'accident-handle-type', '上报信息至Kafka失败', 'aht-send-message-error', '2', 10, 1, '', now());
 
-INSERT INTO DataDictionaryItem VALUES (28, 'accident-handle-status', '发送中', 'ahs-sending', '0', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (29, 'accident-handle-status', '发送成功', 'ahs-sending', '1', 10, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (30, 'accident-handle-status', '发送上报', 'ahs-sending', '2', 15, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (31, 'accident-handle-status', '处理成功', 'ahs-handle-ok', '3', 20, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (32, 'accident-handle-status', '处理失败', 'ahs-handle-fail', '4', 25, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (280, 'accident-handle-status', '发送中', 'ahs-sending', '0', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (290, 'accident-handle-status', '发送成功', 'ahs-sending', '1', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (300, 'accident-handle-status', '发送上报', 'ahs-sending', '2', 15, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (310, 'accident-handle-status', '处理成功', 'ahs-handle-ok', '3', 20, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (320, 'accident-handle-status', '处理失败', 'ahs-handle-fail', '4', 25, 1, '', now());

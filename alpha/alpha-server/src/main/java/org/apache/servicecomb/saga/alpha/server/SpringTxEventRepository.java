@@ -225,8 +225,10 @@ class SpringTxEventRepository implements TxEventRepository {
           List<TxEvent> txEventList = eventRepo.selectSpecialColumnsOfTxEventByGlobalTxIds(globalTxIdList);
           if (txEventList != null && !txEventList.isEmpty()) {
               List<Map<String, Object>> resultTxEventList = new LinkedList<>();
+              Set<String> localTxIdSet = new HashSet<>();
               txEventList.forEach(event -> {
-                  if (TxStartedEvent.name().equals(event.type())) {
+                  if (TxStartedEvent.name().equals(event.type()) && !localTxIdSet.contains(event.localTxId())) {
+                      localTxIdSet.add(event.localTxId());
                       resultTxEventList.add(event.toMap());
                   }
               });
@@ -252,6 +254,16 @@ class SpringTxEventRepository implements TxEventRepository {
   @Override
   public long selectMinUnendedTxEventId(long unendedMinEventId) {
     return eventRepo.selectMinUnendedTxEventId(unendedMinEventId);
+  }
+
+  @Override
+  public Date selectMinDateInTxEvent() {
+    return eventRepo.selectMinDateInTxEvent();
+  }
+
+  @Override
+  public List<Long> selectEndedEventIdsWithinSomePeriod(int pageIndex, int pageSize, Date startTime, Date endTime) {
+    return eventRepo.selectEndedEventIdsWithinSomePeriod(new PageRequest(pageIndex, pageSize), startTime, endTime);
   }
 
   // 计算全局事务的状态
