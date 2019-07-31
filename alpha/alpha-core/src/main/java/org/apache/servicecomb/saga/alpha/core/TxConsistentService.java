@@ -91,7 +91,7 @@ public class TxConsistentService {
 		utxMetrics.countChildTxNumber(event);// child transaction count
 
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
-		if (types.contains(event.type()) && isGlobalTxAborted(event)) {
+		if (isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
 			utxMetrics.countTxNumber(event, false, event.retries() > 0);
 			utxMetrics.endMarkTxDuration(event);// end duration.
@@ -194,6 +194,7 @@ public class TxConsistentService {
 	// 先查询是否含Aborted事件，如果含有再确定是否为重试情况，而不是一下子都确定好，因为存在异常事件的不多，这样性能上会快些
 	TxEvent abortedTxEvent = eventRepository.selectAbortedTxEvent(event.globalTxId());
 	if (abortedTxEvent != null) {
+		if (abortedTxEvent.globalTxId().equals(abortedTxEvent.localTxId())) return true;// 说明全局事务异常，否则说明子事务异常，继续验证是否重试中的异常还是重试完成最终异常
 		// 	验证是否最终异常，即排除非最后一次重试时的异常
 		return eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId());
 	}
