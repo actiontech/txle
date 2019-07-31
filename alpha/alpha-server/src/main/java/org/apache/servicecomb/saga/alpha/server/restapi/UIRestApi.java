@@ -224,6 +224,7 @@ public class UIRestApi {
 
             txEventList.forEach(event -> {
                 if (globalTxIdList.contains(event.globalTxId())) {
+                    globalTxIdList.remove(event.globalTxId());
                     String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
                     String typeName = AdditionalEventType.SagaPausedEvent.name();
                     if ("recover".equals(operation)) {
@@ -231,10 +232,12 @@ public class UIRestApi {
                     } else if ("terminate".equals(operation)) {
                         typeName = EventType.TxAbortedEvent.name();
                     }
-                    TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
-                    eventRepository.save(pausedEvent);
+                    TxEvent txEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
+                    eventRepository.save(txEvent);
                     if ("terminate".equals(operation)) {// TODO 终止后应进行补偿
-                        eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null));
+                        TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
+                        endedEvent.setSurrogateId(null);
+                        eventRepository.save(endedEvent);
                     }
                     CacheRestApi.enabledConfigMap.clear();
                     utxMetrics.countTxNumber(event, false, false);
