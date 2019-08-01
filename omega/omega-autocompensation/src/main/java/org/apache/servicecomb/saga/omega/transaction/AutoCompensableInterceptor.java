@@ -22,19 +22,19 @@ class AutoCompensableInterceptor implements EventAwareInterceptor {
 	public AlphaResponse preIntercept(String parentTxId, String compensationMethod, int timeout, String retriesMethod,
 			int retries, Object... message) {
 		AlphaResponse response = sender.send(new TxStartedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod,
-				timeout, retriesMethod, retries, message));
+				timeout, retriesMethod, retries, context.category(), message));
 		readConfigFromServer();// read 'sqlmonitor' config before executing business sql, the aim is to monitor business sql or not.
 		return response;
 	}
 
 	@Override
 	public void postIntercept(String parentTxId, String compensationMethod) {
-		sender.send(new TxEndedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod));
+		sender.send(new TxEndedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod, context.category()));
 	}
 
 	@Override
 	public void onError(String parentTxId, String compensationMethod, Throwable throwable) {
-		sender.send(new TxAbortedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod,
+		sender.send(new TxAbortedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod, context.category(),
 				throwable));
 	}
 
