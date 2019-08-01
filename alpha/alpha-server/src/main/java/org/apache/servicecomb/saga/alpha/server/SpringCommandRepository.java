@@ -20,6 +20,7 @@ package org.apache.servicecomb.saga.alpha.server;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.DONE;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.PENDING;
+import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
 
 import java.lang.invoke.MethodHandles;
 import java.util.*;
@@ -136,6 +137,7 @@ public class SpringCommandRepository implements CommandRepository {
         try {
           if (!existCommandEventIdList.contains(event.id())) {
             commandRepository.save(new Command(event));
+            eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.localTxId(), event.parentTxId(), TxCompensatedEvent.name(), event.compensationMethod(), event.category(), event.payloads()));
           }
         } catch (Exception e) {
           LOG.warn("Failed to save command {} in method {}.", event, method);

@@ -148,8 +148,8 @@ public class TxConsistentService {
 					}
 
 					if (TxAbortedEvent.name().equals(type)) {
-						// 验证是否最终异常，即排除非最后一次重试时的异常
-						if (eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId())) {
+						// 验证是否最终异常，即排除非最后一次重试时的异常。如果全局事务标识等于子事务标识情况的异常，说明是全局事务异常。否则说明子事务异常，则需验证是否是子事务的最终异常。
+						if (event.globalTxId().equals(event.localTxId()) || eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId())) {
 							if (!globalTxId.equals(localTxId)) {
 								// 当出现非超时的异常情况时记录待补偿命令，超时异常由定时器负责
 								// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【后】，被检测为超时，则该失败的子事务又被回滚一次
