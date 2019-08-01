@@ -166,6 +166,7 @@ public class GrpcClientMessageSender implements MessageSender {
 
   @Override
   public GrpcConfigAck readConfigFromServer(int type, String category) {
+    if (category == null) category = "";
     return blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setCategory(category).setType(type).build());
   }
 
