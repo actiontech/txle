@@ -106,14 +106,14 @@ public class AccidentHandlingService implements IAccidentHandlingService {
             final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
             scheduler.scheduleWithFixedDelay(() -> {
                 if (result.get()) {
-                    scheduler.shutdownNow();
-                    utxMetrics.countSuccessfulNumber();
                     accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_OK.toInteger());
-                } else if (invokeTimes.incrementAndGet() > 1 + this.retries) {
                     scheduler.shutdownNow();
-                    utxMetrics.countFailedNumber();
+                    utxMetrics.countSuccessfulNumber();// TODO prometheus内部方法持续循环，无法该行代码后的代码
+                } else if (invokeTimes.incrementAndGet() > 1 + this.retries) {
                     accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_FAIL.toInteger());
                     LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
+                    scheduler.shutdownNow();
+                    utxMetrics.countFailedNumber();
                 } else {
                     // To report accident to Accident Platform.
                     result.set(reportTask(jsonParams));
