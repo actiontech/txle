@@ -265,7 +265,11 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
     public void onReadConfig(GrpcConfig config, StreamObserver<GrpcConfigAck> responseObserver) {
         boolean isEnabledConfig = false;
         try {
-            isEnabledConfig = dbDegradationConfigService.isEnabledTx(config.getInstanceId(), config.getCategory(), ConfigCenterType.convertTypeFromValue(config.getType()));
+            String instanceId = null, category = null;
+            if (config.getInstanceId() != null) instanceId = config.getInstanceId();
+            if (config.getCategory() != null) category = config.getCategory();
+
+            isEnabledConfig = dbDegradationConfigService.isEnabledTx(instanceId, category, ConfigCenterType.convertTypeFromValue(config.getType()));
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onReadConfig'.", e);
         } finally {
