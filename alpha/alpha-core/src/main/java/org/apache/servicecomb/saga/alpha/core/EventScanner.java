@@ -17,6 +17,9 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import com.ecwid.consul.v1.ConsulClient;
+import com.ecwid.consul.v1.health.model.Check;
+import com.ecwid.consul.v1.session.model.NewSession;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.common.UtxConstants;
 import org.slf4j.Logger;
@@ -30,6 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
 import static org.apache.servicecomb.saga.common.EventType.*;
+import static org.apache.servicecomb.saga.common.UtxConstants.CONSUL_LEADER_KEY;
+import static org.apache.servicecomb.saga.common.UtxConstants.CONSUL_LEADER_KEY_VALUE;
 
 public class EventScanner implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -55,6 +60,11 @@ public class EventScanner implements Runnable {
   public static AtomicInteger unendedMinEventIdSelectCount = new AtomicInteger(1);
 
   public static final String SCANNER_SQL = " /**scanner_sql**/";
+  
+  private final ConsulClient consulClient;
+  private final String serverName;
+  private int serverPort = 8090;
+  private final String consulInstanceId;
 
   public EventScanner(ScheduledExecutorService scheduler,
       TxEventRepository eventRepository,
@@ -63,7 +73,9 @@ public class EventScanner implements Runnable {
       OmegaCallback omegaCallback,
       IKafkaMessageProducer kafkaMessageProducer,
       UtxMetrics utxMetrics,
-      int eventPollingInterval) {
+      int eventPollingInterval,
+      ConsulClient consulClient,
+      Object... params) {
     this.scheduler = scheduler;
     this.eventRepository = eventRepository;
     this.commandRepository = commandRepository;
@@ -72,6 +84,10 @@ public class EventScanner implements Runnable {
     this.kafkaMessageProducer = kafkaMessageProducer;
     this.utxMetrics = utxMetrics;
     this.eventPollingInterval = eventPollingInterval;
+    this.consulClient = consulClient;
+    this.serverName = params[0] + "";
+    try {this.serverPort = Integer.parseInt(params[1] + "");}catch (Exception e) {}
+    this.consulInstanceId = params[2] + "";
   }
 
   @Override
@@ -80,6 +96,8 @@ public class EventScanner implements Runnable {
   }
 
   private void pollEvents() {
+    final String consulSessionId = registerConsulSession();
+
     /**
      * 补偿业务逻辑大换血：
      *    主要需要补偿的分为两大类，超时导致的异常和其它情况导致的异常(重试属于其它情况)；
@@ -94,10 +112,14 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
             () -> {
               try {
-                // 未防止出现部分事务在未检测超时前就已经结束的情况，此处将超时检测单开一个线程，否则其它方法如果执行超过了事务的超时时间，那么下次超时检测将在事务之后检测了，此时事务已经正常结束了
-                updateTimeoutStatus();
-                findTimeoutEvents();
-                abortTimeoutEvents();
+                if (consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
+                  LOG.error("Session " + serverName + "-" + serverPort + " is leader.");
+
+                  // 未防止出现部分事务在未检测超时前就已经结束的情况，此处将超时检测单开一个线程，否则其它方法如果执行超过了事务的超时时间，那么下次超时检测将在事务之后检测了，此时事务已经正常结束了
+                  updateTimeoutStatus();
+                  findTimeoutEvents();
+                  abortTimeoutEvents();
+                }
               } catch (Exception e) {
                 // to avoid stopping this scheduler in case of exception By Gannalyo
                 LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to detect timeout in scheduler.", e);
@@ -110,16 +132,18 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
 				() -> {
 					try {
+                      if (consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
 //                        updateTimeoutStatus();
 //						findTimeoutEvents();
 //						abortTimeoutEvents();
 //						saveUncompensatedEventsToCommands();
-						compensate();
-						updateCompensatedCommands();
+                        compensate();
+                        updateCompensatedCommands();
 //						deleteDuplicateSagaEndedEvents();
 //						updateTransactionStatus();
 
-                      getMinUnendedEventId();
+                        getMinUnendedEventId();
+                      }
 					} catch (Exception e) {
 						// to avoid stopping this scheduler in case of exception By Gannalyo
 						LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to execute method 'compensate' in scheduler.", e);
@@ -347,4 +371,40 @@ public class EventScanner implements Runnable {
     return unendedMinEventId;
   }
 
+  /**
+   * Multiple txle apps register the same key 'CONSUL_LEADER_KEY', it would be leader in case of getting 'true'.
+   * The Session, Checks and Services have to be destroyed/deregistered before shutting down JVM, so that the lock of leader key could be released.
+   */
+  private String registerConsulSession() {
+    String consulSessionId = null;
+    try {
+      // To create a key for leader election no matter if it is exists.
+      consulClient.setKVValue(CONSUL_LEADER_KEY, CONSUL_LEADER_KEY_VALUE);
+      NewSession session = new NewSession();
+      session.setName("session-" + serverName + "-" + serverPort);
+      consulSessionId = consulClient.sessionCreate(session, null).getValue();
+    } catch (Exception e) {
+      LOG.error("Failed to register Consul Session, serverName [{}], serverPort [{}].", serverName, serverPort, e);
+    } finally {
+      try {
+        final String finalConsulSessionId = consulSessionId;
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+          // To deregister service could not destroy session so that current service still held the lock for leader's key.
+          // So to destroy session was necessary as well.
+          consulClient.sessionDestroy(finalConsulSessionId, null);
+          // consulClient.agentServiceDeregister(consulInstanceId);
+          List<Check> checkList = consulClient.getHealthChecksState(null).getValue();
+          checkList.forEach(check -> {
+            if (check.getStatus() != Check.CheckStatus.PASSING || check.getServiceId().equals(consulInstanceId)) {
+              consulClient.agentCheckDeregister(check.getCheckId());
+              consulClient.agentServiceDeregister(check.getServiceId());
+            }
+          });
+        }));
+      } catch (Exception e) {
+        LOG.error("Failed to add ShutdownHook for destroying/deregistering Consul Session, Checks and Services, serverName [{}], serverPort [{}].", serverName, serverPort, e);
+      }
+    }
+    return consulSessionId;
+  }
 }

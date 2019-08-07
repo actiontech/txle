@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfigRestApi {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigRestApi.class);
 
+    @GetMapping("/health")
+    public String consulCheckServerHealth() {
+        return "ok";
+    }
+
     @GetMapping("/reloadConfig/kafka")
     public String reloadKafkaConfig() {
         return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class, "kafkaProducer", new KafkaProducer<>(ConfigLoading.loadKafkaProperties()));

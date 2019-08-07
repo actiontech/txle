@@ -82,6 +82,21 @@ spring:
 #    auto: true
 #    proxy-target-class: org.springframework.data.jpa.repository.JpaRepository
 
+---
+spring:
+  cloud:
+    consul:
+      enabled: true
+      host: 10.186.61.3
+      port: 8500
+      discovery:
+        enabled: true
+        register: true
+        serviceName: {spring.application.name}
+        healthCheckPath: /health
+        healthCheckInterval: 10s
+        instanceId: ${spring.application.name}-${alpha.server.host}-${random.value}
+        tags: alpha-server-host=${alpha.server.host},alpha-server-port=${alpha.server.port}
 # config port for prometheus' metrics server. By Gannalyo
 utx:
   prometheus:

@@ -45,6 +45,7 @@ import java.util.function.Consumer;
 import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLException;
 
+import com.ecwid.consul.v1.ConsulClient;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.common.EventType;
@@ -136,6 +137,9 @@ public class AlphaIntegrationTest {
 
   @Autowired
   private TxConsistentService consistentService;
+
+  @Autowired
+  private ConsulClient consulClient;
 
   private static final Queue<GrpcCompensateCommand> receivedCommands = new ConcurrentLinkedQueue<>();
 
@@ -613,6 +617,7 @@ public class AlphaIntegrationTest {
         omegaCallback,
         kafkaMessageProducer,
         utxMetrics,
-        1).run();
+        1,
+        consulClient, "").run();
   }
 }
