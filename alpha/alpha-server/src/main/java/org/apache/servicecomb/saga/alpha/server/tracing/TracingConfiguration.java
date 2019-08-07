@@ -13,6 +13,8 @@ import brave.servlet.TracingFilter;
 import brave.spring.webmvc.SpanCustomizingAsyncHandlerInterceptor;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.servicecomb.saga.alpha.core.EventScanner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateCustomizer;
@@ -29,6 +31,7 @@ import zipkin2.reporter.okhttp3.OkHttpSender;
 
 import javax.servlet.Filter;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 
 /**
  * This adds tracing configuration to any web mvc controllers or rest template clients.
@@ -37,6 +40,8 @@ import java.io.IOException;
 // Importing a class is effectively the same as declaring bean methods
 @Import(SpanCustomizingAsyncHandlerInterceptor.class)
 public class TracingConfiguration extends WebMvcConfigurerAdapter {
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
     @Value("${spring.zipkin.base-url://127.0.0.1:9411/api/v2/spans}")
     private String zipkinServer;
 
@@ -91,13 +96,11 @@ public class TracingConfiguration extends WebMvcConfigurerAdapter {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                tracing.close();
                 reporter.close();
                 sender.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                tracing.close();
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.error("Failed to tracing when jvm got a shutdown.", e);
             }
         }));
 

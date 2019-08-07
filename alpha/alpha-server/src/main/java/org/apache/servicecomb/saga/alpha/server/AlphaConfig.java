@@ -18,6 +18,7 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import brave.Tracing;
+import com.ecwid.consul.v1.ConsulClient;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
@@ -36,6 +37,7 @@ import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferService
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
@@ -71,6 +73,18 @@ class AlphaConfig {
 
   @Value("${utx.accident.platform.retry.interval:1}")
   private int interval;
+
+  @Autowired
+  private ConsulClient consulClient;
+
+  @Value("${spring.application.name:\"\"}")
+  private String serverName;
+
+  @Value("${spring.server.port:8090}")
+  private int serverPort;
+
+  @Value("${spring.cloud.consul.discovery.instanceId:\"\"}")
+  private String consulInstanceId;
 
   @Bean
   Map<String, Map<String, OmegaCallback>> omegaCallbacks() {
@@ -144,7 +158,7 @@ class AlphaConfig {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
-        omegaCallback, kafkaMessageProducer, utxMetrics, eventPollingInterval).run();
+        omegaCallback, kafkaMessageProducer, utxMetrics, eventPollingInterval, consulClient, serverName, serverPort, consulInstanceId).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
