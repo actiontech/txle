@@ -7,7 +7,7 @@ import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.server.restapi.CacheRestApi;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,7 +75,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
             boolean isExistsConfigs = false;
             for (ConfigCenter config : configCenterList) {// 1.获取当前类型配置的全局值
                 if (config.getInstanceid() == null || config.getInstanceid().trim().length() == 0) {
-                    if (config.getAbility() == UtxConstants.NO) {
+                    if (config.getAbility() == TxleConstants.NO) {
                         return false;
                     }
                     isExistsConfigs = true;
@@ -88,7 +88,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
                 for (ConfigCenter config : configCenterList) {// 2.获取当前配置的具体值(instanceId和category都为有效值的情况)
                     if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0 && config.getCategory() != null && config.getCategory().trim().length() > 0) {
                         isExistsConfigs = true;
-                        if (config.getAbility() == UtxConstants.NO) {
+                        if (config.getAbility() == TxleConstants.NO) {
                             break;// do not cover the value of global config.
                         }
                         value = config.getValue();
@@ -98,7 +98,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
                 if (!isExistsConfigs) {// 3.如果未获取到当前配置的具体值，则获取当前配置的默认值(instanceId为有效值、category为无效值的情况)
                     for (ConfigCenter config : configCenterList) {
                         if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0 && (config.getCategory() == null || config.getCategory().trim().length() == 0)) {
-                            if (config.getAbility() == UtxConstants.NO) {
+                            if (config.getAbility() == TxleConstants.NO) {
                                 break;// do not cover the value of global config.
                             }
                             value = config.getValue();
@@ -106,8 +106,8 @@ public class DBDegradationConfigService implements IConfigCenterService {
                         }
                     }
                 }
-                CacheRestApi.enabledConfigMap.put(configKey, UtxConstants.ENABLED.equals(value));
-                return UtxConstants.ENABLED.equals(value);
+                CacheRestApi.enabledConfigMap.put(configKey, TxleConstants.ENABLED.equals(value));
+                return TxleConstants.ENABLED.equals(value);
             }
         }
 

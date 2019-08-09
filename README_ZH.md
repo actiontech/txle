@@ -1,62 +1,82 @@
-# Saga | [English](README.md) [![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
-Apache ServiceComb (incubating) Saga 是一个微服务应用的数据最终一致性解决方案。相对于[TCC](http://design.inf.usi.ch/sites/default/files/biblio/rest-tcc.pdf)而言，在try阶段，Saga会直接提交事务，后续rollback阶段则通过反向的补偿操作来完成。
+# txle | [English](README.md)
+[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
 
-## 特性
-* 高可用。支持集群模式。
-* 高可靠。所有的事务事件都持久存储在数据库中。
-* 高性能。事务事件是通过gRPC来上报的，且事务的请求信息是通过Kyro进行序列化和反序列化的。
-* 低侵入。仅需2-3个注解和编写对应的补偿方法即可进行分布式事务。
-* 部署简单。可通过Docker快速部署。
-* 支持前向恢复（重试）及后向恢复（补偿）。
+[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
+
+## 什么是txle？
+txle是一款能够保证业务数据最终一致性的分布式事务解决方案。
+
+## 特征
+* 多种手段保证数据最终一致性。
+* 高性能。QPS为5000/s左右，TPS为50000/s左右。
+* 低侵入。最少2个注解即可。
+* 支持Docker快速部署。
+* 支持服务降级。发生不可抗拒因素时，也能保证主业务正常运行。
+* 支持异常快照处理。
+* 支持超时和重试机制。
 
 ## 架构
-Saga是由 **alpha** 和 **omega**组成，其中：
-* alpha充当协调者的角色，主要负责对事务进行管理和协调。
-* omega是微服务中内嵌的一个agent，负责对网络请求进行拦截并向alpha上报事务事件。
 
-下图展示了alpha, omega以及微服务三者的关系：
-![Saga Pack 架构](docs/static_files/pack.png)
+![txle业务集成架构](docs/txle-architecture.png)
 
-详情可浏览[Saga Pack 设计文档](docs/design_zh.md). 
+## 快速启动
 
-## 快速入门
-* Saga在ServiceComb Java Chassis应用可以参考[出行预订](saga-demo/saga-servicecomb-demo/README.md)
-* Saga在Spring应用的用法可参考[出行预订示例](saga-demo/saga-spring-demo/README.md)。
-* Saga在Dubbo应用的用法可参考[Dubbo示例](saga-demo/saga-dubbo-demo/README.md).
+### Step 1: 下载txle正式版本
+[下载](https://github.com/actiontech/txle/releases)最新版本并解压。
 
-## 编译和运行代码
-* 编译代码并且运行相关的单元测试
-   ```bash
-      $ mvn clean install
-   ```
-* 编译示例，并生产docker镜像，运行验收测试
-   ```bash
-      $ mvn clean install -Pdemo,docker
-   ```
-* 当前Saga模块同时支持Spring Boot 1.x 以及 Spring Boot 2.x, 在缺省情况下Saga会使用Spring Boot 1.x来进行构建。
-你可以使用 *-Pspring-boot-2* 将Spring Boot版本转换到 2.x 上。 由于Spring Boot 只在2.x开始支持 JDK9，如果你想用
-JDK9或者JDK10 来编译Saga并运行测试的话，你需要使用 spring-boot-2 profile参数。
-   ```bash
-      $ mvn clean install -Pdemo,docker,spring-boot-2
-   ```
+```bash
+# tar -xzf actiontech-txle-$version.tar.gz
+# mv actiontech-txle-$version txle
+# cd txle
+```
 
+### Step 2: 准备环境
+* MySQL实例
 
-## 用户指南
-如何构建和使用可浏览[用户指南](docs/user_guide_zh.md)。
+    在部署txle服务的机器中启动一个MySQL实例，创建名为txle的数据库，用户为test，密码为123456。
 
-## 获取最新发行版本
+* JVM
 
-[下载Saga](http://servicecomb.incubator.apache.org/release/saga-downloads/)
+    txle是使用java开发的，所以需要在部署txle服务的机器上安装java 1.8或以上版本，并确保JAVA_HOME参数被正确的设置。
 
-## [常见问题](FAQ_ZH.md)
+### Step 3: 启动txle服务
 
-## 联系我们
-* [提交issues](https://issues.apache.org/jira/browse/SCB)
-* [gitter聊天室](https://gitter.im/ServiceCombUsers/Lobby)
-* 邮件列表: [订阅](mailto:dev-subscribe@servicecomb.incubator.apache.org) [浏览](https://lists.apache.org/list.html?dev@servicecomb.apache.org)
+```bash
+# ./txle start
+Starting the txle server....
+Start successfully!
+```
+### Step 4: 停止txle服务
+
+```bash
+# ./txle stop
+Stopping the txle server....
+Stop successfully!
+```
+
+## 官网
+
+了解更多信息，欢迎访问[官网](https://opensource.actionsky.com/)。
 
 ## 贡献
-详情可浏览[代码提交指南](http://servicecomb.incubator.apache.org/cn/developers/submit-codes/)。
 
-## License
-[Apache 2.0 license](https://github.com/apache/incubator-servicecomb-saga/blob/master/LICENSE)。
+我们欢迎并十分感谢您的贡献。有关提交补丁和贡献流程请参阅[CONTRIBUTION.md](https://github.com/actiontech/txle/docs/CONTRIBUTION.md)。
+
+## 社区 TODO
+
+* IRC: [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/txle.png)](https://kiwiirc.com/client/irc.freenode.net/?nick=user|?&theme=cli#txle)
+* QQ group: 669663113
+* [如果您正在使用txle，请告诉我们。](https://wj.qq.com/s/2291106/09f4)
+* 开源社区问下公众号
+  
+  ![dble](./docs/QR_code.png)
+
+## 联系我们
+
+如果想获得txle的商业支持, 您可以联系我们:
+
+- 全国支持: 400-820-6580
+- 华北地区: 86-13718877200, 王先生
+- 华南地区: 86-18503063188, 曹先生
+- 华东地区: 86-18930110869, 梁先生
+- 西南地区: 86-13540040119, 洪先生

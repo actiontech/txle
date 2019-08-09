@@ -1,6 +1,6 @@
 package org.apache.servicecomb.saga.omega.context;
 
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
@@ -10,7 +10,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -21,11 +20,11 @@ import java.util.Properties;
  * @author Gannalyo
  * @date 2019/4/16
  */
-public class UtxStaticConfig {
-    private static final Map<String, Object> utxStaticConfig = new HashMap<>();
-    private static final Logger LOG = LoggerFactory.getLogger(UtxStaticConfig.class);
+public class TxleStaticConfig {
+    private static final Map<String, Object> txleStaticConfig = new HashMap<>();
+    private static final Logger LOG = LoggerFactory.getLogger(TxleStaticConfig.class);
 
-    public UtxStaticConfig() {
+    public TxleStaticConfig() {
         try {
             File resourceDir = ResourceUtils.getFile(ResourceUtils.CLASSPATH_URL_PREFIX);
             if (resourceDir != null && resourceDir.isDirectory()) {
@@ -38,7 +37,7 @@ public class UtxStaticConfig {
                 }
             }
         } catch (Exception e) {
-            LOG.error(UtxConstants.logErrorPrefixWithTime() + "Failed to initialize the Static Configs.", e);
+            LOG.error(TxleConstants.logErrorPrefixWithTime() + "Failed to initialize the Static Configs.", e);
         }
     }
 
@@ -46,7 +45,7 @@ public class UtxStaticConfig {
         try {
             convertYmlToMapConfig(new Yaml().loadAs(new FileInputStream(filePath), HashMap.class), null);
         } catch (FileNotFoundException e) {
-            LOG.error(UtxConstants.logErrorPrefixWithTime() + "Failed to initialize the Static Configs - filePath = " + filePath, e);
+            LOG.error(TxleConstants.logErrorPrefixWithTime() + "Failed to initialize the Static Configs - filePath = " + filePath, e);
         }
     }
 
@@ -63,7 +62,7 @@ public class UtxStaticConfig {
                 if (value instanceof Map) {
                     convertYmlToMapConfig((Map) value, keyPath);
                 } else {
-                    utxStaticConfig.put(keyPath, value);
+                    txleStaticConfig.put(keyPath, value);
                 }
 
                 int lastKeyIndex = keyPath.lastIndexOf(".");
@@ -73,7 +72,7 @@ public class UtxStaticConfig {
                     keyPath = null;
                 }
             } catch (Exception e) {
-                LOG.error(UtxConstants.logErrorPrefixWithTime() + "Failed to initialize the Static Configs - key = " + key, e);
+                LOG.error(TxleConstants.logErrorPrefixWithTime() + "Failed to initialize the Static Configs - key = " + key, e);
             }
         }
     }
@@ -86,7 +85,7 @@ public class UtxStaticConfig {
                 LOG.info("No property in [{}].", filePath);
             }
             properties.keySet().forEach(key -> {
-                utxStaticConfig.put(key + "", properties.get(key));
+                txleStaticConfig.put(key + "", properties.get(key));
             });
         } catch (IOException e) {
             LOG.error("Failed to initialize the Static Configs - filePath = [{}]", filePath, e);
@@ -94,13 +93,13 @@ public class UtxStaticConfig {
     }
 
     public static String getStringConfig(String configFullName, String defaultValue) {
-        Object value = utxStaticConfig.get(configFullName);
+        Object value = txleStaticConfig.get(configFullName);
         if (value == null) return defaultValue;
         return value.toString().trim();
     }
 
     public static Integer getIntegerConfig(String configFullName, Integer defaultValue) {
-        Object value = utxStaticConfig.get(configFullName);
+        Object value = txleStaticConfig.get(configFullName);
         try {
             if (value != null) {
                 return Integer.valueOf(value.toString().trim());
@@ -111,7 +110,7 @@ public class UtxStaticConfig {
     }
 
     public static Boolean getBooleanConfig(String configFullName, Boolean defaultValue) {
-        Object value = utxStaticConfig.get(configFullName);
+        Object value = txleStaticConfig.get(configFullName);
         try {
             if (value != null) {
                 return Boolean.valueOf(value.toString().trim());
@@ -122,7 +121,7 @@ public class UtxStaticConfig {
     }
 
     public static Object getConfig(String configFullName) {
-        return utxStaticConfig.get(configFullName);
+        return txleStaticConfig.get(configFullName);
     }
 
 }

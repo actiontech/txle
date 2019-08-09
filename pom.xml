@@ -27,7 +27,7 @@
 
 	<groupId>org.apache.servicecomb.saga</groupId>
 	<artifactId>saga</artifactId>
-	<!-- <artifactId>utx</artifactId> --><!-- 如果改成utx，那么其下子工程引用出也要改成utx -->
+	<!-- <artifactId>txle</artifactId> --><!-- 如果改成txle，那么其下子工程引用出也要改成txle -->
 	<packaging>pom</packaging>
 	<version>0.3.0-SNAPSHOT</version>
 
@@ -905,7 +905,7 @@
 					<plugin>
 						<artifactId>maven-assembly-plugin</artifactId>
 						<configuration>
-							<finalName>utx_${version}</finalName>
+							<finalName>txle_${version}</finalName>
 							<!-- 不添加assembly的id到打包后的文件名称中 -->
 							<appendAssemblyId>false</appendAssemblyId>
 							<descriptors>

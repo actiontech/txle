@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.lang.reflect.Method;
 
-public class UtxJpaRepositoryInterceptor {
+public class TxleJpaRepositoryInterceptor {
     @Autowired
-    UtxMetrics utxMetrics;
+    TxleMetrics txleMetrics;
 
     public Object doFilter(MethodInvocation Invocation) throws Throwable {
         Method method = Invocation.getMethod();
@@ -19,11 +19,11 @@ public class UtxJpaRepositoryInterceptor {
             // It'll not have a boundary if append arguments to metrics variables, that's not allowed, because it maybe lead to prometheus' death, so have to abandon arguments.
         }
 
-        String globalTxId = utxMetrics.startMarkSQLDurationAndCount(sql, queryAnnotation == null, Invocation.getArguments());
+        String globalTxId = txleMetrics.startMarkSQLDurationAndCount(sql, queryAnnotation == null, Invocation.getArguments());
 
         Object obj = Invocation.proceed();
 
-        utxMetrics.endMarkSQLDuration(globalTxId);
+        txleMetrics.endMarkSQLDuration(globalTxId);
 
         return obj;
     }

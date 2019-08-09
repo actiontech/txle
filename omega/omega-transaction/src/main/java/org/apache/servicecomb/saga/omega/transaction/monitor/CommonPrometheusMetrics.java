@@ -4,10 +4,9 @@ import io.prometheus.client.Collector;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.exporter.HTTPServer;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
-import org.apache.servicecomb.saga.omega.transaction.monitor.CompensableSqlMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,10 +23,10 @@ public class CommonPrometheusMetrics extends Collector {
     // TODO The value of 'Counter' will become zero after restarting current application.
     // mark duration
     // To store 'globalTxId' for aborted events, it is the aim to avoid counting repeat event number. Do not need to pay more attention on restart, cluster and concurrence.
-    protected static final Gauge UTX_SQL_TIME_SECONDS_TOTAL = buildGauge("utx_sql_time_seconds_total", "Total seconds spent executing sql.");
+    protected static final Gauge TXLE_SQL_TIME_SECONDS_TOTAL = buildGauge("txle_sql_time_seconds_total", "Total seconds spent executing sql.");
     protected static final ThreadLocal<Gauge.Timer> gaugeTimer = new ThreadLocal<>();
 
-    protected static final Counter UTX_SQL_TOTAL = buildCounter("utx_sql_total", "SQL total number.");
+    protected static final Counter TXLE_SQL_TOTAL = buildCounter("txle_sql_total", "SQL total number.");
     private static boolean httpServer = false;
     protected static volatile boolean isMonitorSql = true;
 
@@ -42,7 +41,7 @@ public class CommonPrometheusMetrics extends Collector {
                 httpServer = true;
             }
         } catch (IOException e) {
-            LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Initialize utx sql metrics server exception, please check the port " + promMetricsPort + ". " + e);
+            LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Initialize txle sql metrics server exception, please check the port " + promMetricsPort + ". " + e);
         }
     }
 
@@ -63,8 +62,8 @@ public class CommonPrometheusMetrics extends Collector {
         }
 
         // TODO If this method was invoked for many times in the same thread, then the later value will cover the early value.
-        gaugeTimer.set(UTX_SQL_TIME_SECONDS_TOTAL.labels(isBizSql + "", serviceName, category).startTimer());
-        UTX_SQL_TOTAL.labels(isBizSql + "", serviceName, category).inc();
+        gaugeTimer.set(TXLE_SQL_TIME_SECONDS_TOTAL.labels(isBizSql + "", serviceName, category).startTimer());
+        TXLE_SQL_TOTAL.labels(isBizSql + "", serviceName, category).inc();
     }
 
     private static String handleStringNullValue(String param) {

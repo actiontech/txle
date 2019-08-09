@@ -1,6 +1,6 @@
 package org.apache.servicecomb.saga.omega.transaction.repository;
 
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,7 +35,7 @@ public class AutoCompensateDao implements IAutoCompensateDao {
     @Transactional
     @Override
     public boolean executeAutoCompensateSql(String autoCompensateSql) {
-        return jdbcTemplate.update(autoCompensateSql + UtxConstants.ACTION_SQL) > 0;
+        return jdbcTemplate.update(autoCompensateSql + TxleConstants.ACTION_SQL) > 0;
     }
 
     @Modifying

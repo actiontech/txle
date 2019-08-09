@@ -6,7 +6,7 @@ import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.ast.statement.SQLUpdateSetItem;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.alibaba.fastjson.JSON;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
@@ -51,7 +51,7 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 			// 2.take conditions out
 			SQLExpr where = updateStatement.getWhere();// select * ... by where ... ps: having, etc.
 			String whereSql = where.toString();// It doesn't matter, even though the 'where-sql' contains a line break.
-			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
+			LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
 
 			// 3.take primary-key name
 			String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
@@ -67,7 +67,7 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 			List<Map<String, Object>> newDataList = selectNewDataList(delegate, updateStatement, tableName, primaryKeyColumnName, whereSql);
 			List<Map<String, Object>> originalDataList = selectOriginalData(newDataList);
 			if (originalDataList == null || originalDataList.isEmpty()) {
-				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Utx_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
+				LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Txle_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
 				return true;
 			}
 			StringBuffer ids = new StringBuffer();
@@ -87,17 +87,17 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 			// 5.construct compensateSql
 			String compensateSql = constructCompensateSql(delegate, updateStatement, tableName, newDataList, whereSql);
 			
-			// 6.save utx_undo_log
-			return this.saveUtxUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
+			// 6.save txle_undo_log
+			return this.saveTxleUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
 		} catch (SQLException e) {
-			LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for update SQL.", e);
+			LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for update SQL.", e);
 			throw e;
 		} finally {
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (SQLException e) {
-					LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for update SQL.", e);
+					LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for update SQL.", e);
 				}
 			}
 		}
@@ -105,12 +105,12 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 
 	private String constructCompensateSql(PreparedStatement delegate, MySqlUpdateStatement updateStatement, String tableName, List<Map<String, Object>> newDataList, String whereSql) throws SQLException {
 		if (newDataList == null || newDataList.isEmpty()) {
-			throw new SQLException(UtxConstants.LOG_ERROR_PREFIX + "Could not get the original data when constructed the 'compensateSql' for executing update SQL.");
+			throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Could not get the original data when constructed the 'compensateSql' for executing update SQL.");
 		}
 
 		List<SQLUpdateSetItem> updateSetItemList = updateStatement.getItems();
 		if (updateSetItemList == null || updateSetItemList.isEmpty()) {
-			throw new SQLException(UtxConstants.LOG_ERROR_PREFIX + "Had no set-item for update SQL.");
+			throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Had no set-item for update SQL.");
 		}
 		
 		Map<String, String> columnNameType = this.selectColumnNameType(delegate, tableName);
@@ -120,7 +120,7 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 			String setColumns = constructSetColumns(updateSetItemList, dataMap);
 			String whereSqlForCompensation = this.constructWhereSqlForCompensation(dataMap);
 			
-			String compensateSql = String.format("UPDATE %s SET %s WHERE %s" + UtxConstants.ACTION_SQL + ";", tableName, setColumns, whereSqlForCompensation);
+			String compensateSql = String.format("UPDATE %s SET %s WHERE %s" + TxleConstants.ACTION_SQL + ";", tableName, setColumns, whereSqlForCompensation);
 			if (compensateSqls.length() == 0) {
 				compensateSqls.append(compensateSql);
 			} else {
@@ -161,8 +161,8 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 				newColumnValues.append(columnValue + " n_c_v_" + setItem.getColumn().toString());
 			}
 			
-			String originalDataSql = String.format("SELECT T.*, %s FROM %s T WHERE %s FOR UPDATE" + UtxConstants.ACTION_SQL, newColumnValues, tableName, whereSql);// 'FOR UPDATE' is needed to lock data.
-			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
+			String originalDataSql = String.format("SELECT T.*, %s FROM %s T WHERE %s FOR UPDATE" + TxleConstants.ACTION_SQL, newColumnValues, tableName, whereSql);// 'FOR UPDATE' is needed to lock data.
+			LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
 
 			// start to mark duration for business sql By Gannalyo.
 			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(originalDataSql, false);

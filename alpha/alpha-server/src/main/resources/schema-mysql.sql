@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS Message (
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id) USING BTREE,
   UNIQUE INDEX pk_id(id) USING BTREE,
-  INDEX utx_globalTxId_index(globaltxid) USING BTREE
+  INDEX txle_globalTxId_index(globaltxid) USING BTREE
 ) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS Config (

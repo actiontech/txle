@@ -17,7 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.context;
 
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,7 @@ public class CompensationContext {
     String oldLocalTxId= omegaContext.localTxId();
     try {
     	// for auto-compensation By Gannalyo
-    	if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(compensationMethod)) {
+    	if (TxleConstants.AUTO_COMPENSABLE_METHOD.equals(compensationMethod)) {
     		contextInternal.compensationMethod.invoke(contextInternal.target, globalTxId, localTxId);
     		return;
     	}

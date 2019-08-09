@@ -32,8 +32,6 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
-import java.io.File;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -43,7 +41,6 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import javax.annotation.PostConstruct;
-import javax.net.ssl.SSLException;
 
 import com.ecwid.consul.v1.ConsulClient;
 import org.apache.servicecomb.saga.alpha.core.*;
@@ -65,7 +62,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.protobuf.ByteString;
@@ -133,7 +129,7 @@ public class AlphaIntegrationTest {
   private IKafkaMessageProducer kafkaMessageProducer;
 
   @Autowired
-  UtxMetrics utxMetrics;
+  TxleMetrics txleMetrics;
 
   @Autowired
   private TxConsistentService consistentService;
@@ -616,7 +612,7 @@ public class AlphaIntegrationTest {
         timeoutRepository,
         omegaCallback,
         kafkaMessageProducer,
-        utxMetrics,
+            txleMetrics,
         1,
         consulClient, "").run();
   }

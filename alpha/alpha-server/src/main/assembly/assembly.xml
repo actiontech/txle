@@ -20,12 +20,12 @@
 			<outputDirectory>/conf</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<!-- 打包时把utx文件放在bin目录 -->
+			<!-- 打包时把txle文件放在bin目录 -->
 			<directory></directory>
 			<outputDirectory>/bin</outputDirectory>
-			<!-- 此处赋值权限实际未生效，需要在最终打tar.gz包(即utx根目录下的pom.xml关联的assembly.xml文件中)设置 -->
+			<!-- 此处赋值权限实际未生效，需要在最终打tar.gz包(即txle根目录下的pom.xml关联的assembly.xml文件中)设置 -->
 			<includes>
-				<include>utx</include>
+				<include>txle</include>
 			</includes>
 		</fileSet>
 	</fileSets>

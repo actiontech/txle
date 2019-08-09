@@ -21,7 +21,7 @@ import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.health.model.Check;
 import com.ecwid.consul.v1.session.model.NewSession;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
 import static org.apache.servicecomb.saga.common.EventType.*;
-import static org.apache.servicecomb.saga.common.UtxConstants.CONSUL_LEADER_KEY;
-import static org.apache.servicecomb.saga.common.UtxConstants.CONSUL_LEADER_KEY_VALUE;
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY;
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
 
 public class EventScanner implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -46,7 +46,7 @@ public class EventScanner implements Runnable {
   private final TxTimeoutRepository timeoutRepository;
   private final OmegaCallback omegaCallback;
   private IKafkaMessageProducer kafkaMessageProducer;
-  private UtxMetrics utxMetrics;
+  private TxleMetrics txleMetrics;
 
   private final int eventPollingInterval;
 
@@ -72,7 +72,7 @@ public class EventScanner implements Runnable {
       TxTimeoutRepository timeoutRepository,
       OmegaCallback omegaCallback,
       IKafkaMessageProducer kafkaMessageProducer,
-      UtxMetrics utxMetrics,
+      TxleMetrics txleMetrics,
       int eventPollingInterval,
       ConsulClient consulClient,
       Object... params) {
@@ -82,7 +82,7 @@ public class EventScanner implements Runnable {
     this.timeoutRepository = timeoutRepository;
     this.omegaCallback = omegaCallback;
     this.kafkaMessageProducer = kafkaMessageProducer;
-    this.utxMetrics = utxMetrics;
+    this.txleMetrics = txleMetrics;
     this.eventPollingInterval = eventPollingInterval;
     this.consulClient = consulClient;
     this.serverName = params[0] + "";
@@ -112,7 +112,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
             () -> {
               try {
-                if (consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
+                if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
                   LOG.error("Session " + serverName + "-" + serverPort + " is leader.");
 
                   // 未防止出现部分事务在未检测超时前就已经结束的情况，此处将超时检测单开一个线程，否则其它方法如果执行超过了事务的超时时间，那么下次超时检测将在事务之后检测了，此时事务已经正常结束了
@@ -122,7 +122,7 @@ public class EventScanner implements Runnable {
                 }
               } catch (Exception e) {
                 // to avoid stopping this scheduler in case of exception By Gannalyo
-                LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to detect timeout in scheduler.", e);
+                LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to detect timeout in scheduler.", e);
               }
             },
             0,
@@ -132,7 +132,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
 				() -> {
 					try {
-                      if (consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
+                      if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
 //                        updateTimeoutStatus();
 //						findTimeoutEvents();
 //						abortTimeoutEvents();
@@ -146,7 +146,7 @@ public class EventScanner implements Runnable {
                       }
 					} catch (Exception e) {
 						// to avoid stopping this scheduler in case of exception By Gannalyo
-						LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to execute method 'compensate' in scheduler.", e);
+						LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to execute method 'compensate' in scheduler.", e);
 					}
 				},
         0,
@@ -190,7 +190,7 @@ public class EventScanner implements Runnable {
         commandRepository.saveWillCompensateCommandsForTimeout(abortedEvent.globalTxId());
 
 //        boolean isRetried = eventRepository.checkIsRetriedEvent(abortedEvent.type());
-//        utxMetrics.countTxNumber(abortedEvent, true, isRetried);
+//        txleMetrics.countTxNumber(abortedEvent, true, isRetried);
 
 //      if (timeout.type().equals(TxStartedEvent.name())) {
 //        eventRepository.findTxStartedEvent(timeout.globalTxId(), timeout.localTxId())
@@ -363,7 +363,7 @@ public class EventScanner implements Runnable {
         unendedMinEventIdSelectCount.set(0);
       }
     } catch (Exception e) {
-      LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to get the min id of global transaction which is not ended.", e);
+      LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to get the min id of global transaction which is not ended.", e);
     }
   }
 
@@ -376,6 +376,7 @@ public class EventScanner implements Runnable {
    * The Session, Checks and Services have to be destroyed/deregistered before shutting down JVM, so that the lock of leader key could be released.
    */
   private String registerConsulSession() {
+    if (consulClient == null) return null;
     String consulSessionId = null;
     try {
       // To create a key for leader election no matter if it is exists.

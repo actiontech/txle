@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS Message (
   createtime TIMESTAMP NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS utx_globalTxId_index ON Message(globaltxid);
+CREATE INDEX IF NOT EXISTS txle_globalTxId_index ON Message(globaltxid);
 
 
 CREATE TABLE IF NOT EXISTS Config (
