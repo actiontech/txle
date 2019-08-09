@@ -1,62 +1,78 @@
-# Action Global Transaction
+# txle | [中文](README_ZH.md)
+[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
 
-# Saga | [中文](README_ZH.md) [![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
-Apache ServiceComb (incubating) Saga is an eventually data consistency solution for micro-service applications. Transactions are commited directly in the try phase and compensated in reverse order in the rollback phase comparing to [TCC](http://design.inf.usi.ch/sites/default/files/biblio/rest-tcc.pdf). 
+[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
 
-## Features
-* High availability. The coordinator is stateless and thus can have multiple instances.
-* High reliability. All transaction events are stored in database permanently.
-* High performance. Transaction events are reported to coordinator via gRPC and transaction payloads are serialized/deserialized by Kyro.
-* Low invasion. All you need to do is add 2-3 annotations and the corresponding compensate methods.
-* Easy to deploy. All components can boot via docker.
-* Support both forward(retry) and backward(compensate) recovery.
+## What is txle?
+txle is a distributed transaction solution and can guarantee the final consistency of the business data.
+## Feature
+* Multiple ways to guarantee the final consistency of the business data.
+* High performance. QPS is 5000 or so and TPS is 50000 or so.
+* Low invasion. It can work by setting 2 annotations.
+* Support quick start by Docker.
+* Support service degradation. No effect to main business in case of irresistible factors.
+* Support for exception snapshot processing.
+* Support both timeout and retry.
 
 ## Architecture
-Saga is composed of  **alpha** and **omega**.
-* The alpha plays as the coordinator. It is responsible for the management of transactions.
-* The omega plays as an agent inside the micro-service. It intercepts incoming/outgoing requests and reports transaction events to alpha.
 
-The following diagram shows the relationships among alpha, omega and services.
-![Saga Pack Architecture](docs/static_files/pack.png)
+![txle architecture](docs/txle-architecture.png)
 
-See [Saga Pack Design](docs/design.md) for details. 
+## Quick start
+### Step 1: Download txle Release
+[Download](https://github.com/actiontech/txle/releases) the release and un-tar it.
 
-## Get Started
-* For ServiceComb Java Chassis application, please see [Booking Demo](saga-demo/saga-servicecomb-demo/README.md) for details.
-* For Spring applications, please see [Booking Demo](saga-demo/saga-spring-demo/README.md) for details.
-* For Dubbo applications, please see [Dubbo Demo](saga-demo/saga-dubbo-demo/README.md) for details.
+```bash
+# tar -xzf actiontech-txle-$version.tar.gz
+# mv actiontech-txle-$version txle
+# cd txle
+```
+### Step 2: Preparation
+* MySQL Instance
 
-## Build and Run the tests from source
-* Build the source code and run the tests
-   ```bash
-      $ mvn clean install
-   ```
-* Build the source demo docker images and run the accept tests
-   ```bash
-      $ mvn clean install -Pdemo,docker
-   ```   
-* Current Saga code supports Spring Boot 1.x and Spring Boot 2.x at the same time, saga uses Spring Boot 1.x by default, you can use *-Pspring-boot-2* to switch Spring Boot version to 2.x.
-Since Spring Boot supports JDK9 since 2.x, if you want to build and run test the Saga with JDK9 or JDK10, you need to use the spring-boot-2 profile. 
-   ```bash
-      $ mvn clean install -Pdemo,docker,spring-boot-2
-   ```   
+    Start a MySQL Instance in your machine where the txle service is deployed. And create a database called 'txle', a user called 'test' and the password is '123456'.
 
-## User Guide
-How to build and use can refer to [User Guide](docs/user_guide.md).
+* JVM
 
-## Get The Latest Release
+    Install Java 1.8 or later in your machine and make sure the JAVA_HOME configuration is correct.
 
-[Download Saga](http://servicecomb.incubator.apache.org/release/saga-downloads/)
+### Step 3: Start erver
+```bash
+# ./txle start
+Starting the txle server....
+Start successfully!
+```
+### Step 4: Stop server
 
-## [FAQ](FAQ.md)
+```bash
+# ./txle stop
+Stopping the txle server....
+Stop successfully!
+```
 
-## Contact Us
-* [issues](https://issues.apache.org/jira/browse/SCB)
-* [gitter](https://gitter.im/ServiceCombUsers/Lobby)
-* mailing list: [subscribe](mailto:dev-subscribe@servicecomb.incubator.apache.org) [view](https://lists.apache.org/list.html?dev@servicecomb.apache.org)
+## Official website
 
-## Contributing
-See [Pull Request Guide](http://servicecomb.incubator.apache.org/developers/submit-codes/) for details.
+For more information, please visit the [Official website](https://opensource.actionsky.com/).
 
-## License
-Licensed under an [Apache 2.0 license](https://github.com/apache/incubator-servicecomb-saga/blob/master/LICENSE).
+## Contribution
+
+Contributions are welcomed and greatly appreciated. See [CONTRIBUTION.md](https://github.com/actiontech/txle/docs/CONTRIBUTION.md) for details on submitting patches and the contribution workflow.
+
+## Community TODO
+
+* IRC: [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/txle.png)](https://kiwiirc.com/client/irc.freenode.net/?nick=user|?&theme=cli#txle)
+* QQ group: 669663113
+* [If you're using txle, please let us know.](https://wj.qq.com/s/2291106/09f4)
+* wechat subscription QR code
+  
+  ![dble](./docs/QR_code.png)
+
+## Contact us
+
+txle has enterprise support plans, you may contact our sales team:
+
+- Global Sales: 400-820-6580
+- North China: 86-13718877200, Mr.Wang
+- South China: 86-18503063188, Mr.Cao
+- East China: 86-18930110869, Mr.Liang
+- South-West China: 86-13540040119, Mr.Hong

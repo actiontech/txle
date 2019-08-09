@@ -2,7 +2,7 @@ package org.apache.servicecomb.saga.omega.transaction.autocompensate;
 
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
@@ -56,33 +56,33 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 				}
 			});
 			standbyParams.put("ids", ids);
-			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "The primary keys info is [" + primaryKeyName + " = " + ids.toString() + "] to table [" + tableName + "].");
+			LOG.debug(TxleConstants.logDebugPrefixWithTime() + "The primary keys info is [" + primaryKeyName + " = " + ids.toString() + "] to table [" + tableName + "].");
 
 			// 4.take the new data out
 			List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
 
-			// 5.save utx_undo_log
-//			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + UtxConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
+			// 5.save txle_undo_log
+//			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + TxleConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
 			String compensateSql = constructCompensateSql(delegate, insertStatement, tableName, newDataList);
 
 			// start to mark duration for business sql By Gannalyo.
 			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
 
-			boolean result = this.saveUtxUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
+			boolean result = this.saveTxleUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
 
 			// end mark duration for maintaining sql By Gannalyo.
 			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
 			return  result;
 		} catch (SQLException e) {
-			LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for insert SQL.", e);
+			LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for insert SQL.", e);
 			throw e;
 		} finally {
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (SQLException e) {
-					LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for insert SQL.", e);
+					LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for insert SQL.", e);
 				}
 			}
 		}
@@ -90,7 +90,7 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 	
 	private String constructCompensateSql(PreparedStatement delegate, MySqlInsertStatement insertStatement, String tableName, List<Map<String, Object>> newDataList) throws SQLException {
 		if (newDataList == null || newDataList.isEmpty()) {
-			throw new SQLException(UtxConstants.LOG_ERROR_PREFIX + "Could not get the new data when constructed the 'compensateSql' for executing insert SQL.");
+			throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Could not get the new data when constructed the 'compensateSql' for executing insert SQL.");
 		}
 		
 		Map<String, String> columnNameType = this.selectColumnNameType(delegate, tableName);
@@ -99,7 +99,7 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 			this.resetColumnValueByDBType(columnNameType, dataMap);
 			String whereSqlForCompensation = this.constructWhereSqlForCompensation(dataMap);
 			
-			String compensateSql = String.format("DELETE FROM %s WHERE %s" + UtxConstants.ACTION_SQL + ";", tableName, whereSqlForCompensation);
+			String compensateSql = String.format("DELETE FROM %s WHERE %s" + TxleConstants.ACTION_SQL + ";", tableName, whereSqlForCompensation);
 			if (compensateSqls.length() == 0) {
 				compensateSqls.append(compensateSql);
 			} else {

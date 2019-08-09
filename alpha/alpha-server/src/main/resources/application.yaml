@@ -19,15 +19,14 @@ server:
 
 alpha:
   server:
-    host: localhost
+    host: 127.0.0.1
     port: 8080
+
 spring:
   profiles:
     active: mysql
   application:
     name: txle
-  zipkin:
-    base-url: http://10.186.61.3:9411/api/v2/spans
 
 ---
 spring:
@@ -47,7 +46,7 @@ spring:
   datasource:
     username: postgres
     password: 123456
-    url: jdbc:postgresql://localhost:5432/saga?useSSL=false
+    url: jdbc:postgresql://127.0.0.1:5432/saga?useSSL=false
     platform: postgresql
 #    continue-on-error: true
 
@@ -57,8 +56,8 @@ spring:
   datasource:
     username: root
     password: 123456
-#    url: jdbc:mysql://10.186.61.3:3306/utx?useSSL=false
-    url: jdbc:mysql://10.186.61.3:3306/utx?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
+#    url: jdbc:mysql://10.186.61.3:3306/txle?useSSL=false
+    url: jdbc:mysql://10.186.61.3:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
 #    driver-class-name    it'll get an error if open it, and don't know why so far.
 #    driver-class-name: com.mysql.jdbc.driver
     platform: mysql
@@ -81,13 +80,12 @@ spring:
 #  aop:
 #    auto: true
 #    proxy-target-class: org.springframework.data.jpa.repository.JpaRepository
-
----
-spring:
+  zipkin:
+    base-url: http://127.0.0.1:9411/api/v2/spans
   cloud:
     consul:
-      enabled: true
-      host: 10.186.61.3
+      enabled: false
+      host: 127.0.0.1
       port: 8500
       discovery:
         enabled: true
@@ -96,16 +94,17 @@ spring:
         healthCheckPath: /health
         healthCheckInterval: 10s
         instanceId: ${spring.application.name}-${alpha.server.host}-${random.value}
-        tags: alpha-server-host=${alpha.server.host},alpha-server-port=${alpha.server.port}
+        tags: txle-server-host=${alpha.server.host},txle-server-port=${alpha.server.port}
+
 # config port for prometheus' metrics server. By Gannalyo
-utx:
+txle:
   prometheus:
     metrics:
       port: 8099
   accident:
     platform:
       address:
-        api: http://192.168.2.187:8000/receiveFailedGlobalTxInfo
+        api: http://127.0.0.1:8000/receiveFailedGlobalTxInfo
       retry:
         retries: 3
         interval: 1

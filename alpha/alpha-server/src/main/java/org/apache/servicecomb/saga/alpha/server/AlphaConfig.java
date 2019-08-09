@@ -62,19 +62,19 @@ class AlphaConfig {
   @Value("${alpha.compensation.retry.delay:3000}")
   private int delay;
 
-  @Value("${utx.prometheus.metrics.port:-1}")
+  @Value("${txle.prometheus.metrics.port:-1}")
   private String promMetricsPort;
 
-  @Value("${utx.accident.platform.address.api:\"\"}")
+  @Value("${txle.accident.platform.address.api:\"\"}")
   private String accidentPlatformAddress;
 
-  @Value("${utx.accident.platform.retry.retries:3}")
+  @Value("${txle.accident.platform.retry.retries:3}")
   private int retries;
 
-  @Value("${utx.accident.platform.retry.interval:1}")
+  @Value("${txle.accident.platform.retry.interval:1}")
   private int interval;
 
-  @Autowired
+  @Autowired(required = false)
   private ConsulClient consulClient;
 
   @Value("${spring.application.name:\"\"}")
@@ -126,8 +126,8 @@ class AlphaConfig {
   IDataDictionaryService dataDictionaryService(DataDictionaryEntityRepository dataDictionaryEntityRepository) { return new DataDictionaryService(dataDictionaryEntityRepository); }
 
   @Bean
-  UtxJpaRepositoryInterceptor utxJpaRepositoryInterceptor() {
-    return new UtxJpaRepositoryInterceptor();
+  TxleJpaRepositoryInterceptor txleJpaRepositoryInterceptor() {
+    return new TxleJpaRepositoryInterceptor();
   }
 
   @Bean
@@ -152,13 +152,13 @@ class AlphaConfig {
       Map<String, Map<String, OmegaCallback>> omegaCallbacks,
       IKafkaMessageProducer kafkaMessageProducer,
       IConfigCenterService dbDegradationConfigService,
-      UtxMetrics utxMetrics,
+      TxleMetrics txleMetrics,
       Tracing tracing,
       IAccidentHandlingService accidentHandlingService) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
-        omegaCallback, kafkaMessageProducer, utxMetrics, eventPollingInterval, consulClient, serverName, serverPort, consulInstanceId).run();
+        omegaCallback, kafkaMessageProducer, txleMetrics, eventPollingInterval, consulClient, serverName, serverPort, consulInstanceId).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
@@ -179,8 +179,8 @@ class AlphaConfig {
   }
 
   @Bean
-  public UtxMetrics utxMetrics() {
-    return new UtxMetrics(promMetricsPort);
+  public TxleMetrics txleMetrics() {
+    return new TxleMetrics(promMetricsPort);
   }
 
   @Bean

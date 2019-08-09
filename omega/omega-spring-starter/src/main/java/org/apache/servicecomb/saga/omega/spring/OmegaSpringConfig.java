@@ -41,7 +41,7 @@ import java.util.Arrays;
 @Configuration
 class OmegaSpringConfig {
 
-  @Value("${utx.prometheus.metrics.port:8098}")
+  @Value("${txle.prometheus.metrics.port:8098}")
   private String promMetricsPort;
 
   @Bean(name = {"omegaUniqueIdGenerator"})
@@ -85,8 +85,8 @@ class OmegaSpringConfig {
   }
 
   @Bean
-  UtxStaticConfig utxStaticConfig() {
-    return new UtxStaticConfig();
+  TxleStaticConfig txleStaticConfig() {
+    return new TxleStaticConfig();
   }
 
   @Bean

@@ -11,15 +11,15 @@ import javax.persistence.Table;
 import com.alibaba.fastjson.JSON;
 
 /**
- * An entity mapping to database table 'utx_undo_log'.
+ * An entity mapping to database table 'txle_undo_log'.
  * recommendation: it's better to give lower names to fields, if not, it will bring trouble to you on variety of databases. 
  * 
  * @author Gannalyo
  * @since 2018-07-30
  */
 @Entity
-@Table(name = "utx_undo_log")
-public class UtxUndoLogEntity {
+@Table(name = "txle_undo_log")
+public class TxleUndoLogEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long id;
@@ -117,11 +117,11 @@ public class UtxUndoLogEntity {
 		this.lastmodifytime = lastmodifytime;
 	}
 
-	public UtxUndoLogEntity() {
+	public TxleUndoLogEntity() {
 	}
 
-	public UtxUndoLogEntity(String globalTxId, String localTxId, String executeSql, String compensateSql, String originalInfo, int status,
-							String server, Date createTime, Date lastModifyTime) {
+	public TxleUndoLogEntity(String globalTxId, String localTxId, String executeSql, String compensateSql, String originalInfo, int status,
+							 String server, Date createTime, Date lastModifyTime) {
 		this.globaltxid = globalTxId;
 		this.localtxid = localTxId;
 		this.executesql = executeSql;

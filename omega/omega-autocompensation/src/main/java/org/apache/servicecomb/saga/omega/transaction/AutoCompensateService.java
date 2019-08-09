@@ -1,7 +1,7 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
 import com.google.gson.JsonObject;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandleType;
 import org.apache.servicecomb.saga.omega.transaction.accidentplatform.ClientAccidentHandlingService;
 import org.apache.servicecomb.saga.omega.transaction.repository.IAutoCompensateDao;
@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -40,19 +39,19 @@ public class AutoCompensateService implements IAutoCompensateService {
 	public boolean executeAutoCompensateByLocalTxId(String globalTxId, String localTxId) {
 		AtomicInteger result = new AtomicInteger(0);
         try {autoCompensateDao.setDataSource(DataSourceMappingCache.get(localTxId)); } catch (Exception e){LOG.error("Failed to change datasource globalTxId [{}], localTxId [{}].", globalTxId, localTxId, e);}
-        final List<Map<String, Object>> utxUndoLogList;
+        final List<Map<String, Object>> txleUndoLogList;
         try {
-        	utxUndoLogList = autoCompensateDao.execute("SELECT * FROM utx_undo_log T WHERE T.globalTxId = ? AND T.localTxId = ?", globalTxId, localTxId);
+        	txleUndoLogList = autoCompensateDao.execute("SELECT * FROM txle_undo_log T WHERE T.globalTxId = ? AND T.localTxId = ?", globalTxId, localTxId);
 		} catch (Exception e) {
 			reportMsgToAccidentPlatform(globalTxId, localTxId, "", "Failed to select undo_log info, " + e.getMessage());
 			return false;
 		}
-		if (utxUndoLogList == null || utxUndoLogList.isEmpty()) {
+		if (txleUndoLogList == null || txleUndoLogList.isEmpty()) {
 			reportMsgToAccidentPlatform(globalTxId, localTxId, "", "The undo_log info is empty.");
 			return false;
 		}
 
-		utxUndoLogList.forEach(map -> {
+		txleUndoLogList.forEach(map -> {
 			String[] compensateSqlArr;
 			try {
 				compensateSqlArr = map.get("compensateSql").toString().split(";\n");
@@ -65,7 +64,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 				try {
 					if (autoCompensateDao.executeAutoCompensateSql(compensateSql)) {
 						result.incrementAndGet();
-						LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Successfully to execute AutoCompensable SQL [[{}]]", compensateSql);
+						LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Successfully to execute AutoCompensable SQL [[{}]]", compensateSql);
 					} else {
 						reportMsgToAccidentPlatform(globalTxId, localTxId, compensateSql, "Got false value after executing AutoCompensable SQL [" + compensateSql + "].");
 					}
@@ -75,7 +74,7 @@ public class AutoCompensateService implements IAutoCompensateService {
 			}
 		});
 
-		// TODO to update compensation status in utx_undo_log.
+		// TODO to update compensation status in txle_undo_log.
 		return result.get() > 0;
 	}
 
@@ -89,9 +88,9 @@ public class AutoCompensateService implements IAutoCompensateService {
 			jsonParams.addProperty("bizinfo", bizinfo);
 			jsonParams.addProperty("remark", remark);
 			clientAccidentHandlingService.reportMsgToAccidentPlatform(jsonParams.toString());
-			LOG.error(UtxConstants.logErrorPrefixWithTime() + "Fail to execute AutoCompensable jsonParams [{}]", jsonParams.toString());
+			LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to execute AutoCompensable jsonParams [{}]", jsonParams.toString());
 			// 不要抛出异常，否则org.apache.servicecomb.saga.omega.context.CompensationContext中报(IllegalAccessException | InvocationTargetException)错误
-			// throw new RuntimeException(UtxConstants.logErrorPrefixWithTime() + "Failed to execute AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
+			// throw new RuntimeException(TxleConstants.logErrorPrefixWithTime() + "Failed to execute AutoCompensable SQL [" + compensateSql + "], result [" + tempResult + "]");
 		} catch (Exception e) {
 			LOG.error("Failed to report accident for method 'executeAutoCompensateByLocalTxId', params [{}].", jsonParams.toString(), e);
 		}

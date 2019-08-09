@@ -17,7 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 
 public class OmegaException extends RuntimeException {
   public OmegaException(String message) {
@@ -25,6 +25,6 @@ public class OmegaException extends RuntimeException {
   }
 
   public OmegaException(String cause, Throwable throwable) {
-    super(UtxConstants.logErrorPrefixWithTime() + cause, throwable);
+    super(TxleConstants.logErrorPrefixWithTime() + cause, throwable);
   }
 }

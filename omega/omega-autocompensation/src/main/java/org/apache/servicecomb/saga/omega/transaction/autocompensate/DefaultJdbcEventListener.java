@@ -151,7 +151,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
 
                     AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), false, standbyParams);
 
-                    // To construct business information, and then report to the UTX Server.
+                    // To construct business information, and then report to the txle Server.
                     constructBusinessInfoToServer(standbyParams);
                 }
             }
@@ -248,7 +248,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
     public void onAfterStatementClose(SQLException e) {
     }
 
-    // To construct business information, and then report to the UTX Server.
+    // To construct business information, and then report to the txle Server.
     private void constructBusinessInfoToServer(Map<String, Object> standbyParams) {
         final Logger LOG = LoggerFactory.getLogger(PreparedStatementWrapper.class);
         try {

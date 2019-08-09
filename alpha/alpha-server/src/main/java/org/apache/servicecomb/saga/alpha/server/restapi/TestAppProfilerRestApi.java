@@ -12,12 +12,12 @@ import java.util.Map;
 @RestController
 public class TestAppProfilerRestApi {
 	private static final Logger LOG = LoggerFactory.getLogger(TestAppProfilerRestApi.class);
-	private static final Gauge UTX_METRIC_TEST = Gauge.build("utx_metric_test", "test metric help").register();
+	private static final Gauge TXLE_METRIC_TEST = Gauge.build("txle_metric_test", "test metric help").register();
 
 	@GetMapping("/testMetric")
 	public String testMetric() {
-		UTX_METRIC_TEST.inc();
-		return UTX_METRIC_TEST.get() + "";
+		TXLE_METRIC_TEST.inc();
+		return TXLE_METRIC_TEST.get() + "";
 	}
 
 	@GetMapping("/cpu/increaseUsage")

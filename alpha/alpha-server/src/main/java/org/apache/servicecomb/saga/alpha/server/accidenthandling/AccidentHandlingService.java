@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
-import org.apache.servicecomb.saga.alpha.core.UtxMetrics;
+import org.apache.servicecomb.saga.alpha.core.TxleMetrics;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleStatus;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandling;
@@ -13,7 +13,7 @@ import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandling
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +47,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
     TxEventRepository eventRepository;
 
     @Autowired
-    UtxMetrics utxMetrics;
+    TxleMetrics txleMetrics;
 
     @Autowired
     private IDataDictionaryService dataDictionaryService;
@@ -94,7 +94,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
     @Override
     public boolean reportMsgToAccidentPlatform(String jsonParams) {
         long a = System.currentTimeMillis();
-        LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Message [[{}]] will send to Accident Platform [" + this.accidentPlatformAddress + "].", jsonParams);
+        LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Message [[{}]] will send to Accident Platform [" + this.accidentPlatformAddress + "].", jsonParams);
         AtomicBoolean result = new AtomicBoolean();
         AtomicInteger invokeTimes = new AtomicInteger();
 
@@ -108,12 +108,12 @@ public class AccidentHandlingService implements IAccidentHandlingService {
                 if (result.get()) {
                     accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_OK.toInteger());
                     scheduler.shutdownNow();
-                    utxMetrics.countSuccessfulNumber();// TODO prometheus内部方法持续循环，无法该行代码后的代码
+                    txleMetrics.countSuccessfulNumber();// TODO prometheus内部方法持续循环，无法该行代码后的代码
                 } else if (invokeTimes.incrementAndGet() > 1 + this.retries) {
                     accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_FAIL.toInteger());
-                    LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
+                    LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
                     scheduler.shutdownNow();
-                    utxMetrics.countFailedNumber();
+                    txleMetrics.countFailedNumber();
                 } else {
                     // To report accident to Accident Platform.
                     result.set(reportTask(jsonParams));
@@ -121,8 +121,8 @@ public class AccidentHandlingService implements IAccidentHandlingService {
                 // 下一次执行会在本次任务完全执行后的interval时间后执行，如本次任务花费5s，interval为1s，那么将在6s后执行下次任务，而非1s后执行
             }, 0, interval, TimeUnit.SECONDS);
         } catch (Exception e) {
-            LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
-            utxMetrics.countFailedNumber();
+            LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
+            txleMetrics.countFailedNumber();
         }
         LOG.info("Method 'AccidentPlatformService.reportMsgToAccidentPlatform' took {} milliseconds.", System.currentTimeMillis() - a);
 
@@ -245,7 +245,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
             headers.setContentType(mediaType);
             HttpEntity<String> entity = new HttpEntity<>(jsonParams, headers);
             String reportResponse = restTemplate.postForObject(this.accidentPlatformAddress, entity, String.class);
-            result = UtxConstants.OK.equals(reportResponse);
+            result = TxleConstants.OK.equals(reportResponse);
         } catch (Exception e) {
             LOG.error("Failed to report msg [{}] to Accident Platform [{}].", jsonParams, this.accidentPlatformAddress, e);
         }

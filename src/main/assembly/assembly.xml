@@ -15,16 +15,16 @@
 			<!-- alpha打包文件信息 -->
 			<directory>alpha/alpha-server/target/alpha-server-${version}</directory>
 			<excludes>
-				<exclude>/bin/utx</exclude>
+				<exclude>/bin/txle</exclude>
 			</excludes>
 			<outputDirectory></outputDirectory>
 		</fileSet>
 		<fileSet>
-			<!-- alpha打包文件信息，为utx文件赋值可执行权限 -->
+			<!-- alpha打包文件信息，为txle文件赋值可执行权限 -->
 			<directory>alpha/alpha-server/target/alpha-server-${version}/bin</directory>
 			<outputDirectory>/bin</outputDirectory>
 			<includes>
-				<include>utx</include>
+				<include>txle</include>
 			</includes>
 			<fileMode>0755</fileMode>
 		</fileSet>

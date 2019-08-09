@@ -3,7 +3,7 @@ package org.apache.servicecomb.saga.omega.transaction;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.annotations.AutoCompensable;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -41,14 +41,14 @@ public class AutoCompensableAspect {
 		try {
 			method = ((MethodSignature) joinPoint.getSignature()).getMethod();
 			String localTxId = context.newLocalTxId();
-			LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Updated context [{}] for autoCompensable method [{}] ", context, method.toString());
+			LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Updated context [{}] for autoCompensable method [{}] ", context, method.toString());
 
 			int retries = autoCompensable.retries();
 			AutoCompensableRecoveryPolicy recoveryPolicy = AutoCompensableRecoveryPolicyFactory.getRecoveryPolicy(retries);
 			
 			return recoveryPolicy.apply(joinPoint, autoCompensable, autoCompensableInterceptor, context, localTxId, retries, autoCompensateService);
 		} catch (Throwable e) {
-			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompensableAspect, context [{}], method [{}]", context,
+			LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompensableAspect, context [{}], method [{}]", context,
 					method == null ? "" : method.toString(), e);
 			throw e;
 		}

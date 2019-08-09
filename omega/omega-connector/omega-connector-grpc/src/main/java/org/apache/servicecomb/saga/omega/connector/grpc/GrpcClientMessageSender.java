@@ -22,12 +22,12 @@ package org.apache.servicecomb.saga.omega.connector.grpc;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender.ErrorHandlerFactory;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
 import org.apache.servicecomb.saga.omega.context.ServiceConfig;
-import org.apache.servicecomb.saga.omega.context.UtxStaticConfig;
+import org.apache.servicecomb.saga.omega.context.TxleStaticConfig;
 import org.apache.servicecomb.saga.omega.transaction.*;
 import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandling;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
@@ -103,7 +103,7 @@ public class GrpcClientMessageSender implements MessageSender {
 //    blockingEventService.withDeadlineAfter(5, TimeUnit.SECONDS);// TODO 设置本次通信的超时时间
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
 	while (grpcAck.getPaused()) {// It's a manual operation to pause transaction, so it can accept to pause for one minute.
-      try {Thread.sleep(UtxStaticConfig.getIntegerConfig("utx.transaction.pause-check-interval", 60) * 1000);} catch (InterruptedException e) {}
+      try {Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60) * 1000);} catch (InterruptedException e) {}
 		grpcAck = blockingEventService.onTxEvent(convertEvent(event));
 		if (!grpcAck.getPaused()) {
 			break;
@@ -117,7 +117,7 @@ public class GrpcClientMessageSender implements MessageSender {
   public Set<String> send(Set<String> localTxIdSet) {
     ByteString payloads = ByteString.copyFrom(serializer.serialize(localTxIdSet.toArray()));
 
-    Builder builder = GrpcTxEvent.newBuilder().setCategory(UtxConstants.SPECIAL_KEY).setPayloads(payloads);
+    Builder builder = GrpcTxEvent.newBuilder().setCategory(TxleConstants.SPECIAL_KEY).setPayloads(payloads);
     GrpcTxEvent grpcTxEvent = builder.build();
     blockingEventService.onTxEvent(grpcTxEvent);
 

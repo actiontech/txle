@@ -47,7 +47,7 @@ public class UIRestApi {
     private IDataDictionaryService dataDictionaryService;
 
     @Autowired
-    UtxMetrics utxMetrics;
+    TxleMetrics txleMetrics;
 
     @Autowired
     IAccidentHandlingService accidentHandlingService;
@@ -240,7 +240,7 @@ public class UIRestApi {
                         eventRepository.save(endedEvent);
                     }
                     CacheRestApi.enabledConfigMap.clear();
-                    utxMetrics.countTxNumber(event, false, false);
+                    txleMetrics.countTxNumber(event, false, false);
                 }
             });
         } catch (Exception e) {
@@ -287,7 +287,7 @@ public class UIRestApi {
                     if (globalTxIdList.contains(event.globalTxId())) {
                         TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaPausedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
-                        utxMetrics.countTxNumber(event, false, false);
+                        txleMetrics.countTxNumber(event, false, false);
                     }
                 });
             }
@@ -338,7 +338,7 @@ public class UIRestApi {
                         TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
                         CacheRestApi.enabledConfigMap.clear();
-                        utxMetrics.countTxNumber(event, false, false);
+                        txleMetrics.countTxNumber(event, false, false);
                     }
                 });
             }

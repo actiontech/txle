@@ -1,7 +1,7 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
 import org.apache.servicecomb.saga.common.ConfigCenterType;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
@@ -36,7 +36,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 			AutoCompensableInterceptor interceptor, OmegaContext context, String parentTxId, int retries, IAutoCompensateService autoCompensateService)
 			throws Throwable {
 		Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
-		LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Intercepting autoCompensable method {} with context {}", method.toString(), context);
+		LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Intercepting autoCompensable method {} with context {}", method.toString(), context);
 
 		// String retrySignature = (retries != 0 || compensationSignature.isEmpty()) ? method.toString() : "";
 		String retrySignature = "";
@@ -48,7 +48,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 			// Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
 			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, false));
 
-			AlphaResponse response = interceptor.preIntercept(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD, compensable.timeout(),
+			AlphaResponse response = interceptor.preIntercept(parentTxId, TxleConstants.AUTO_COMPENSABLE_METHOD, compensable.timeout(),
 					retrySignature, retries, joinPoint.getArgs());
 			enabledTx = response.enabledTx();
 			CurrentThreadOmegaContext.getContextFromCurThread().setIsEnabledAutoCompensateTx(enabledTx);
@@ -59,25 +59,25 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 			if (enabledTx) {
 				if (response.aborted()) {
 					context.setLocalTxId(parentTxId);
-					throw new InvalidTransactionException(UtxConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId
+					throw new InvalidTransactionException(TxleConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId
 							+ " because global transaction " + context.globalTxId() + " has already aborted.");
 				}
 
 				CurrentThreadOmegaContext.clearCache();
 
 				// To submit the TxEndedEvent.
-				interceptor.postIntercept(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD);
+				interceptor.postIntercept(parentTxId, TxleConstants.AUTO_COMPENSABLE_METHOD);
 			}
 
 			return result;
 		} catch (InvalidTransactionException e) {
 			throw e;
 		} catch (Throwable e) {
-			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Fail to proceed business, context {}, method {}", context, method.toString(), e);
+			LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Fail to proceed business, context {}, method {}", context, method.toString(), e);
 
 			boolean isFaultTolerant = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.CompensationFaultTolerant.toInteger(), context.category()).getStatus();
 			if (enabledTx && !isFaultTolerant) {
-				interceptor.onError(parentTxId, UtxConstants.AUTO_COMPENSABLE_METHOD, e);
+				interceptor.onError(parentTxId, TxleConstants.AUTO_COMPENSABLE_METHOD, e);
 			}
 
 			if (!isProceed && isFaultTolerant) {// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
@@ -104,7 +104,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 				executorService.shutdown();
 			}
 		} catch (Exception e) {
-			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to clear cache for the datasource mapping. " + e.getMessage());
+			LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to clear cache for the datasource mapping. " + e.getMessage());
 		}
 	}
 

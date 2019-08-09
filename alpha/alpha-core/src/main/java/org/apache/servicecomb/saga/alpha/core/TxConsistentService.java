@@ -52,7 +52,7 @@ public class TxConsistentService {
   private IConfigCenterService configCenterService;
 
 	@Autowired
-	UtxMetrics utxMetrics;
+    TxleMetrics txleMetrics;
 
 	@Autowired
 	private IDataDictionaryService dataDictionaryService;
@@ -67,16 +67,16 @@ public class TxConsistentService {
   }
 
   public boolean handle(TxEvent event) {
-	  utxMetrics.startMarkTxDuration(event);// start duration.
+	  txleMetrics.startMarkTxDuration(event);// start duration.
 	  if (types.contains(event.type()) && isGlobalTxAborted(event)) {
 		  LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted",
 				  event.type(), event.globalTxId());
-		  utxMetrics.endMarkTxDuration(event);// end duration.
+		  txleMetrics.endMarkTxDuration(event);// end duration.
 		  return false;
 	  }
 
 	  eventRepository.save(event);
-	  utxMetrics.endMarkTxDuration(event);// end duration.
+	  txleMetrics.endMarkTxDuration(event);// end duration.
 
 	  return true;
   }
@@ -87,14 +87,14 @@ public class TxConsistentService {
 	 * @author Gannalyo
 	 */
 	public int handleSupportTxPause(TxEvent event) {
-		utxMetrics.startMarkTxDuration(event);// start duration.
-		utxMetrics.countChildTxNumber(event);// child transaction count
+		txleMetrics.startMarkTxDuration(event);// start duration.
+		txleMetrics.countChildTxNumber(event);// child transaction count
 
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
 		if (isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
-			utxMetrics.countTxNumber(event, false, event.retries() > 0);
-			utxMetrics.endMarkTxDuration(event);// end duration.
+			txleMetrics.countTxNumber(event, false, event.retries() > 0);
+			txleMetrics.endMarkTxDuration(event);// end duration.
 			return -1;
 		}
 
@@ -171,8 +171,8 @@ public class TxConsistentService {
 					LOG.error("Failed to save event globalTxId {} localTxId {} type {}", globalTxId, localTxId, type, e);
 				}
 
-				utxMetrics.countTxNumber(event, false, event.retries() > 0);
-				utxMetrics.endMarkTxDuration(event);// end duration.
+				txleMetrics.countTxNumber(event, false, event.retries() > 0);
+				txleMetrics.endMarkTxDuration(event);// end duration.
 
 				// To send message to Kafka.
 				kafkaMessageProducer.send(event);
@@ -181,7 +181,7 @@ public class TxConsistentService {
 			return 1;
 		}
 
-		utxMetrics.endMarkTxDuration(event);// end duration.
+		txleMetrics.endMarkTxDuration(event);// end duration.
 
 		return 0;
 	}

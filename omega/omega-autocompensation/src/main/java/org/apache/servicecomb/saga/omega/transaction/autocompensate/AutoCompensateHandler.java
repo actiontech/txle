@@ -6,10 +6,10 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
-import org.apache.servicecomb.saga.omega.context.UtxStaticConfig;
+import org.apache.servicecomb.saga.omega.context.TxleStaticConfig;
 import org.apache.servicecomb.saga.omega.transaction.DataSourceMappingCache;
 import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
@@ -73,11 +73,11 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 		} else if (isBeforeNotice) {
 			standbyParams.clear();
 			// Default is closed, means that just does record, if it's open, then program will throw an exception about current special SQL, just for auto-compensation.
-			boolean checkSpecialSql = UtxStaticConfig.getBooleanConfig("utx.transaction.auto-compensation.check-special-sql", false);
+			boolean checkSpecialSql = TxleStaticConfig.getBooleanConfig("txle.transaction.auto-compensation.check-special-sql", false);
 			if (checkSpecialSql) {
-				throw new SQLException(UtxConstants.logErrorPrefixWithTime() + "Do not support sql [" + executeSql + "] to auto-compensation.");
+				throw new SQLException(TxleConstants.logErrorPrefixWithTime() + "Do not support sql [" + executeSql + "] to auto-compensation.");
 			} else {
-				LOG.debug(UtxConstants.logDebugPrefixWithTime() + "Do not support sql [{}] to auto-compensation, but it has been executed due to the switch 'checkSpecialSql' is closed.", executeSql);
+				LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Do not support sql [{}] to auto-compensation, but it has been executed due to the switch 'checkSpecialSql' is closed.", executeSql);
 			}
 		}
 	}
@@ -87,7 +87,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 	}
 
 	protected Map<String, String> selectColumnNameType(PreparedStatement delegate, String tableName) throws SQLException {
-		String sql = "SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL;
+		String sql = "SHOW FULL COLUMNS FROM " + tableName + TxleConstants.ACTION_SQL;
 
 		// start to mark duration for maintaining sql By Gannalyo.
 		ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
@@ -107,7 +107,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 	}
 
 	protected String parsePrimaryKeyColumnName(PreparedStatement delegate, SQLStatement sqlStatement, String tableName) throws SQLException {
-		String primaryKeyColumnName = "id", sql = "SHOW FULL COLUMNS FROM " + tableName + UtxConstants.ACTION_SQL;
+		String primaryKeyColumnName = "id", sql = "SHOW FULL COLUMNS FROM " + tableName + TxleConstants.ACTION_SQL;
 
 		// start to mark duration for maintaining sql By Gannalyo.
 		ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
@@ -161,17 +161,17 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 	}
 	
 	/**
-	 * To save auto-compensation info to data table 'utx_undo_log'.
+	 * To save auto-compensation info to data table 'txle_undo_log'.
 	 * 
 	 * @author Gannalyo
 	 * @since 2018-08-08
 	 */
-	public boolean saveUtxUndoLog(PreparedStatement delegate, String localTxId, String executeSql, String compensateSql, String originalDataJson, String server) throws SQLException {
+	public boolean saveTxleUndoLog(PreparedStatement delegate, String localTxId, String executeSql, String compensateSql, String originalDataJson, String server) throws SQLException {
 		int index = 1;
 		Timestamp currentTime = new Timestamp(System.currentTimeMillis());
 		PreparedStatement preparedStatement = null;
 		try {
-			String sql = "insert into utx_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)" + UtxConstants.ACTION_SQL;
+			String sql = "insert into txle_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)" + TxleConstants.ACTION_SQL;
 			preparedStatement = delegate.getConnection().prepareStatement(sql);
 			preparedStatement.setString(index++, CurrentThreadOmegaContext.getGlobalTxIdFromCurThread());
 			preparedStatement.setString(index++, localTxId);
@@ -193,7 +193,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
 
 			return result;
 		} catch (Exception e) {
-			LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to save undo_log, localTxId=[{}].", localTxId, e);
+			LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to save undo_log, localTxId=[{}].", localTxId, e);
 			return false;
 		} finally {
 			if (preparedStatement != null) {

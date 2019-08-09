@@ -37,7 +37,7 @@ import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceImplBase;
 import org.slf4j.Logger;
@@ -101,7 +101,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
     @Override
     public void onTxEvent(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
-        if (UtxConstants.SPECIAL_KEY.equals(message.getCategory())) {
+        if (TxleConstants.SPECIAL_KEY.equals(message.getCategory())) {
             fetchLocalTxIdOfEndedGlobalTx(message, responseObserver);
             return;
         }
@@ -123,9 +123,9 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
             } else if (EventType.TxStartedEvent.name().equals(message.getType())) {
                 result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
                 if (result) {// If the global transaction was not enabled, then two child transactions were regarded as disabled.
-                    if (!UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
+                    if (!TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
                         result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.Compensation);
-                    } else if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
+                    } else if (TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
                         result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.AutoCompensation);
                     }
                 }

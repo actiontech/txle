@@ -18,7 +18,7 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
 import org.apache.servicecomb.saga.common.ConfigCenterType;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.monitor.CompensableSqlMetrics;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ class CompensableInterceptor implements EventAwareInterceptor {
     try {
       CompensableSqlMetrics.setIsMonitorSql(sender.readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger(), context.category()).getStatus());
     } catch (Exception e) {
-      LOG.error(UtxConstants.LOG_ERROR_PREFIX + "Failed to execute method 'readConfigFromServer'.", e);
+      LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to execute method 'readConfigFromServer'.", e);
     }
   }
 }

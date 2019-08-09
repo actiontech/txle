@@ -18,7 +18,7 @@ cd ..
 
 DEPLOY_DIR=`pwd`
 
-SERVER_NAME=Utx
+SERVER_NAME=txle
 LIB_DIR=$DEPLOY_DIR/lib
 CONF_DIR=$DEPLOY_DIR/conf
 LOG_FILE="$DEPLOY_DIR/log/stdout.log"
@@ -37,18 +37,18 @@ for p_name in $@; do
         --debug) P_DEBUG="true" ;;
         --port=*) SERVER_PORT="-Dserver.port=$val" ; ONLY_PORT="$val";;
         --rpc-port=*) RPC_PORT="-Dalpha.server.port=$val";;
-        --metrics-port=*) METRICS_PORT="-Dutx.prometheus.metrics.port=$val";;
+        --metrics-port=*) METRICS_PORT="-Dtxle.prometheus.metrics.port=$val";;
         -ha) P_HA="true" ;;
     esac
 done
 
-UTXPIDFILE=$CONF_DIR/utx_server$ONLY_PORT.pid
+TXLEPIDFILE=$CONF_DIR/txle_server$ONLY_PORT.pid
 
 start() {
-    if [ ! -f "$UTXPIDFILE" ]; then
-	touch "$UTXPIDFILE"
+    if [ ! -f "$TXLEPIDFILE" ]; then
+	touch "$TXLEPIDFILE"
     else
-	PID=`cat "$UTXPIDFILE"`
+	PID=`cat "$TXLEPIDFILE"`
 	SERVER_STATUS=`ps -ef|grep -w "$PID" |grep -v "grep" |wc -l`
 	if [ $SERVER_STATUS -gt 0 ]; then
 		echo "warning: $SERVER_NAME server has been started!"
@@ -56,7 +56,7 @@ start() {
 		exit 1
 	else
 		# PIDFILE is existent, but it is not alive.
-		rm "$UTXPIDFILE"
+		rm "$TXLEPIDFILE"
 	fi
     fi
 
@@ -99,33 +99,33 @@ start() {
     nohup java $JAVA_OPTS $JAVA_MEM_OPTS $SERVER_PORT $RPC_PORT $METRICS_PORT -classpath $DEPLOY_DIR:$LIB_DIR:$CONF_DIR:$LIB_JARS $MAIN_CLASS > /dev/null 2>>$LOG_FILE &
 
     if [ $? -eq 0 ]; then
-	echo $! > "$UTXPIDFILE"
+	echo $! > "$TXLEPIDFILE"
     fi
 
     echo "Start successfully!"
-    echo "PID: `cat "$UTXPIDFILE"`"
+    echo "PID: `cat "$TXLEPIDFILE"`"
 }
 
 
 stop(){
-    if [ ! -f "$UTXPIDFILE" ]; then
+    if [ ! -f "$TXLEPIDFILE" ]; then
 	echo "ERROR: The $SERVER_NAME has not been started!"
 	exit 0
     fi
 
-    PID=`cat "$UTXPIDFILE"`
+    PID=`cat "$TXLEPIDFILE"`
     SERVER_STATUS=`ps -ef|grep -w "$PID" |grep -v "grep" |wc -l`
     if [ $SERVER_STATUS -eq 0 ]; then
 	# PIDFILE is existent, but it is not alive.
-	rm "$UTXPIDFILE"
+	rm "$TXLEPIDFILE"
 	echo "ERROR: The $SERVER_NAME has not been started!"
 	exit 0
     fi
 
-    echo -e "Stopping the $SERVER_NAME server ....\c"
+    echo -e "Stopping the $SERVER_NAME server....\c"
 
     kill "$PID" > /dev/null 2>&1
-    rm "$UTXPIDFILE"
+    rm "$TXLEPIDFILE"
 
     while :
     do
@@ -138,38 +138,38 @@ stop(){
     done
 
     if [ "$P_HA" == "true" ]; then
-        # stop service in systemd. it will give a mistake 'Job for utx.service canceled.' out when use the command 'systemctl restart utx.service'.
-        systemctl stop utx$ONLY_PORT.service
+        # stop service in systemd. it will give a mistake 'Job for txle.service canceled.' out when use the command 'systemctl restart txle.service'.
+        systemctl stop txle$ONLY_PORT.service
     fi
 
-    echo "stop OK!"
+    echo "Stop successfully!"
     echo "PID: $PID"
 }
 
 
-UTX_SERVICE_NAME=utx$ONLY_PORT.service
+TXLE_SERVICE_NAME=txle$ONLY_PORT.service
 start_ha() {
-	UTX_SERVICE=/usr/lib/systemd/system/$UTX_SERVICE_NAME
-	if [ -f "$UTX_SERVICE" ]; then
+	TXLE_SERVICE=/usr/lib/systemd/system/$TXLE_SERVICE_NAME
+	if [ -f "$TXLE_SERVICE" ]; then
 		# delete first and create again, the aim is to load new parameters.
-		rm "$UTX_SERVICE"
+		rm "$TXLE_SERVICE"
 	fi
 
 
-	touch "$UTX_SERVICE"
+	touch "$TXLE_SERVICE"
 
 	echo "[Unit]
-	Description=utx$ONLY_PORT
+	Description=txle$ONLY_PORT
 
 	[Service]
-	ExecStart=$DEPLOY_DIR/bin/utx start $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
-	ExecStop=$DEPLOY_DIR/bin/utx stop $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
-	ExecReload=$DEPLOY_DIR/bin/utx restart $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
-	PIDFile=$DEPLOY_DIR/conf/utx_server$ONLY_PORT.pid
+	ExecStart=$DEPLOY_DIR/bin/txle start $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
+	ExecStop=$DEPLOY_DIR/bin/txle stop $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
+	ExecReload=$DEPLOY_DIR/bin/txle restart $SERVER_PORT $RPC_PORT $METRICS_PORT $CONF_DIR $LOG_FILE $P_DEBUG
+	PIDFile=$DEPLOY_DIR/conf/txle_server$ONLY_PORT.pid
 	Restart=always
 
 	[Install]
-	WantedBy=multi-user.target" > $UTX_SERVICE
+	WantedBy=multi-user.target" > $TXLE_SERVICE
 
 
 
@@ -177,17 +177,17 @@ start_ha() {
 
 	systemctl daemon-reload
 
-	systemctl start $UTX_SERVICE_NAME
+	systemctl start $TXLE_SERVICE_NAME
 
 	echo "Starting server in a highly available way."
 	echo "Please pay more attention on this server after several seconds."
 }
 
 stop_ha(){
-	echo "It will take a while to stop, please wait patiently ...."
+	echo "It will take a while to stop, please wait patiently...."
 
 	# stop service in systemd
-	systemctl stop $UTX_SERVICE_NAME
+	systemctl stop $TXLE_SERVICE_NAME
 
 	echo "Successfully to stop server."
 }
@@ -210,9 +210,9 @@ case $1 in
 	;;
 
 	restart)
-		echo "$SERVER_NAME server is restarting ...."
+		echo "$SERVER_NAME server is restarting...."
 		# support to restart even though not started.
-		if [ -f "$UTXPIDFILE" ]; then
+		if [ -f "$TXLEPIDFILE" ]; then
 			if [ "$P_HA" != "true" ]; then
 				stop;
 			else
@@ -228,7 +228,7 @@ case $1 in
 	;;
 
 	--help)
-		echo "Usage: utx COMMAND [OPTIONS]    e.g. ./utx start --port=8090"
+		echo "Usage: txle COMMAND [OPTIONS]    e.g. ./txle start --port=8090"
 		echo ""
 		echo "Commands: start|stop|restart"
 		echo ""
@@ -242,7 +242,7 @@ case $1 in
 	;;
 
 	*)
-		echo "Usage: utx {start|stop|restart}"
+		echo "Usage: txle {start|stop|restart}"
 	;;
 esac
 exit 0

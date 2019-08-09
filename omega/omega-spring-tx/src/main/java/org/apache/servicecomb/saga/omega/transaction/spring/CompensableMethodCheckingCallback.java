@@ -17,7 +17,7 @@
 
 package org.apache.servicecomb.saga.omega.transaction.spring;
 
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.context.CompensationContext;
 import org.apache.servicecomb.saga.omega.transaction.OmegaException;
 import org.apache.servicecomb.saga.omega.transaction.annotations.Compensable;
@@ -44,7 +44,7 @@ class CompensableMethodCheckingCallback implements MethodCallback {
   public void doWith(Method method) throws IllegalArgumentException {
     if (!method.isAnnotationPresent(Compensable.class)) {
     	// for auto-compensation By Gannalyo
-    	if (UtxConstants.AUTO_COMPENSABLE_METHOD.equals(method.toString())) {
+    	if (TxleConstants.AUTO_COMPENSABLE_METHOD.equals(method.toString())) {
     		compensationContext.addCompensationContext(method, bean);
     	}
     	return;

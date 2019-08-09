@@ -2,7 +2,7 @@ package org.apache.servicecomb.saga.alpha.core.configcenter;
 
 import com.google.gson.GsonBuilder;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
-import org.apache.servicecomb.saga.common.UtxConstants;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.springframework.util.MultiValueMap;
 
 import javax.persistence.*;
@@ -56,7 +56,7 @@ public class ConfigCenter {
         this.instanceid = mvm.getFirst("instanceid");
         this.category = mvm.getFirst("category");
         this.status = toInteger(mvm.getFirst("status"), ConfigCenterStatus.Normal.toInteger());
-        this.status = toInteger(mvm.getFirst("ability"), UtxConstants.YES);
+        this.status = toInteger(mvm.getFirst("ability"), TxleConstants.YES);
         // To return a default value for 'status', but throw exception for 'type'. Because, the default value of the former is suitable and the later's is not good.
         this.type = Integer.valueOf(mvm.getFirst("type"));
         this.value = mvm.getFirst("value");
