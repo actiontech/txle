@@ -94,7 +94,6 @@ start() {
     JAVA_MEM_OPTS=" -server -Xmx2g -Xms2g -Xmn256m -XX:PermSize=128m  -XX:+DisableExplicitGC -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:LargePageSizeInBytes=128m -XX:+UseFastAccessorMethods -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70 -Djava.rmi.server.hostname=10.186.61.3 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
 
     echo -e "Starting the $SERVER_NAME server...."
-    echo "JAVA_MEM_OPTS=$JAVA_MEM_OPTS $SERVER_PORT $RPC_PORT $METRICS_PORT"
 
     nohup java $JAVA_OPTS $JAVA_MEM_OPTS $SERVER_PORT $RPC_PORT $METRICS_PORT -classpath $DEPLOY_DIR:$LIB_DIR:$CONF_DIR:$LIB_JARS $MAIN_CLASS > /dev/null 2>>$LOG_FILE &
 
@@ -103,7 +102,6 @@ start() {
     fi
 
     echo "Start successfully!"
-    echo "PID: `cat "$TXLEPIDFILE"`"
 }
 
 
