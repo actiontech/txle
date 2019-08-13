@@ -233,7 +233,7 @@
 				<version>3.3.2.Final</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
+				<groupId>com.actiontech.txle</groupId>
 				<artifactId>omega-transport-feign</artifactId>
 				<version>0.3.0-SNAPSHOT</version>
 			</dependency>

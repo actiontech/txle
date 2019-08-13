@@ -21,7 +21,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>omega</artifactId>
-    <groupId>org.apache.servicecomb.saga</groupId>
+    <groupId>com.actiontech.txle</groupId>
     <version>0.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -40,15 +40,15 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-context</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-transaction</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-autocompensation</artifactId>
     </dependency>
 
@@ -79,8 +79,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>saga-persistence-jpa</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
     <dependency>

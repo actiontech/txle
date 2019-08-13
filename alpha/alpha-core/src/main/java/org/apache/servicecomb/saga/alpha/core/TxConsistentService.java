@@ -93,6 +93,11 @@ public class TxConsistentService {
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
 		if (isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
+			// subA ok, timeout, compensate subA, subB ok without exception(need to save ended even though aborted), compensate subB.
+			if (TxEndedEvent.name().equals(type)) {
+				eventRepository.save(event);
+				commandRepository.saveWillCompensateCmdForCurSubTx(globalTxId, localTxId);
+			}
 			txleMetrics.countTxNumber(event, false, event.retries() > 0);
 			txleMetrics.endMarkTxDuration(event);// end duration.
 			return -1;
@@ -120,7 +125,7 @@ public class TxConsistentService {
 						this.putServerNameIdCategory(event);
 					}
 
-						if (TxEndedEvent.name().equals(type)) {// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
+					if (TxEndedEvent.name().equals(type)) {// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
 						// 若定时器检测超时后结束了当前全局事务，但超时子事务的才刚刚完成，此时检测全局事务是否已经终止，如果终止，则补偿当前刚刚完成的子事务
 						if (isGlobalTxAborted(event)) {
 							commandRepository.saveWillCompensateCmdForCurSubTx(globalTxId, localTxId);
@@ -196,7 +201,7 @@ public class TxConsistentService {
 	if (abortedTxEvent != null) {
 		if (abortedTxEvent.globalTxId().equals(abortedTxEvent.localTxId())) return true;// 说明全局事务异常，否则说明子事务异常，继续验证是否重试中的异常还是重试完成最终异常
 		// 	验证是否最终异常，即排除非最后一次重试时的异常
-		return eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId());
+		return eventRepository.checkTxIsAborted(abortedTxEvent.globalTxId(), abortedTxEvent.localTxId());
 	}
   	return false;
   }
