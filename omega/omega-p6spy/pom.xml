@@ -10,8 +10,8 @@
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>1.5.13.RELEASE</version>
 	</parent>
-	
-	<groupId>org.apache.servicecomb.saga</groupId>
+
+	<groupId>com.actiontech.txle</groupId>
 	<artifactId>omega-p6spy</artifactId>
 	<version>0.3.0-SNAPSHOT</version>
 	
@@ -23,12 +23,12 @@
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.servicecomb.saga</groupId>
+            <groupId>com.actiontech.txle</groupId>
 			<artifactId>pack-common</artifactId>
 			<version>0.3.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.servicecomb.saga</groupId>
+			<groupId>com.actiontech.txle</groupId>
 			<artifactId>omega-context</artifactId>
 			<version>0.3.0-SNAPSHOT</version>
 		</dependency>

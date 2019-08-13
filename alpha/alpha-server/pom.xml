@@ -21,7 +21,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>alpha</artifactId>
-    <groupId>org.apache.servicecomb.saga</groupId>
+    <groupId>com.actiontech.txle</groupId>
     <version>0.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -63,16 +63,19 @@
       <artifactId>grpc-netty</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>pack-contract-grpc</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>alpha-core</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>pack-common</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -89,8 +92,9 @@
       <artifactId>spring-boot-starter-log4j2</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>saga-persistence-jpa</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>

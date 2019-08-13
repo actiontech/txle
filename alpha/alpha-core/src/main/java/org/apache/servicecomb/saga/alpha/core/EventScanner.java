@@ -113,8 +113,6 @@ public class EventScanner implements Runnable {
             () -> {
               try {
                 if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
-                  LOG.error("Session " + serverName + "-" + serverPort + " is leader.");
-
                   // 未防止出现部分事务在未检测超时前就已经结束的情况，此处将超时检测单开一个线程，否则其它方法如果执行超过了事务的超时时间，那么下次超时检测将在事务之后检测了，此时事务已经正常结束了
                   updateTimeoutStatus();
                   findTimeoutEvents();
@@ -133,6 +131,7 @@ public class EventScanner implements Runnable {
 				() -> {
 					try {
                       if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
+//                        LOG.error("Session " + serverName + "-" + serverPort + " is leader.");
 //                        updateTimeoutStatus();
 //						findTimeoutEvents();
 //						abortTimeoutEvents();

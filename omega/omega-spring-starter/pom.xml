@@ -21,7 +21,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>omega</artifactId>
-    <groupId>org.apache.servicecomb.saga</groupId>
+    <groupId>com.actiontech.txle</groupId>
     <version>0.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -31,24 +31,31 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-spring-tx</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-transaction</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-autocompensation</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-p6spy</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
+      <groupId>com.actiontech.txle</groupId>
       <artifactId>omega-format</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>com.actiontech.txle</groupId>
+      <artifactId>omega-connector-grpc</artifactId>
+      <version>0.3.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
@@ -57,10 +64,6 @@
     <dependency>
       <groupId>io.grpc</groupId>
       <artifactId>grpc-stub</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.servicecomb.saga</groupId>
-      <artifactId>omega-connector-grpc</artifactId>
     </dependency>
   </dependencies>
 
