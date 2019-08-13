@@ -14,6 +14,7 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ## ---------------------------------------------------------------------------
+
 server:
   port: 8090
 
@@ -56,10 +57,7 @@ spring:
   datasource:
     username: root
     password: 123456
-#    url: jdbc:mysql://10.186.61.3:3306/txle?useSSL=false
     url: jdbc:mysql://10.186.61.3:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
-#    driver-class-name    it'll get an error if open it, and don't know why so far.
-#    driver-class-name: com.mysql.jdbc.driver
     platform: mysql
     continue-on-error: true
 #    自动执行schema和data可参考org.springframework.boot.autoconfigure.jdbc.DataSourceInitializer文件
@@ -70,21 +68,17 @@ spring:
     properties:
       eclipselink:
         ddl-generation: none
-#      hibernate:
-#        ejb:
-#          interceptor: org.apache.servicecomb.saga.alpha.core.SpringDataJpaSqlAspect
     show-sql: false
   metrics:
     export:
       enabled: false
-#  aop:
-#    auto: true
-#    proxy-target-class: org.springframework.data.jpa.repository.JpaRepository
+
   zipkin:
     base-url: http://127.0.0.1:9411/api/v2/spans
+
   cloud:
     consul:
-      enabled: false
+      enabled: true # Consul must be enabled in a production environment.
       host: 127.0.0.1
       port: 8500
       discovery:
@@ -96,7 +90,7 @@ spring:
         instanceId: ${spring.application.name}-${alpha.server.host}-${random.value}
         tags: txle-server-host=${alpha.server.host},txle-server-port=${alpha.server.port}
 
-# config port for prometheus' metrics server. By Gannalyo
+# configurations for txle server. By Gannalyo
 txle:
   prometheus:
     metrics:
