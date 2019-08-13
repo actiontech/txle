@@ -166,27 +166,26 @@ public class UIRestApi {
 
     @PostMapping("/pauseGlobalTransactions")
     public ResponseEntity<ReturnValue> pauseGlobalTransactions(@RequestBody JSONObject jsonParams) {
-        ReturnValue rv = new ReturnValue();
-        if (jsonParams == null) {
-            rv.setMessage("The identifications of Global Transactions are empty.");
-            return ResponseEntity.badRequest().body(rv);
-        }
-        String globalTxIds = jsonParams.getString("globalTxIds");
-        return saveOperationTxEventWithVerification(globalTxIds, jsonParams.getIntValue("pausePeriod"), "pause");
+        return saveOperationTxEventWithVerification(jsonParams, jsonParams.getIntValue("pausePeriod"), "pause");
     }
 
     @PostMapping("/recoverGlobalTransactions")
-    public ResponseEntity<ReturnValue> recoverGlobalTransactions(@RequestBody String globalTxIds) {
-        return saveOperationTxEventWithVerification(globalTxIds, 0, "recover");
+    public ResponseEntity<ReturnValue> recoverGlobalTransactions(@RequestBody JSONObject jsonParams) {
+        return saveOperationTxEventWithVerification(jsonParams, 0, "recover");
     }
 
     @PostMapping("/terminateGlobalTransactions")
-    public ResponseEntity<ReturnValue> terminateGlobalTransactions(@RequestBody String globalTxIds) {
-        return saveOperationTxEventWithVerification(globalTxIds, 0, "terminate");
+    public ResponseEntity<ReturnValue> terminateGlobalTransactions(@RequestBody JSONObject jsonParams) {
+        return saveOperationTxEventWithVerification(jsonParams, 0, "terminate");
     }
 
-    private ResponseEntity<ReturnValue> saveOperationTxEventWithVerification(String globalTxIds, int pausePeriod, String operation) {
+    private ResponseEntity<ReturnValue> saveOperationTxEventWithVerification(JSONObject jsonParams, int pausePeriod, String operation) {
         ReturnValue rv = new ReturnValue();
+        if (jsonParams == null) {
+            rv.setMessage("The identifications of Global Transactions are empty, operation [" + operation + "].");
+            return ResponseEntity.badRequest().body(rv);
+        }
+        String globalTxIds = jsonParams.getString("globalTxIds");
         try {
             if (globalTxIds == null || globalTxIds.trim().length() == 0) {
                 rv.setMessage("The identifications of Global Transactions are empty.");
