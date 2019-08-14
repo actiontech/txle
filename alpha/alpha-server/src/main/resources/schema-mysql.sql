@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS Message (
   localtxid varchar(36) NOT NULL,
   status int(1) NOT NULL DEFAULT 0 COMMENT '0-init, 1-sending, 2-success, 3-fail',
   version int(2) NOT NULL DEFAULT 1,
-  dbdrivername varchar(50),
+  dbdrivername varchar(100),
   dburl varchar(100),
   dbusername varchar(20),
   tablename varchar(255),
