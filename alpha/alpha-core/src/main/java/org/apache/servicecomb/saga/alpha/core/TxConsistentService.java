@@ -168,7 +168,9 @@ public class TxConsistentService {
 								// 说明是全局事务异常终止
 								commandRepository.saveWillCompensateCommandsWhenGlobalTxAborted(globalTxId);
 								// To save SagaEndedEvent.
-								eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), new byte[0]));
+								TxEvent sagaEndedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), new byte[0]);
+								eventRepository.save(sagaEndedEvent);
+								kafkaMessageProducer.send(sagaEndedEvent);
 							}
 						}
 					}
