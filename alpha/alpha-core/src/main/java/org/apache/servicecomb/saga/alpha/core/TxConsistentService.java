@@ -57,7 +57,7 @@ public class TxConsistentService {
 	@Autowired
 	private IDataDictionaryService dataDictionaryService;
 
-  private final List<String> types = Arrays.asList(TxStartedEvent.name(), SagaEndedEvent.name());
+  private final List<String> types = Arrays.asList(TxEndedEvent.name(), TxAbortedEvent.name(), SagaEndedEvent.name());
   private final Set<String> serverNameIdCategory = new HashSet<>();
 
   public TxConsistentService(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository) {
@@ -91,13 +91,8 @@ public class TxConsistentService {
 		txleMetrics.countChildTxNumber(event);// child transaction count
 
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
-		if (isGlobalTxAborted(event)) {
+		if (!types.contains(type) && isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
-			// subA ok, timeout, compensate subA, subB ok without exception(need to save ended even though aborted), compensate subB.
-			if (TxEndedEvent.name().equals(type)) {
-				eventRepository.save(event);
-				commandRepository.saveWillCompensateCmdForCurSubTx(globalTxId, localTxId);
-			}
 			txleMetrics.countTxNumber(event, false, event.retries() > 0);
 			txleMetrics.endMarkTxDuration(event);// end duration.
 			return -1;
@@ -128,6 +123,7 @@ public class TxConsistentService {
 					if (TxEndedEvent.name().equals(type)) {// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
 						// 若定时器检测超时后结束了当前全局事务，但超时子事务的才刚刚完成，此时检测全局事务是否已经终止，如果终止，则补偿当前刚刚完成的子事务
 						if (isGlobalTxAborted(event)) {
+							// subA ok, timeout, compensate subA, subB ok without exception(need to save ended even though aborted), compensate subB.
 							commandRepository.saveWillCompensateCmdForCurSubTx(globalTxId, localTxId);
 						} else {
 							// 由于定时扫描器中检测超时会存在一定误差，如定时器中任务需3s完成，但某事务超时设置的是2秒，此时还未等对该事物进行检测，该事务就已经结束了，所以此处在正常结束前需检测是否超时
