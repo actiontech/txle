@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
+import java.net.InetAddress;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -381,7 +382,7 @@ public class EventScanner implements Runnable {
       // To create a key for leader election no matter if it is exists.
       consulClient.setKVValue(CONSUL_LEADER_KEY, CONSUL_LEADER_KEY_VALUE);
       NewSession session = new NewSession();
-      session.setName("session-" + serverName + "-" + serverPort);
+      session.setName("session-" + serverName + "-" + InetAddress.getLocalHost().getHostAddress() + "-" + serverPort);
       consulSessionId = consulClient.sessionCreate(session, null).getValue();
     } catch (Exception e) {
       LOG.error("Failed to register Consul Session, serverName [{}], serverPort [{}].", serverName, serverPort, e);
