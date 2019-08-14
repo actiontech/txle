@@ -61,9 +61,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                 if (messageList != null && !messageList.isEmpty()) {
                     // To update message's status to 'sending'.
                     List<Long> idList = new ArrayList<>();
-                    messageList.forEach(msg -> {
-                        idList.add(msg.getId());
-                    });
+                    messageList.forEach(msg -> idList.add(msg.getId()));
                     // Cause current method is called in many places, and one message per globalTxId, hence, use a mutex of 'globalTxId' to avoid to send message repeatedly is planned. But, it could not work among distribution servers.
                     // So, we take advantage of the db-lock, just one server can do update successfully for same globalTxId in distribution and concurrence case.
                     boolean updateResult = kafkaMessageRepository.updateMessageStatusByIdListAndStatus(idList, KafkaMessageStatus.SENDING, KafkaMessageStatus.INIT);
