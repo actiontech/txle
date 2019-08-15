@@ -27,6 +27,8 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -377,15 +379,16 @@ public class EventScanner implements Runnable {
    */
   private String registerConsulSession() {
     if (consulClient == null) return null;
-    String consulSessionId = null;
+    String consulSessionId = null, serverHost = "127.0.0.1";
     try {
       // To create a key for leader election no matter if it is exists.
       consulClient.setKVValue(CONSUL_LEADER_KEY, CONSUL_LEADER_KEY_VALUE);
       NewSession session = new NewSession();
-      session.setName("session-" + serverName + "-" + InetAddress.getLocalHost().getHostAddress() + "-" + serverPort);
+      serverHost = InetAddress.getLocalHost().getHostAddress();
+      session.setName("session-" + serverName + "-" + serverHost + "-" + serverPort + "-" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
       consulSessionId = consulClient.sessionCreate(session, null).getValue();
     } catch (Exception e) {
-      LOG.error("Failed to register Consul Session, serverName [{}], serverPort [{}].", serverName, serverPort, e);
+      LOG.error("Failed to register Consul Session, serverName [{}], serverHost [{}], serverPort [{}].", serverName, serverHost, serverPort, e);
     } finally {
       try {
         final String finalConsulSessionId = consulSessionId;
