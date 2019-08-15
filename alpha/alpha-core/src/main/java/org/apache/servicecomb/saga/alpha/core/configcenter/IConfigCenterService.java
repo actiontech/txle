@@ -14,7 +14,7 @@ public interface IConfigCenterService {
 
     List<Map<String, String>> selectAllClientIdAndName();
 
-    boolean isEnabledTx(String instanceId, String category, ConfigCenterType type);
+    boolean isEnabledConfig(String instanceId, String category, ConfigCenterType type);
 
     boolean createConfigCenter(ConfigCenter config);
 

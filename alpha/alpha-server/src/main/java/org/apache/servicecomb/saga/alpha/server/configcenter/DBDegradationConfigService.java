@@ -1,11 +1,12 @@
 package org.apache.servicecomb.saga.alpha.server.configcenter;
 
+import com.ecwid.consul.v1.ConsulClient;
+import com.ecwid.consul.v1.kv.model.GetValue;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
-import org.apache.servicecomb.saga.alpha.server.restapi.CacheRestApi;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
@@ -29,6 +30,9 @@ public class DBDegradationConfigService implements IConfigCenterService {
 
     @Autowired
     private IDataDictionaryService dataDictionaryService;
+
+    @Autowired
+    private ConsulClient consulClient;
 
     public DBDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
         this.configCenterEntityRepository = configCenterEntityRepository;
@@ -55,13 +59,18 @@ public class DBDegradationConfigService implements IConfigCenterService {
     }
 
     @Override
-    public boolean isEnabledTx(String instanceId, String category, ConfigCenterType type) {
-        String configKey = instanceId + "_" + category + "_" + ConfigCenterStatus.Normal.toInteger() + "_" + type.toInteger();
-        Enumeration<String> configKeys = CacheRestApi.enabledConfigMap.keys();
-        while (configKeys.hasMoreElements()) {
-            if (configKey.equals(configKeys.nextElement())){
-                return CacheRestApi.enabledConfigMap.get(configKey);
-            }
+    public boolean isEnabledConfig(String instanceId, String category, ConfigCenterType type) {
+        // First, to check the cache of global config. It's been enabled if it's false, so return immediately.
+        GetValue configCacheValue = consulClient.getKVValue(TxleConstants.constructConfigCenterKey(null, null, type.toInteger())).getValue();
+        if (configCacheValue != null && !Boolean.valueOf(configCacheValue.getDecodedValue())) {
+            return false;
+        }
+
+        // Next, to check the cache with 'instanceId' and 'category'.
+        configCacheValue = consulClient.getKVValue(TxleConstants.constructConfigCenterKey(instanceId, category, type.toInteger())).getValue();
+        if (configCacheValue != null) {
+            System.err.println("Config cache: " + configCacheValue.getKey() + " = " + configCacheValue.getDecodedValue());
+            return Boolean.valueOf(configCacheValue.getDecodedValue());
         }
 
         List<ConfigCenter> configCenterList = configCenterEntityRepository.selectConfigCenterByType(instanceId, category, ConfigCenterStatus.Normal.toInteger(), type.toInteger());
@@ -106,48 +115,57 @@ public class DBDegradationConfigService implements IConfigCenterService {
                         }
                     }
                 }
-                CacheRestApi.enabledConfigMap.put(configKey, TxleConstants.ENABLED.equals(value));
+                consulClient.setKVValue(TxleConstants.constructConfigCenterKey(instanceId, category, type.toInteger()), Boolean.toString(TxleConstants.ENABLED.equals(value)));
                 return TxleConstants.ENABLED.equals(value);
             }
         }
 
         // All of configs except fault-tolerant are enabled by default.
         if (ConfigCenterType.PauseGlobalTx.equals(type) || ConfigCenterType.GlobalTxFaultTolerant.equals(type) || ConfigCenterType.CompensationFaultTolerant.equals(type) || ConfigCenterType.AutoCompensationFaultTolerant.equals(type)) {
-            CacheRestApi.enabledConfigMap.put(configKey, false);
+            consulClient.setKVValue(TxleConstants.constructConfigCenterKey(instanceId, category, type.toInteger()), Boolean.FALSE.toString());
             return false;
         }
-        CacheRestApi.enabledConfigMap.put(configKey, true);
+
+        consulClient.setKVValue(TxleConstants.constructConfigCenterKey(instanceId, category, type.toInteger()), Boolean.TRUE.toString());
         return true;
     }
 
     @Override
     public boolean createConfigCenter(ConfigCenter config) {
-        config.setUpdatetime(new Date());
-        if ((config.getServicename() + "").length() == 0) config.setServicename(null);
-        if ((config.getInstanceid() + "").length() == 0) config.setInstanceid(null);
-        if ((config.getCategory() + "").length() == 0) config.setCategory(null);
-        CacheRestApi.enabledConfigMap.clear();
-        return configCenterEntityRepository.save(config) != null;
+        return createOrUpdateConfig(config);
     }
 
     @Override
     public boolean updateConfigCenter(ConfigCenter config) {
         ConfigCenter existsConfig = configCenterEntityRepository.findOne(config.getId());
         if (existsConfig != null) {
-            config.setUpdatetime(new Date());
-            if ((config.getServicename() + "").length() == 0) config.setServicename(null);
-            if ((config.getInstanceid() + "").length() == 0) config.setInstanceid(null);
-            if ((config.getCategory() + "").length() == 0) config.setCategory(null);
-            CacheRestApi.enabledConfigMap.clear();
-            return configCenterEntityRepository.save(config) != null;
+            return createOrUpdateConfig(config);
         }
         return false;
     }
 
+    private boolean createOrUpdateConfig(ConfigCenter config) {
+        config.setUpdatetime(new Date());
+        if ((config.getServicename() + "").length() == 0) config.setServicename(null);
+        if ((config.getInstanceid() + "").length() == 0) config.setInstanceid(null);
+        if ((config.getCategory() + "").length() == 0) config.setCategory(null);
+
+        // To save the cache of config center to Consul.
+        consulClient.setKVValue(TxleConstants.constructConfigCenterKey(config.getInstanceid(), config.getCategory(), config.getType()), config.getValue());
+
+        return configCenterEntityRepository.save(config) != null;
+    }
+
     @Override
     public boolean deleteConfigCenter(long id) {
-        configCenterEntityRepository.delete(id);
-        CacheRestApi.enabledConfigMap.clear();
+        ConfigCenter config = configCenterEntityRepository.findOne(id);
+        if (config != null) {
+
+            // To remove the cache of config center from Consul.
+            consulClient.deleteKVValue(TxleConstants.constructConfigCenterKey(config.getInstanceid(), config.getCategory(), config.getType()));
+
+            configCenterEntityRepository.delete(id);
+        }
         return true;
     }
 

@@ -258,7 +258,7 @@ public class TxleMetrics extends Collector {
 
     private boolean isEnableMonitor(TxEvent event) {
         if (!isEnableMonitorServer) return false;
-        return dbDegradationConfigService.isEnabledTx(event.instanceId(), event.category(), ConfigCenterType.TxMonitor);
+        return dbDegradationConfigService.isEnabledConfig(event.instanceId(), event.category(), ConfigCenterType.TxMonitor);
     }
 
     public void countSuccessfulNumber() {

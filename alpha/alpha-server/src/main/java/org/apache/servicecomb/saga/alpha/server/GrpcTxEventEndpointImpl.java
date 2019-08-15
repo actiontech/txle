@@ -114,24 +114,23 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         handleSupportTxPause(message, responseObserver);
     }
 
-    // Do not use any cache, the aim is to provide a realtime config.
     private boolean isEnabledTx(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
         boolean result = true;
         try {
             if (EventType.SagaStartedEvent.name().equals(message.getType())) {
-                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
+                result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
             } else if (EventType.TxStartedEvent.name().equals(message.getType())) {
-                result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
+                result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
                 if (result) {// If the global transaction was not enabled, then two child transactions were regarded as disabled.
                     if (!TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                        result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.Compensation);
+                        result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.Compensation);
                     } else if (TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                        result = dbDegradationConfigService.isEnabledTx(message.getInstanceId(), message.getCategory(), ConfigCenterType.AutoCompensation);
+                        result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.AutoCompensation);
                     }
                 }
             }
         } catch (Exception e) {
-            LOG.error("Encountered an exception when executing method 'isEnabledTx'.", e);
+            LOG.error("Encountered an exception when executing method 'isEnabledConfig'.", e);
         }
 
         if (!result) {
@@ -269,7 +268,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
             if (config.getInstanceId() != null) instanceId = config.getInstanceId();
             if (config.getCategory() != null) category = config.getCategory();
 
-            isEnabledConfig = dbDegradationConfigService.isEnabledTx(instanceId, category, ConfigCenterType.convertTypeFromValue(config.getType()));
+            isEnabledConfig = dbDegradationConfigService.isEnabledConfig(instanceId, category, ConfigCenterType.convertTypeFromValue(config.getType()));
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onReadConfig'.", e);
         } finally {

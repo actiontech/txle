@@ -210,7 +210,7 @@ public class TxConsistentService {
 		}
 		boolean isPaused = false;
 		try {
-			boolean enabledTx = configCenterService.isEnabledTx(null, null, ConfigCenterType.PauseGlobalTx);
+			boolean enabledTx = configCenterService.isEnabledConfig(null, null, ConfigCenterType.PauseGlobalTx);
 			if (enabledTx) {
 				return true;
 			}
