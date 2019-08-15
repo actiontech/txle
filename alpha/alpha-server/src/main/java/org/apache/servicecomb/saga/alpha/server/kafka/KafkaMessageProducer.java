@@ -55,7 +55,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     public void send(TxEvent event) {
         long a = System.currentTimeMillis();
         try {
-            boolean enabled = dbDegradationConfigService.isEnabledTx(event.instanceId(), event.category(), ConfigCenterType.BizInfoToKafka);
+            boolean enabled = dbDegradationConfigService.isEnabledConfig(event.instanceId(), event.category(), ConfigCenterType.BizInfoToKafka);
             if (enabled && EventType.SagaEndedEvent.name().equals(event.type())) {
                 List<KafkaMessage> messageList = kafkaMessageRepository.findMessageListByGlobalTxId(event.globalTxId(), KafkaMessageStatus.INIT.toInteger());
                 if (messageList != null && !messageList.isEmpty()) {

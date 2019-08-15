@@ -3,6 +3,7 @@ package org.apache.servicecomb.saga.alpha.server.restapi;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.ecwid.consul.v1.ConsulClient;
 import com.google.gson.GsonBuilder;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
@@ -15,6 +16,7 @@ import org.apache.servicecomb.saga.alpha.server.TableFieldRepository;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.common.ReturnValue;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +53,9 @@ public class UIRestApi {
 
     @Autowired
     IAccidentHandlingService accidentHandlingService;
+
+    @Autowired
+    private ConsulClient consulClient;
 
     public UIRestApi(TableFieldRepository tableFieldRepository, TxEventRepository eventRepository) {
         this.tableFieldRepository = tableFieldRepository;
@@ -238,7 +243,6 @@ public class UIRestApi {
                         endedEvent.setSurrogateId(null);
                         eventRepository.save(endedEvent);
                     }
-                    CacheRestApi.enabledConfigMap.clear();
                     txleMetrics.countTxNumber(event, false, false);
                 }
             });
@@ -290,7 +294,7 @@ public class UIRestApi {
                     }
                 });
             }
-            CacheRestApi.enabledConfigMap.clear();
+            consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()), "true");
         } catch (Exception e) {
             rv.setMessage("Failed to pause all global transactions.");
             LOG.error(rv.getMessage(), e);
@@ -309,7 +313,8 @@ public class UIRestApi {
                 ConfigCenter configCenter = configCenterList.get(0);
                 configCenter.setStatus(ConfigCenterStatus.Historical.toInteger());
                 configCenterService.updateConfigCenter(configCenter);
-                CacheRestApi.enabledConfigMap.clear();
+                // To close the 'PauseGlobalTx' config on Consul.
+                consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()), "false");
                 return ResponseEntity.ok(rv);
             }
 
@@ -336,10 +341,11 @@ public class UIRestApi {
                     if (globalTxIdList.contains(event.globalTxId())) {
                         TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
-                        CacheRestApi.enabledConfigMap.clear();
                         txleMetrics.countTxNumber(event, false, false);
                     }
                 });
+                // To close the 'PauseGlobalTx' config on Consul.
+                consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()), "false");
             }
         } catch (Exception e) {
             rv.setMessage("Failed to recover all global transactions.");
@@ -353,7 +359,7 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> degradeGlobalTransaction() {
         ReturnValue rv = new ReturnValue();
         try {// 已经开启但未结束的全局事务在执行过程中遇到全局事务服务降级，则本全局事务中后续的业务按照无全局事务运行，因为服务降级的目的不是为了保证全局事务，而是为了保证主业务能正常继续运行
-            boolean enabledTx = configCenterService.isEnabledTx(null, null, ConfigCenterType.GlobalTx);
+            boolean enabledTx = configCenterService.isEnabledConfig(null, null, ConfigCenterType.GlobalTx);
             if (!enabledTx) {
                 rv.setMessage("Sever has been degraded for the Global Transaction.");
                 return ResponseEntity.ok(rv);
@@ -364,7 +370,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                CacheRestApi.enabledConfigMap.clear();
+                consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.GlobalTx.toInteger()), "false");
             }
         } catch (Exception e) {
             rv.setMessage("Failed to degrade global transaction.");
@@ -390,7 +396,8 @@ public class UIRestApi {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                CacheRestApi.enabledConfigMap.clear();
+                // To remove the cache of config center from Consul.
+                consulClient.deleteKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
             }
         } catch (Exception e) {
             rv.setMessage("Failed to start global transaction.");

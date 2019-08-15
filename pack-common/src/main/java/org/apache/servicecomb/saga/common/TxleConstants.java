@@ -9,7 +9,7 @@ public final class TxleConstants {
     public static final String LOG_DEBUG_PREFIX = "[txle debug] ";
     public static final String LOG_ERROR_PREFIX = "[txle error] ";
     public static final String ACTION_SQL = " /**txle_sql**/";
-    public static final String SPECIAL_KEY = "txle-SPECIAL-KEY";// Usage in org.apache.servicecomb.saga.alpha.server.GrpcTxEventEndpointImpl.onTxEvent
+    public static final String SPECIAL_KEY = "txle-special-key";// Usage in org.apache.servicecomb.saga.alpha.server.GrpcTxEventEndpointImpl.onTxEvent
 
     public static final String OK = "ok";
     public static final String ERROR = "error";
@@ -20,7 +20,7 @@ public final class TxleConstants {
 
     public static final String AUTO_COMPENSABLE_METHOD = "public boolean org.apache.servicecomb.saga.omega.transaction.AutoCompensateService.executeAutoCompensateByLocalTxId(java.lang.String,java.lang.String)";
 
-    public static final String CONSUL_LEADER_KEY = "service/" + APP_NAME + "/leader";
+    public static final String CONSUL_LEADER_KEY = APP_NAME + "/service/leader";
     public static final String CONSUL_LEADER_KEY_VALUE = "leader election key for " + TxleConstants.APP_NAME + " service";
 
     private TxleConstants() {
@@ -44,5 +44,9 @@ public final class TxleConstants {
         }
         type = type.substring(0, type.length() - 2) + " ";
         return type + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()) + "] ";
+    }
+
+    public static String constructConfigCenterKey(String instanceId, String category, int type) {
+        return APP_NAME + "/config/" + instanceId + "_" + category + "_" + type;
     }
 }

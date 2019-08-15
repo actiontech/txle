@@ -33,7 +33,7 @@ public class ZkDegradationConfigService implements IConfigCenterService {
     }
 
     @Override
-    public boolean isEnabledTx(String instanceId, String category, ConfigCenterType type) {
+    public boolean isEnabledConfig(String instanceId, String category, ConfigCenterType type) {
         return false;
     }
 
