@@ -3,7 +3,6 @@ package org.apache.servicecomb.saga.alpha.server.restapi;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.ecwid.consul.v1.ConsulClient;
 import com.google.gson.GsonBuilder;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
@@ -55,7 +54,7 @@ public class UIRestApi {
     IAccidentHandlingService accidentHandlingService;
 
     @Autowired
-    private ConsulClient consulClient;
+    CacheRestApi cacheRestApi;
 
     public UIRestApi(TableFieldRepository tableFieldRepository, TxEventRepository eventRepository) {
         this.tableFieldRepository = tableFieldRepository;
@@ -294,7 +293,6 @@ public class UIRestApi {
                     }
                 });
             }
-            consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()), "true");
         } catch (Exception e) {
             rv.setMessage("Failed to pause all global transactions.");
             LOG.error(rv.getMessage(), e);
@@ -313,8 +311,7 @@ public class UIRestApi {
                 ConfigCenter configCenter = configCenterList.get(0);
                 configCenter.setStatus(ConfigCenterStatus.Historical.toInteger());
                 configCenterService.updateConfigCenter(configCenter);
-                // To close the 'PauseGlobalTx' config on Consul.
-                consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()), "false");
+                cacheRestApi.removeForDistributedCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
                 return ResponseEntity.ok(rv);
             }
 
@@ -344,8 +341,7 @@ public class UIRestApi {
                         txleMetrics.countTxNumber(event, false, false);
                     }
                 });
-                // To close the 'PauseGlobalTx' config on Consul.
-                consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()), "false");
+                cacheRestApi.removeForDistributedCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
             }
         } catch (Exception e) {
             rv.setMessage("Failed to recover all global transactions.");
@@ -369,8 +365,6 @@ public class UIRestApi {
             if (!enabled) {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
-            } else {
-                consulClient.setKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.GlobalTx.toInteger()), "false");
             }
         } catch (Exception e) {
             rv.setMessage("Failed to degrade global transaction.");
@@ -396,8 +390,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                // To remove the cache of config center from Consul.
-                consulClient.deleteKVValue(TxleConstants.constructConfigCenterKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
+                cacheRestApi.putForDistributedCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()), true);
             }
         } catch (Exception e) {
             rv.setMessage("Failed to start global transaction.");

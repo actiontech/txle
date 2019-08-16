@@ -46,7 +46,7 @@ public final class TxleConstants {
         return type + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()) + "] ";
     }
 
-    public static String constructConfigCenterKey(String instanceId, String category, int type) {
-        return APP_NAME + "/config/" + instanceId + "_" + category + "_" + type;
+    public static String constructConfigCacheKey(String instanceId, String category, int type) {
+        return "config_cache_" + instanceId + "_" + category + "_" + type;
     }
 }
