@@ -68,6 +68,7 @@ public class EventScanner implements Runnable {
   private final String serverName;
   private int serverPort = 8090;
   private final String consulInstanceId;
+  public static String CONSUL_SESSION_ID;
 
   public EventScanner(ScheduledExecutorService scheduler,
       TxEventRepository eventRepository,
@@ -99,7 +100,7 @@ public class EventScanner implements Runnable {
   }
 
   private void pollEvents() {
-    final String consulSessionId = registerConsulSession();
+    registerConsulSession();
 
     /**
      * 补偿业务逻辑大换血：
@@ -115,7 +116,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
             () -> {
               try {
-                if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
+                if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + CONSUL_SESSION_ID, CONSUL_LEADER_KEY_VALUE).getValue()) {
                   // 未防止出现部分事务在未检测超时前就已经结束的情况，此处将超时检测单开一个线程，否则其它方法如果执行超过了事务的超时时间，那么下次超时检测将在事务之后检测了，此时事务已经正常结束了
                   updateTimeoutStatus();
                   findTimeoutEvents();
@@ -133,7 +134,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
 				() -> {
 					try {
-                      if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue()) {
+                      if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + CONSUL_SESSION_ID, CONSUL_LEADER_KEY_VALUE).getValue()) {
 //                        LOG.error("Session " + serverName + "-" + serverPort + " is leader.");
 //                        updateTimeoutStatus();
 //						findTimeoutEvents();
@@ -379,23 +380,22 @@ public class EventScanner implements Runnable {
    */
   private String registerConsulSession() {
     if (consulClient == null) return null;
-    String consulSessionId = null, serverHost = "127.0.0.1";
+    String serverHost = "127.0.0.1";
     try {
       // To create a key for leader election no matter if it is exists.
       consulClient.setKVValue(CONSUL_LEADER_KEY, CONSUL_LEADER_KEY_VALUE);
       NewSession session = new NewSession();
       serverHost = InetAddress.getLocalHost().getHostAddress();
       session.setName("session-" + serverName + "-" + serverHost + "-" + serverPort + "-" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-      consulSessionId = consulClient.sessionCreate(session, null).getValue();
+      CONSUL_SESSION_ID = consulClient.sessionCreate(session, null).getValue();
     } catch (Exception e) {
       LOG.error("Failed to register Consul Session, serverName [{}], serverHost [{}], serverPort [{}].", serverName, serverHost, serverPort, e);
     } finally {
       try {
-        final String finalConsulSessionId = consulSessionId;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
           // To deregister service could not destroy session so that current service still held the lock for leader's key.
           // So to destroy session was necessary as well.
-          consulClient.sessionDestroy(finalConsulSessionId, null);
+          consulClient.sessionDestroy(CONSUL_SESSION_ID, null);
           // consulClient.agentServiceDeregister(consulInstanceId);
           List<Check> checkList = consulClient.getHealthChecksState(null).getValue();
           checkList.forEach(check -> {
@@ -409,6 +409,6 @@ public class EventScanner implements Runnable {
         LOG.error("Failed to add ShutdownHook for destroying/deregistering Consul Session, Checks and Services, serverName [{}], serverPort [{}].", serverName, serverPort, e);
       }
     }
-    return consulSessionId;
+    return CONSUL_SESSION_ID;
   }
 }
