@@ -48,7 +48,10 @@ public class DataTransferService implements IDataTransferService {
     public void scheduledTask() {
         // To transfer data on master node only.
         if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + EventScanner.CONSUL_SESSION_ID, CONSUL_LEADER_KEY_VALUE).getValue()) {
+            LOG.info("Triggered data transfer task on current master node.");
             dataTransfer("TxEvent");
+        } else {
+            LOG.info("Triggered data transfer task, but current node had been not master yet.");
         }
     }
 
@@ -74,15 +77,19 @@ public class DataTransferService implements IDataTransferService {
 
         switch (historyTableInternalRule) {
             case 0:
+                LOG.info("Transferring data with the rule '0'.");
                 transferDataByDayMonthYear(srcTable, "yyyyMMdd");
                 return;
             case 2:
+                LOG.info("Transferring data with the rule '2'.");
                 transferDataBySeason(srcTable);
                 return;
             case 3:
+                LOG.info("Transferring data with the rule '3'.");
                 transferDataByDayMonthYear(srcTable, "yyyy");
                 return;
             default:
+                LOG.info("Transferring data with the rule '1'.");
                 transferDataByDayMonthYear(srcTable, "yyyyMM");
                 return;
         }
@@ -94,6 +101,7 @@ public class DataTransferService implements IDataTransferService {
             SimpleDateFormat sdf = new SimpleDateFormat(datePattern);
             int minYMD = Integer.parseInt(sdf.format(minDate));
             int curYMD = Integer.parseInt(sdf.format(new Date()));
+            LOG.info("Transferring data, min date [{}], current date [{}].", minYMD, curYMD);
             for (int i = minYMD; i < curYMD;) {// 当前日期前的
                 try {
                     Date startTime = sdf.parse(i + "");
@@ -103,7 +111,7 @@ public class DataTransferService implements IDataTransferService {
 
                     i = increaseDate(datePattern, i);
                 } catch (Exception e) {
-                    LOG.error("Encountered an error in case of transferring data, date [{}].", i, e);
+                    LOG.info("Encountered an error in case of transferring data, date [{}].", i, e);
                 }
             }
         }
@@ -138,7 +146,7 @@ public class DataTransferService implements IDataTransferService {
                     // Selecting And Moving Season Data.
                     moveDataToHistory(srcTable, i + "season", startTime, endTime);
                 } catch (Exception e) {
-                    LOG.error("Encountered an error in case of transferring data, date [{}].", i, e);
+                    LOG.info("Encountered an error in case of transferring data, date [{}].", i, e);
                 }
             }
         }
@@ -185,14 +193,17 @@ public class DataTransferService implements IDataTransferService {
         while (true) {
             // 每次最多取10000条id，以免数据过多对内存造成过多影响
             List<Long> eventIdList = txEventRepository.selectEndedEventIdsWithinSomePeriod(pageIndex/*++ 不++是因为moveData时将上次查询出的清除了，所以再次查询还是从0起*/, pageSize, startTime, endTime);
+            LOG.info("Transferring data, get data from method 'selectEndedEventIdsWithinSomePeriod', data size [{}].", eventIdList == null ? 0 : eventIdList.size());
             if (eventIdList == null || eventIdList.isEmpty()) {
                 break;
             }
 
             // Creating Season Table.
             createHistoryTable(srcTable, suffix);
+            LOG.info("Transferring data, create successfully.");
 
             moveDataToHistory(srcTable, suffix, eventIdList);
+            LOG.info("Transferring data, move successfully.");
 
             int eventSize = eventIdList.size();
             eventIdList.clear();
