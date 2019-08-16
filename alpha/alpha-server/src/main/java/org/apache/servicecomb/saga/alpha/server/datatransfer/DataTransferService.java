@@ -1,5 +1,7 @@
 package org.apache.servicecomb.saga.alpha.server.datatransfer;
 
+import com.ecwid.consul.v1.ConsulClient;
+import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
@@ -17,6 +19,9 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY;
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
+
 /**
  * This tool class just likes a simple ETL. For transferring normal data to some history tables according to some rule.
  * @author Gannalyo
@@ -27,17 +32,24 @@ public class DataTransferService implements IDataTransferService {
 
     private DataTransferRepository dataTransferRepository;
     private TxEventRepository txEventRepository;
+
     @Autowired
     IConfigCenterService configCenterService;
+
+    @Autowired
+    ConsulClient consulClient;
 
     public DataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
         this.dataTransferRepository = dataTransferRepository;
         this.txEventRepository = txEventRepository;
     }
 
-    @Scheduled(cron = "0 0 * * * ?") // 每天凌晨执行一次 TODO 后续仅在master节点执行
+    @Scheduled(cron = "0 0 0 * * ?")
     public void scheduledTask() {
-        dataTransfer("TxEvent");
+        // To transfer data on master node only.
+        if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + EventScanner.CONSUL_SESSION_ID, CONSUL_LEADER_KEY_VALUE).getValue()) {
+            dataTransfer("TxEvent");
+        }
     }
 
     @Override
