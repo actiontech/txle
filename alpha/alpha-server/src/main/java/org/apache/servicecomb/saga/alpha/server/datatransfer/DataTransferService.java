@@ -102,7 +102,7 @@ public class DataTransferService implements IDataTransferService {
             int minYMD = Integer.parseInt(sdf.format(minDate));
             int curYMD = Integer.parseInt(sdf.format(new Date()));
             LOG.info("Transferring data, min date [{}], current date [{}].", minYMD, curYMD);
-            for (int i = minYMD; i < curYMD;) {// 当前日期前的
+            for (int i = minYMD; i <= curYMD;) {
                 try {
                     Date startTime = sdf.parse(i + "");
                     Date endTime = sdf.parse((i + 1) + "");
@@ -136,7 +136,7 @@ public class DataTransferService implements IDataTransferService {
             int minSeason = computeSeason(minDate);// format: yyyyMM
             int curSeason = computeSeason(new Date());
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMM");
-            for (int i = minSeason; i < curSeason; i = String.valueOf(i).endsWith("4") ? i + 100 - 3 : i + 1) {
+            for (int i = minSeason; i <= curSeason; i = String.valueOf(i).endsWith("4") ? i + 100 - 3 : i + 1) {
                 try {
                     String year = String.valueOf(i).substring(0, 4);
                     int season = Integer.parseInt(String.valueOf(i).substring(5));
