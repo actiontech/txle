@@ -18,7 +18,7 @@ import java.util.Map;
  * 3.The client's priority is higher than global priority.
  *
  * @author Gannalyo
- * @date 2018/12/3
+ * @since 2018/12/3
  */
 @Entity
 @Table(name = "Config")
@@ -29,9 +29,13 @@ public class ConfigCenter {
     private String servicename;
     private String instanceid;
     private String category;
-    private int status;// 0-normal, 1-historical, 2-dumped
-    private int ability;// 0-do not provide ability, 1-provide ability  全局配置参数，非全局同步且只读：即全局配置是否提供当前配置对应功能，以“是否可手动补偿为例”，如果不提供则全局和非全局均不支持手动补偿功能，如果提供，则优先客户端再全局默认值
-    private int type;// 1-globaltx, 2-compensation, 3-autocompensation, 4-bizinfotokafka, 5-txmonitor, 6-alert, 7-schedule, 8-globaltxfaulttolerant, 9-compensationfaulttolerant, 10-autocompensationfaulttolerant, 11-pauseglobaltx, 50-accidentreport, 51-sqlmonitor  if values are less than 50, then configs for server, otherwise configs for client.
+    // 0-normal, 1-historical, 2-dumped
+    private int status;
+    // 0-do not provide ability, 1-provide ability  全局配置参数，非全局同步且只读：即全局配置是否提供当前配置对应功能，以“是否可手动补偿为例”，如果不提供则全局和非全局均不支持手动补偿功能，如果提供，则优先客户端再全局默认值
+    private int ability;
+    // 1-globaltx, 2-compensation, 3-autocompensation, 4-bizinfotokafka, 5-txmonitor, 6-alert, 7-schedule, 8-globaltxfaulttolerant, 9-compensationfaulttolerant, 10-autocompensationfaulttolerant, 11-pauseglobaltx,
+    // 50-accidentreport, 51-sqlmonitor  if values are less than 50, then configs for server, otherwise configs for client.
+    private int type;
     private String value;
     private String remark;
     private Date updatetime;
@@ -58,7 +62,7 @@ public class ConfigCenter {
         this.status = toInteger(mvm.getFirst("status"), ConfigCenterStatus.Normal.toInteger());
         this.status = toInteger(mvm.getFirst("ability"), TxleConstants.YES);
         // To return a default value for 'status', but throw exception for 'type'. Because, the default value of the former is suitable and the later's is not good.
-        this.type = Integer.valueOf(mvm.getFirst("type"));
+        this.type = Integer.parseInt(mvm.getFirst("type"));
         this.value = mvm.getFirst("value");
         this.remark = mvm.getFirst("remark");
         this.updatetime = new Date(System.currentTimeMillis());

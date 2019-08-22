@@ -15,8 +15,10 @@ public class TableFieldEntity {
     private String type;
     private int fieldlength;
     private int decimalpoint;
-    private String notnull;// true/false，default false
-    private String display;// true/false，default false
+    // true/false，default false
+    private String notnull;
+    // true/false，default false
+    private String display;
     private int showorder;
     private String comment;
 

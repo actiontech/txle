@@ -63,9 +63,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
           " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.globalTxId = t.globalTxId AND t2.type = 'TxAbortedEvent')" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<TxEvent> findTimeoutEvents(long unendedMinEventId, Date currentDateTime);
 
-  /**
-   * 查询某未结束的全局事务中的超时未处理的记录，如果全局事务和子事务都设置了超时，则优先获取子事务的(其实哪个都可以)
-   */
+  // 查询某未结束的全局事务中的超时未处理的记录，如果全局事务和子事务都设置了超时，则优先获取子事务的(其实哪个都可以)
   @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'TxAbortedEvent')" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'SagaEndedEvent')" +

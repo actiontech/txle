@@ -9,22 +9,25 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Gannalyo
  * @since 2018-07-30
  */
-public class CurrentThreadContext {
+public final class CurrentThreadContext {
 
-    private static final Map<String, TxEvent> globalTxEventContext = new ConcurrentHashMap<>(10);
+    private static final Map<String, TxEvent> GLOBAL_TX_EVENT_CONTEXT = new ConcurrentHashMap<>(10);
 
     public static TxEvent get(String globalTxId) {
-        return globalTxEventContext.get(globalTxId);
+        return GLOBAL_TX_EVENT_CONTEXT.get(globalTxId);
     }
 
     public static void put(String globalTxId, TxEvent event) {
-        globalTxEventContext.putIfAbsent(globalTxId, event);
+        GLOBAL_TX_EVENT_CONTEXT.putIfAbsent(globalTxId, event);
+    }
+
+    private CurrentThreadContext() {
     }
 
     // It'll be invoked when the event is over or aborted.
     public static void clearCache(String globalTxId) {
         if (globalTxId != null) {
-            globalTxEventContext.remove(globalTxId);
+            GLOBAL_TX_EVENT_CONTEXT.remove(globalTxId);
         }
     }
 

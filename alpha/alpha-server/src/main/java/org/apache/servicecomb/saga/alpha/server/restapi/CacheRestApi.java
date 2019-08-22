@@ -56,7 +56,8 @@ public class CacheRestApi {
         if (cacheKV != null) {
             configCacheMap.remove(cacheKV.split(",")[0]);
             if (configCacheMap.isEmpty()) {
-                configCacheMap.clear();// 释放内存
+                // 释放内存
+                configCacheMap.clear();
             }
         }
     }

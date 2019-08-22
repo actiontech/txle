@@ -10,7 +10,7 @@ import java.util.Date;
  * Kafka message.
  *
  * @author Gannalyo
- * @date 2018/12/3
+ * @since 2018/12/3
  */
 @Entity
 @Table(name = "Message")
@@ -20,7 +20,8 @@ public class KafkaMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Date createtime;
-    private int status;// 0-init, 1-sending, 2-success, 3-fail
+    // 0-init, 1-sending, 2-success, 3-fail
+    private int status;
     private int version;
 
     // message body, datasource, table and data and the like, from business.
@@ -35,7 +36,8 @@ public class KafkaMessage {
     private String globaltxid;
     private String localtxid;
 
-    private KafkaMessage() {}
+    private KafkaMessage() {
+    }
 
     public KafkaMessage(String globaltxid, String localtxid, String dbdrivername, String dburl, String dbusername, String tablename, String operation, String ids) {
         this.status = KafkaMessageStatus.INIT.toInteger();

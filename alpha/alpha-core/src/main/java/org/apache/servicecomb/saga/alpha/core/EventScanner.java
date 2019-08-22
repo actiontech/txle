@@ -40,8 +40,8 @@ import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY
 import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
 
 public class EventScanner implements Runnable {
-  private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private static final byte[] EMPTY_PAYLOAD = new byte[0];
+  private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private final byte[] emptyPayload = new byte[0];
 
   private final ScheduledExecutorService scheduler;
   private final TxEventRepository eventRepository;
@@ -49,9 +49,9 @@ public class EventScanner implements Runnable {
   private final TxTimeoutRepository timeoutRepository;
   private final OmegaCallback omegaCallback;
   private IKafkaMessageProducer kafkaMessageProducer;
-  private TxleMetrics txleMetrics;
+//  private TxleMetrics txleMetrics;
 
-  private final int eventPollingInterval;
+  private final long eventPollingInterval;
 
   private long nextEndedEventId;
 
@@ -60,15 +60,15 @@ public class EventScanner implements Runnable {
   // 不能简单地获取已完成的最大id，因为会存在部分id小的还未完成的场景，如id：1、2、3，可能3完成了，但2也许还未完成
   private static volatile long unendedMinEventId;
   // 需要查询未完成最小id的次数，如果值为0则不需要查询，初始值为1，即系统启动后先查询最小id
-  public static AtomicInteger unendedMinEventIdSelectCount = new AtomicInteger(1);
+  public static final AtomicInteger UNENDED_MIN_EVENT_ID_SELECT_COUNT = new AtomicInteger(1);
 
   public static final String SCANNER_SQL = " /**scanner_sql**/";
-  
+
   private final ConsulClient consulClient;
   private final String serverName;
-  private int serverPort = 8090;
+  private int serverPort;
   private final String consulInstanceId;
-  public static String CONSUL_SESSION_ID;
+  private String consulSessionId;
   private boolean isMaster;
 
   public EventScanner(ScheduledExecutorService scheduler,
@@ -77,7 +77,6 @@ public class EventScanner implements Runnable {
       TxTimeoutRepository timeoutRepository,
       OmegaCallback omegaCallback,
       IKafkaMessageProducer kafkaMessageProducer,
-      TxleMetrics txleMetrics,
       int eventPollingInterval,
       ConsulClient consulClient,
       Object... params) {
@@ -87,11 +86,14 @@ public class EventScanner implements Runnable {
     this.timeoutRepository = timeoutRepository;
     this.omegaCallback = omegaCallback;
     this.kafkaMessageProducer = kafkaMessageProducer;
-    this.txleMetrics = txleMetrics;
     this.eventPollingInterval = eventPollingInterval;
     this.consulClient = consulClient;
     this.serverName = params[0] + "";
-    try {this.serverPort = Integer.parseInt(params[1] + "");}catch (Exception e) {}
+    try {
+      this.serverPort = Integer.parseInt(params[1] + "");
+    } catch (Exception e) {
+      this.serverPort = 8090;
+    }
     this.consulInstanceId = params[2] + "";
   }
 
@@ -125,7 +127,7 @@ public class EventScanner implements Runnable {
                 }
               } catch (Exception e) {
                 // to avoid stopping this scheduler in case of exception By Gannalyo
-                LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to detect timeout in scheduler.", e);
+                log.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to detect timeout in scheduler.", e);
               }
             },
             0,
@@ -149,7 +151,7 @@ public class EventScanner implements Runnable {
                       }
 					} catch (Exception e) {
 						// to avoid stopping this scheduler in case of exception By Gannalyo
-						LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to execute method 'compensate' in scheduler.", e);
+						log.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to execute method 'compensate' in scheduler.", e);
 					}
 				},
         0,
@@ -158,10 +160,10 @@ public class EventScanner implements Runnable {
   }
 
   private boolean isMaster() {
-    boolean result = consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + CONSUL_SESSION_ID, CONSUL_LEADER_KEY_VALUE).getValue();
+    boolean result = consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue();
     if (result) {
       if (!isMaster) {
-        LOG.error("Session " + serverName + "-" + serverPort + " is leader.");
+        log.error("Session " + serverName + "-" + serverPort + " is leader.");
       }
       isMaster = true;
     } else {
@@ -183,25 +185,27 @@ public class EventScanner implements Runnable {
     eventRepository.findTimeoutEvents(unendedMinEventId)
         .forEach(event -> {
           CurrentThreadContext.put(event.globalTxId(), event);
-          LOG.info("Found timeout event {}", event);
+          log.info("Found timeout event {}", event);
           try {
             if (timeoutRepository.findTxTimeoutByEventId(event.id()) < 1) {
               timeoutRepository.save(txTimeoutOf(event));
             }
           } catch (Exception e) {
-            LOG.error("Failed to save timeout {} in method 'EventScanner.findTimeoutEvents()'.", event, e);
+            log.error("Failed to save timeout {} in method 'EventScanner.findTimeoutEvents()'.", event, e);
           }
         });
   }
 
   private void abortTimeoutEvents() {
-    timeoutRepository.findFirstTimeout().forEach(timeout -> {// 查找超时且状态为 NEW 的超时记录
-      LOG.info("Found timeout event {} to abort", timeout);
+    // 查找超时且状态为 NEW 的超时记录
+    timeoutRepository.findFirstTimeout().forEach(timeout -> {
+      log.info("Found timeout event {} to abort", timeout);
 
       TxEvent abortedEvent = toTxAbortedEvent(timeout);
       CurrentThreadContext.put(abortedEvent.globalTxId(), abortedEvent);
       if (!eventRepository.checkIsExistsTxCompensatedEvent(abortedEvent.globalTxId(), abortedEvent.localTxId(), abortedEvent.type())) {
-        eventRepository.save(abortedEvent);// 查找到超时记录后，记录相应的(超时)终止状态
+        // 查找到超时记录后，记录相应的(超时)终止状态
+        eventRepository.save(abortedEvent);
         // 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
         commandRepository.saveWillCompensateCommandsForTimeout(abortedEvent.globalTxId());
 
@@ -220,11 +224,13 @@ public class EventScanner implements Runnable {
     long a = System.currentTimeMillis();
     // nextEndedEventId不推荐使用，原因是某事务超时时间较长在定时器检测时并未超时，并且其后续执行了一些带有异常的事务，定时器检测到这些异常事务后该值被更改，然后该超时事务将无法被补偿，因为查询需要补偿的SQL中含id值大于该nextEndedEventId值条件
     List<TxEvent> eventList = eventRepository.findFirstUncompensatedEventByIdGreaterThan(nextEndedEventId, TxEndedEvent.name());
-    if (eventList == null || eventList.isEmpty()) return;
-    LOG.info("Method 'find uncompensated event' took {} milliseconds, size = {}, nextEndedEventId = {}.", System.currentTimeMillis() - a, eventList == null ? 0 : eventList.size(), nextEndedEventId);
+    if (eventList == null || eventList.isEmpty()) {
+      return;
+    }
+    log.info("Method 'find uncompensated event' took {} milliseconds, size = {}, nextEndedEventId = {}.", System.currentTimeMillis() - a, eventList.size(), nextEndedEventId);
     eventList.forEach(event -> {
       CurrentThreadContext.put(event.globalTxId(), event);
-      LOG.info("Found uncompensated event {}, nextEndedEventId {}", event, nextEndedEventId);
+      log.info("Found uncompensated event {}, nextEndedEventId {}", event, nextEndedEventId);
       nextEndedEventId = event.id();
 //      commandRepository.saveCompensationCommands(event.globalTxId());
       commandRepository.saveCommandsForNeedCompensationEvent(event.globalTxId(), event.localTxId());
@@ -234,14 +240,17 @@ public class EventScanner implements Runnable {
   private void compensate() {
     long a = System.currentTimeMillis();
     List<Command> commandList = commandRepository.findFirstCommandToCompensate();
-    if (commandList == null || commandList.isEmpty()) return;
-    LOG.info("Method 'find compensated command' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, commandList == null ? 0 : commandList.size());
+    if (commandList == null || commandList.isEmpty()) {
+      return;
+    }
+    log.info("Method 'find compensated command' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, commandList.size());
     commandList.forEach(command -> {
-      LOG.info("Compensating transaction with globalTxId {} and localTxId {}",
+      log.error("Compensating transaction with globalTxId {} and localTxId {}",
               command.globalTxId(),
               command.localTxId());
 
-      omegaCallback.compensate(txStartedEventOf(command));// 该方法会最终调用客户端的org.apache.servicecomb.saga.omega.transaction.CompensationMessageHandler.onReceive方法进行补偿和请求存储补偿事件
+      // 该方法会最终调用客户端的org.apache.servicecomb.saga.omega.transaction.CompensationMessageHandler.onReceive方法进行补偿和请求存储补偿事件
+      omegaCallback.compensate(txStartedEventOf(command));
     });
   }
 
@@ -249,11 +258,13 @@ public class EventScanner implements Runnable {
     // The 'findFirstCompensatedEventByIdGreaterThan' interface did not think about the 'SagaEndedEvent' type so that would do too many thing those were wasted.
     long a = System.currentTimeMillis();
     List<TxEvent> compensatedUnendEventList = eventRepository.findSequentialCompensableEventOfUnended(unendedMinEventId);
-    if (compensatedUnendEventList == null || compensatedUnendEventList.isEmpty()) return;
-    LOG.info("Method 'find compensated(unend) event' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, compensatedUnendEventList == null ? 0 : compensatedUnendEventList.size());
+    if (compensatedUnendEventList == null || compensatedUnendEventList.isEmpty()) {
+      return;
+    }
+    log.info("Method 'find compensated(unend) event' took {} milliseconds, size = {}.", System.currentTimeMillis() - a, compensatedUnendEventList.size());
     compensatedUnendEventList.forEach(event -> {
       CurrentThreadContext.put(event.globalTxId(), event);
-      LOG.info("Found compensated event {}", event);
+      log.info("Found compensated event {}", event);
       updateCompensationStatus(event);
     });
   }
@@ -266,13 +277,13 @@ public class EventScanner implements Runnable {
       }
 //      eventRepository.deleteDuplicateEvents(SagaEndedEvent.name());
     } catch (Exception e) {
-      LOG.warn("Failed to delete duplicate event", e);
+      log.warn("Failed to delete duplicate event", e);
     }
   }
 
   private void updateCompensationStatus(TxEvent event) {
     commandRepository.markCommandAsDone(event.globalTxId(), event.localTxId());
-    LOG.info("Transaction with globalTxId {} and localTxId {} was compensated",
+    log.info("Transaction with globalTxId {} and localTxId {} was compensated",
         event.globalTxId(),
         event.localTxId());
 
@@ -301,9 +312,9 @@ public class EventScanner implements Runnable {
       eventRepository.save(sagaEndedEvent);
       // To send message to Kafka.
       kafkaMessageProducer.send(sagaEndedEvent);
-      LOG.info("Marked end of transaction with globalTxId {}", event.globalTxId());
+      log.info("Marked end of transaction with globalTxId {}", event.globalTxId());
     } catch (Exception e) {
-      LOG.error("Failed to save event globalTxId {} localTxId {} type {}", event.globalTxId(), event.localTxId(), event.type(), e);
+      log.error("Failed to save event globalTxId {} localTxId {} type {}", event.globalTxId(), event.localTxId(), event.type(), e);
     }
   }
 
@@ -321,7 +332,7 @@ public class EventScanner implements Runnable {
         TxAbortedEvent.name(),
         "",
         timeout.category(),
-        ("Transaction timeout").getBytes());
+        "Transaction timeout".getBytes());
   }
 
   private TxEvent toSagaEndedEvent(TxEvent event) {
@@ -334,7 +345,7 @@ public class EventScanner implements Runnable {
         SagaEndedEvent.name(),
         "",
         event.category(),
-        EMPTY_PAYLOAD);
+            emptyPayload);
   }
 
   private TxEvent txStartedEventOf(Command command) {
@@ -368,18 +379,20 @@ public class EventScanner implements Runnable {
 
   private void getMinUnendedEventId() {
     try {
-      if (unendedMinEventIdSelectCount.get() == 0) return;
-      unendedMinEventIdSelectCount.decrementAndGet();
+      if (UNENDED_MIN_EVENT_ID_SELECT_COUNT.get() == 0) {
+        return;
+      }
+      UNENDED_MIN_EVENT_ID_SELECT_COUNT.decrementAndGet();
       // 上面的方法，既能保证准确性，又不节省性能开销，但对性能的开销会越来越大，且也不太适合ServerCluster场景
       // 不保证是未完成最小的，但保证比最小未完成的还小。即：id：1、2、3...10，如果2未完成，此时定时器执行该方法，则返回2，之后2立即结束，3-7结束，8-10执行，此时再次检测，min id仍是2，而不是7/8，相当于多查询了几条数据，但保证足够的准确性。
       long currentMinid = eventRepository.selectMinUnendedTxEventId(unendedMinEventId);
       if (unendedMinEventId < currentMinid) {
         unendedMinEventId = currentMinid;
       } else if (currentMinid == 0 || currentMinid == unendedMinEventId) {
-        unendedMinEventIdSelectCount.set(0);
+        UNENDED_MIN_EVENT_ID_SELECT_COUNT.set(0);
       }
     } catch (Exception e) {
-      LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to get the min id of global transaction which is not ended.", e);
+      log.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to get the min id of global transaction which is not ended.", e);
     }
   }
 
@@ -390,9 +403,12 @@ public class EventScanner implements Runnable {
   /**
    * Multiple txle apps register the same key 'CONSUL_LEADER_KEY', it would be leader in case of getting 'true'.
    * The Session, Checks and Services have to be destroyed/deregistered before shutting down JVM, so that the lock of leader key could be released.
+   * @return String session id
    */
   private String registerConsulSession() {
-    if (consulClient == null) return null;
+    if (consulClient == null) {
+      return null;
+    }
     String serverHost = "127.0.0.1";
     try {
       // To create a key for leader election no matter if it is exists.
@@ -400,15 +416,15 @@ public class EventScanner implements Runnable {
       NewSession session = new NewSession();
       serverHost = InetAddress.getLocalHost().getHostAddress();
       session.setName("session-" + serverName + "-" + serverHost + "-" + serverPort + "-" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-      CONSUL_SESSION_ID = consulClient.sessionCreate(session, null).getValue();
+      consulSessionId = consulClient.sessionCreate(session, null).getValue();
     } catch (Exception e) {
-      LOG.error("Failed to register Consul Session, serverName [{}], serverHost [{}], serverPort [{}].", serverName, serverHost, serverPort, e);
+      log.error("Failed to register Consul Session, serverName [{}], serverHost [{}], serverPort [{}].", serverName, serverHost, serverPort, e);
     } finally {
       try {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
           // To deregister service could not destroy session so that current service still held the lock for leader's key.
           // So to destroy session was necessary as well.
-          consulClient.sessionDestroy(CONSUL_SESSION_ID, null);
+          consulClient.sessionDestroy(consulSessionId, null);
           // consulClient.agentServiceDeregister(consulInstanceId);
           List<Check> checkList = consulClient.getHealthChecksState(null).getValue();
           checkList.forEach(check -> {
@@ -419,9 +435,13 @@ public class EventScanner implements Runnable {
           });
         }));
       } catch (Exception e) {
-        LOG.error("Failed to add ShutdownHook for destroying/deregistering Consul Session, Checks and Services, serverName [{}], serverPort [{}].", serverName, serverPort, e);
+        log.error("Failed to add ShutdownHook for destroying/deregistering Consul Session, Checks and Services, serverName [{}], serverPort [{}].", serverName, serverPort, e);
       }
     }
-    return CONSUL_SESSION_ID;
+    return consulSessionId;
+  }
+
+  public static String getConsulSessionId() {
+    return getConsulSessionId();
   }
 }

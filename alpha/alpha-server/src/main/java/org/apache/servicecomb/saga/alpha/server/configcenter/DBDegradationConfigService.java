@@ -19,7 +19,7 @@ import java.util.*;
 
 /**
  * @author Gannalyo
- * @date 2019/2/21
+ * @since 2019/2/21
  */
 public class DBDegradationConfigService implements IConfigCenterService {
 
@@ -31,7 +31,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
     private IDataDictionaryService dataDictionaryService;
 
     @Autowired
-    CacheRestApi cacheRestApi;
+    private CacheRestApi cacheRestApi;
 
     public DBDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
         this.configCenterEntityRepository = configCenterEntityRepository;
@@ -76,7 +76,8 @@ public class DBDegradationConfigService implements IConfigCenterService {
              */
             String value = "";
             boolean isExistsConfigs = false;
-            for (ConfigCenter config : configCenterList) {// 1.获取当前类型配置的全局值
+            // 1.获取当前类型配置的全局值
+            for (ConfigCenter config : configCenterList) {
                 if (config.getInstanceid() == null || config.getInstanceid().trim().length() == 0) {
                     if (config.getAbility() == TxleConstants.NO) {
                         return false;
@@ -86,26 +87,33 @@ public class DBDegradationConfigService implements IConfigCenterService {
                     break;
                 }
             }
-            if (isExistsConfigs) {// 强制每个配置必须有全局配置才生效
+            // 强制每个配置必须有全局配置才生效
+            if (isExistsConfigs) {
                 isExistsConfigs = false;
-                for (ConfigCenter config : configCenterList) {// 2.获取当前配置的具体值(instanceId和category都为有效值的情况)
+                // 2.获取当前配置的具体值(instanceId和category都为有效值的情况)
+                for (ConfigCenter config : configCenterList) {
                     if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0 && config.getCategory() != null && config.getCategory().trim().length() > 0) {
                         isExistsConfigs = true;
                         if (config.getAbility() == TxleConstants.NO) {
-                            break;// do not cover the value of global config.
+                            // do not cover the value of global config.
+                            break;
                         }
                         value = config.getValue();
-                        break;// cover the value of global config.
+                        // cover the value of global config.
+                        break;
                     }
                 }
-                if (!isExistsConfigs) {// 3.如果未获取到当前配置的具体值，则获取当前配置的默认值(instanceId为有效值、category为无效值的情况)
+                // 3.如果未获取到当前配置的具体值，则获取当前配置的默认值(instanceId为有效值、category为无效值的情况)
+                if (!isExistsConfigs) {
                     for (ConfigCenter config : configCenterList) {
                         if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0 && (config.getCategory() == null || config.getCategory().trim().length() == 0)) {
                             if (config.getAbility() == TxleConstants.NO) {
-                                break;// do not cover the value of global config.
+                                // do not cover the value of global config.
+                                break;
                             }
                             value = config.getValue();
-                            break;// cover the value of global config.
+                            // cover the value of global config.
+                            break;
                         }
                     }
                 }
@@ -140,9 +148,15 @@ public class DBDegradationConfigService implements IConfigCenterService {
 
     private boolean createOrUpdateConfig(ConfigCenter config) {
         config.setUpdatetime(new Date());
-        if ((config.getServicename() + "").length() == 0) config.setServicename(null);
-        if ((config.getInstanceid() + "").length() == 0) config.setInstanceid(null);
-        if ((config.getCategory() + "").length() == 0) config.setCategory(null);
+        if ((config.getServicename() + "").length() == 0) {
+            config.setServicename(null);
+        }
+        if ((config.getInstanceid() + "").length() == 0) {
+            config.setInstanceid(null);
+        }
+        if ((config.getCategory() + "").length() == 0) {
+            config.setCategory(null);
+        }
         cacheRestApi.putForDistributedCache(TxleConstants.constructConfigCacheKey(config.getInstanceid(), config.getCategory(), config.getType()), TxleConstants.ENABLED.equals(config.getValue()));
         return configCenterEntityRepository.save(config) != null;
     }

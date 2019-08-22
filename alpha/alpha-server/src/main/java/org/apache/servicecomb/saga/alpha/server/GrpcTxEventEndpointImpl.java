@@ -80,7 +80,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
                 .put(request.getInstanceId(), new GrpcOmegaCallback(responseObserver));
     }
 
-    // TODO: 2018/1/5 connect is async and disconnect is sync, meaning callback may not be registered on disconnected
+    // TODO 2018/1/5 connect is async and disconnect is sync, meaning callback may not be registered on disconnected
     @Override
     public void onDisconnected(GrpcServiceConfig request, StreamObserver<GrpcAck> responseObserver) {
         try {
@@ -121,7 +121,8 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
                 result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
             } else if (EventType.TxStartedEvent.name().equals(message.getType())) {
                 result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
-                if (result) {// If the global transaction was not enabled, then two child transactions were regarded as disabled.
+                if (result) {
+                    // If the global transaction was not enabled, then two child transactions were regarded as disabled.
                     if (!TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
                         result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.Compensation);
                     } else if (TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
@@ -142,7 +143,8 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
     }
 
     private void handleSupportTxPause(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
-        GrpcAck grpcAck = null;// To use temporary variables as much as possible for saving memory, not static variables.
+        // To use temporary variables as much as possible for saving memory, not static variables.
+        GrpcAck grpcAck = null;
         try {
             int result = 0;
             try {
@@ -190,14 +192,22 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
             for (int i = 0; i < payloadArr.length; i++) {
                 localTxIdSet.add(payloadArr[i].toString());
             }
-            Set<String> localTxIdOfEndedGlobalTx = txConsistentService.fetchLocalTxIdOfEndedGlobalTx(localTxIdSet);
-            payloads = ByteString.copyFrom(serialize(localTxIdOfEndedGlobalTx.toArray()));
+            if (localTxIdSet != null && !localTxIdSet.isEmpty()) {
+                Set<String> localTxIdOfEndedGlobalTx = txConsistentService.fetchLocalTxIdOfEndedGlobalTx(localTxIdSet);
+                if (localTxIdOfEndedGlobalTx != null && !localTxIdOfEndedGlobalTx.isEmpty()) {
+                    payloads = ByteString.copyFrom(serialize(localTxIdOfEndedGlobalTx.toArray()));
+                }
+            }
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'fetchLocalTxIdOfEndedGlobalTx'.", e);
         } finally {
             // message.toBuilder().setPayloads(payloads);// Could not set payloads to the original object.
             // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
-            responseObserver.onNext(GrpcAck.newBuilder().setAborted(false).setLocalTxIds(payloads).build());
+            if (payloads == null) {
+                responseObserver.onNext(GrpcAck.newBuilder().setAborted(false).build());
+            } else {
+                responseObserver.onNext(GrpcAck.newBuilder().setAborted(false).setLocalTxIds(payloads).build());
+            }
             responseObserver.onCompleted();
         }
     }
@@ -224,30 +234,30 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
     @Override
     public void onMessage(GrpcMessage message, StreamObserver<GrpcMessageAck> responseObserver) {
-        GrpcMessageAck MSG_ACK_TRUE = null;
-        GrpcMessageAck MSG_ACK_FALSE = null;
+        GrpcMessageAck msgAckTrue = null;
+        GrpcMessageAck msgAckFalse = null;
         boolean result = false;
         try {
-            MSG_ACK_TRUE = GrpcMessageAck.newBuilder().setStatus(true).build();
-            MSG_ACK_FALSE = GrpcMessageAck.newBuilder().setStatus(false).build();
+            msgAckTrue = GrpcMessageAck.newBuilder().setStatus(true).build();
+            msgAckFalse = GrpcMessageAck.newBuilder().setStatus(false).build();
             result = txConsistentService.saveKafkaMessage(new KafkaMessage(message.getGlobaltxid(), message.getLocaltxid(), message.getDbdrivername(), message.getDburl(), message.getDbusername(), message.getTablename(), message.getOperation(), message.getIds()));
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onMessage'.", e);
         } finally {
             // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
-            responseObserver.onNext(result ? MSG_ACK_TRUE : MSG_ACK_FALSE);
+            responseObserver.onNext(result ? msgAckTrue : msgAckFalse);
             responseObserver.onCompleted();
         }
     }
 
     @Override
     public void onAccident(GrpcAccident accident, StreamObserver<GrpcAccidentAck> responseObserver) {
-        GrpcAccidentAck MSG_ACK_TRUE = null;
-        GrpcAccidentAck MSG_ACK_FALSE = null;
+        GrpcAccidentAck msgAckTrue = null;
+        GrpcAccidentAck msgAckFalse = null;
         boolean result = false;
         try {
-            MSG_ACK_TRUE = GrpcAccidentAck.newBuilder().setStatus(true).build();
-            MSG_ACK_FALSE = GrpcAccidentAck.newBuilder().setStatus(false).build();
+            msgAckTrue = GrpcAccidentAck.newBuilder().setStatus(true).build();
+            msgAckFalse = GrpcAccidentAck.newBuilder().setStatus(false).build();
             AccidentHandling accidentHandling = new AccidentHandling(accident.getServicename(), accident.getInstanceid(), accident.getGlobaltxid(), accident.getLocaltxid(), AccidentHandleType.convertTypeFromValue(accident.getType()), accident.getBizinfo(), accident.getRemark());
             // To report accident to Accident Platform.
             result = accidentHandlingService.reportMsgToAccidentPlatform(accidentHandling.toJsonString());
@@ -255,7 +265,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
             LOG.error("Encountered an exception when executing method 'onAccident'.", e);
         } finally {
             // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
-            responseObserver.onNext(result ? MSG_ACK_TRUE : MSG_ACK_FALSE);
+            responseObserver.onNext(result ? msgAckTrue : msgAckFalse);
             responseObserver.onCompleted();
         }
     }
@@ -265,8 +275,12 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         boolean isEnabledConfig = false;
         try {
             String instanceId = null, category = null;
-            if (config.getInstanceId() != null) instanceId = config.getInstanceId();
-            if (config.getCategory() != null) category = config.getCategory();
+            if (config.getInstanceId() != null) {
+                instanceId = config.getInstanceId();
+            }
+            if (config.getCategory() != null) {
+                category = config.getCategory();
+            }
 
             isEnabledConfig = dbDegradationConfigService.isEnabledConfig(instanceId, category, ConfigCenterType.convertTypeFromValue(config.getType()));
         } catch (Exception e) {

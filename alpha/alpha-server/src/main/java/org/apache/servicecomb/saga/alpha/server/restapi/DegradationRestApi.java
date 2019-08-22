@@ -2,7 +2,6 @@ package org.apache.servicecomb.saga.alpha.server.restapi;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,7 +26,7 @@ public class DegradationRestApi {
 
 	@GetMapping("/disableLogReport")
 	public String disableLogReport() {
-		this.disableKafkaLogReport();
+ //		this.disableKafkaLogReport();
 		return "";
 	}
 

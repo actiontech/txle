@@ -29,7 +29,7 @@ public interface TxEventRepository {
   /**
    * Save a {@link TxEvent}.
    *
-   * @param event
+   * @param event for global/sub transaction
    */
   void save(TxEvent event);
 
@@ -40,7 +40,7 @@ public interface TxEventRepository {
    *   <li>{@link TxEvent#type} is {@link EventType#TxAbortedEvent}</li>
    *   <li>There are no {@link TxEvent} which has the same {@link TxEvent#globalTxId} and {@link TxEvent#type} is {@link EventType#TxEndedEvent} or {@link EventType#SagaEndedEvent}</li>
    * </ol>
-   * @return
+   * @return event list
    */
   Optional<List<TxEvent>> findFirstAbortedGlobalTransaction();
 
@@ -53,7 +53,8 @@ public interface TxEventRepository {
    *  <li>There are no corresponding {@link TxEvent} which type is <code>TxEndedEvent</code> or <code>SagaEndedEvent</code></li>
    * </ol>
    *
-   * @return
+   * @param unendedMinEventId the min identify of undone event
+   * @return event list
    */
   List<TxEvent> findTimeoutEvents(long unendedMinEventId);
 
@@ -67,8 +68,8 @@ public interface TxEventRepository {
    *   <li>{@link TxEvent#localTxId} equals to param <code>localTxId</code></li>
    * </ol>
    *
-   * @param globalTxId
-   * @param localTxId
+   * @param globalTxId global transaction identify
+   * @param localTxId sub-transaction identify
    * @return {@link TxEvent}
    */
   Optional<TxEvent> findTxStartedEvent(String globalTxId, String localTxId);
@@ -82,7 +83,7 @@ public interface TxEventRepository {
    *
    * @param globalTxId globalTxId to search for
    * @param type       event type to search for
-   * @return
+   * @return event list
    */
   List<TxEvent> findTransactions(String globalTxId, String type);
 
@@ -96,8 +97,9 @@ public interface TxEventRepository {
    *   <li>There is no coresponding <code>TxCompensatedEvent</code></li>
    * </ol>
    *
-   * @param id
-   * @return
+   * @param id event id
+   * @param type event type
+   * @return event list
    */
   List<TxEvent> findFirstUncompensatedEventByIdGreaterThan(long id, String type);
 

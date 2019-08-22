@@ -5,7 +5,7 @@ import java.util.Date;
 
 /**
  * @author Gannalyo
- * @date 2019/7/11
+ * @since 2019/7/11
  */
 @Entity
 @Table(name = "DataDictionaryItem")

@@ -13,7 +13,7 @@ import java.util.Map;
 public class DataTransferRepository {
 
     @PersistenceContext
-    public EntityManager entityManager;
+    private EntityManager entityManager;
 
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> executeQuery(String sql, Object... params) {

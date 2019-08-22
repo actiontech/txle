@@ -25,7 +25,7 @@ import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY
 /**
  * This tool class just likes a simple ETL. For transferring normal data to some history tables according to some rule.
  * @author Gannalyo
- * @date 2019/7/23
+ * @since 2019/7/23
  */
 public class DataTransferService implements IDataTransferService {
     private static final Logger LOG = LoggerFactory.getLogger(DataTransferService.class);
@@ -34,10 +34,10 @@ public class DataTransferService implements IDataTransferService {
     private TxEventRepository txEventRepository;
 
     @Autowired
-    IConfigCenterService configCenterService;
+    private IConfigCenterService configCenterService;
 
     @Autowired
-    ConsulClient consulClient;
+    private ConsulClient consulClient;
 
     public DataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
         this.dataTransferRepository = dataTransferRepository;
@@ -47,7 +47,7 @@ public class DataTransferService implements IDataTransferService {
     @Scheduled(cron = "0 0 0 * * ?")
     public void scheduledTask() {
         // To transfer data on master node only.
-        if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + EventScanner.CONSUL_SESSION_ID, CONSUL_LEADER_KEY_VALUE).getValue()) {
+        if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + EventScanner.getConsulSessionId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
             LOG.info("Triggered data transfer task on current master node.");
             dataTransfer("TxEvent");
         } else {
@@ -125,15 +125,17 @@ public class DataTransferService implements IDataTransferService {
             calendar.add("yyyy".equals(datePattern) ? Calendar.YEAR : "yyyyMM".equals(datePattern) ? Calendar.MONTH : Calendar.DAY_OF_YEAR, 1);
             return Integer.parseInt(sdfYMD.format(calendar.getTime()));
         } catch (Exception e) {
-            return date;
+            LOG.info("Failed to increase the date, datePattern [{}], date [{}].", datePattern, date, e);
         }
+        return date;
     }
 
     // 季度：1-3、4-6、7-9、10-12
     private void transferDataBySeason(String srcTable) {
         Date minDate = txEventRepository.selectMinDateInTxEvent();
         if (minDate != null) {
-            int minSeason = computeSeason(minDate);// format: yyyyMM
+            // format: yyyyMM
+            int minSeason = computeSeason(minDate);
             int curSeason = computeSeason(new Date());
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMM");
             for (int i = minSeason; i <= curSeason; i = String.valueOf(i).endsWith("4") ? i + 100 - 3 : i + 1) {
@@ -215,7 +217,9 @@ public class DataTransferService implements IDataTransferService {
     }
 
     private void moveDataToHistory(String srcTable, String suffix, List<Long> idList) {
-        if (idList == null || idList.isEmpty()) return;
+        if (idList == null || idList.isEmpty()) {
+            return;
+        }
 
         int maxPlaceholders = 1000;
         StringBuilder insertSql = new StringBuilder("INSERT IGNORE INTO " + srcTable + "_" + suffix + " SELECT * FROM " + srcTable + " T WHERE T.surrogateId IN (");
@@ -239,7 +243,7 @@ public class DataTransferService implements IDataTransferService {
             StringBuilder placeholders = new StringBuilder(maxPlaceholders);
             List<Long> idSetWithin1000 = new LinkedList<>();
             for (int i = 1; i < idList.size() + 1; i++) {
-                idSetWithin1000.add(idList.get(i - 1).longValue());
+                idSetWithin1000.add(idList.get(i - 1));
                 placeholders.append("?,");
 
                 if (i % maxPlaceholders == 0 || i == idList.size()) {

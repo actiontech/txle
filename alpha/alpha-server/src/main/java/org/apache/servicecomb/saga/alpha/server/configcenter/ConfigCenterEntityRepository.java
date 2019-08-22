@@ -30,13 +30,15 @@ public interface ConfigCenterEntityRepository extends CrudRepository<ConfigCente
     @Query("FROM ConfigCenter T WHERE T.status = ?1")
     List<ConfigCenter> findConfigList(Pageable pageable, int status);
 
-    @Query("FROM ConfigCenter T WHERE T.status = ?1 AND FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status), FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
+    @Query("FROM ConfigCenter T WHERE T.status = ?1 AND FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status)," +
+            " FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
     List<ConfigCenter> findConfigList(Pageable pageable, int status, String searchText);
 
     @Query("SELECT COUNT(1) FROM ConfigCenter T")
     long findConfigCount();
 
-    @Query("SELECT COUNT(1) FROM ConfigCenter T WHERE FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status), FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
+    @Query("SELECT COUNT(1) FROM ConfigCenter T WHERE FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status)," +
+            " FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
     long findConfigCount(String searchText);
 
 }

@@ -13,7 +13,7 @@ import org.springframework.context.annotation.PropertySource;
  * Kafka producer configuration.
  *
  * @author Gannalyo
- * @date 2018/12/3
+ * @since 2018/12/3
  */
 @Configuration
 //@ConfigurationProperties(prefix="spring.kafka")
