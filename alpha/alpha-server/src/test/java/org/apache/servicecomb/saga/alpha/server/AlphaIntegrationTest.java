@@ -17,21 +17,25 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import static com.seanyinx.github.unit.scaffolding.Randomness.uniquify;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.servicecomb.saga.alpha.core.TaskStatus.DONE;
-import static org.apache.servicecomb.saga.common.EventType.SagaEndedEvent;
-import static org.apache.servicecomb.saga.common.EventType.SagaStartedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxAbortedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxEndedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
-import static org.awaitility.Awaitility.await;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import com.ecwid.consul.v1.ConsulClient;
+import com.google.protobuf.ByteString;
+import io.grpc.ManagedChannel;
+import io.grpc.netty.NettyChannelBuilder;
+import io.grpc.stub.StreamObserver;
+import org.apache.servicecomb.saga.alpha.core.*;
+import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
+import org.apache.servicecomb.saga.common.EventType;
+import org.apache.servicecomb.saga.pack.contract.grpc.*;
+import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
+import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceStub;
+import org.hamcrest.core.Is;
+import org.junit.*;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
+import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -40,35 +44,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-import javax.annotation.PostConstruct;
-
-import com.ecwid.consul.v1.ConsulClient;
-import org.apache.servicecomb.saga.alpha.core.*;
-import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
-import org.apache.servicecomb.saga.common.EventType;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcAck;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcCompensateCommand;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcServiceConfig;
-import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent;
-import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc;
-import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
-import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceStub;
-import org.hamcrest.core.Is;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
-
-import com.google.protobuf.ByteString;
-
-import io.grpc.ManagedChannel;
-import io.grpc.netty.NettyChannelBuilder;
-import io.grpc.stub.StreamObserver;
+import static com.seanyinx.github.unit.scaffolding.Randomness.uniquify;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.servicecomb.saga.alpha.core.TaskStatus.DONE;
+import static org.apache.servicecomb.saga.common.EventType.*;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = {AlphaApplication.class, AlphaConfig.class},
@@ -127,9 +111,6 @@ public class AlphaIntegrationTest {
 
   @Autowired
   private IKafkaMessageProducer kafkaMessageProducer;
-
-  @Autowired
-  TxleMetrics txleMetrics;
 
   @Autowired
   private TxConsistentService consistentService;
@@ -612,7 +593,6 @@ public class AlphaIntegrationTest {
         timeoutRepository,
         omegaCallback,
         kafkaMessageProducer,
-            txleMetrics,
         1,
         consulClient, "").run();
   }

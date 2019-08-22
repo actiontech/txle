@@ -30,7 +30,6 @@ import zipkin2.reporter.Sender;
 import zipkin2.reporter.okhttp3.OkHttpSender;
 
 import javax.servlet.Filter;
-import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 
 /**
@@ -45,25 +44,16 @@ public class TracingConfiguration extends WebMvcConfigurerAdapter {
     @Value("${spring.zipkin.base-url://127.0.0.1:9411/api/v2/spans}")
     private String zipkinServer;
 
-    /**
-     * Configuration for how to send spans to Zipkin
-     */
     @Bean
     Sender sender() {
         return OkHttpSender.create(zipkinServer);
     }
 
-    /**
-     * Configuration for how to buffer spans into messages for Zipkin
-     */
     @Bean
     AsyncReporter<Span> spanReporter() {
         return AsyncReporter.create(sender());
     }
 
-    /**
-     * Controls aspects of tracing such as the service name that shows up in the UI
-     */
     @Bean
     Tracing tracing(@Value("${spring.application.name}") String serviceName, Sender sender, AsyncReporter reporter) {
 //        final Pattern exclude = Pattern.compile("(set.+)|(commit)|(show)|(select @@)", Pattern.CASE_INSENSITIVE);
@@ -107,25 +97,16 @@ public class TracingConfiguration extends WebMvcConfigurerAdapter {
         return tracing;
     }
 
-    /**
-     * Allows someone to add tags to a span if a trace is in progress
-     */
     @Bean
     SpanCustomizer spanCustomizer(Tracing tracing) {
         return CurrentSpanCustomizer.create(tracing);
     }
 
-    /**
-     * Decides how to name and tag spans. By default they are named the same as the http method
-     */
     @Bean
     HttpTracing httpTracing(Tracing tracing) {
         return HttpTracing.create(tracing);
     }
 
-    /**
-     * Creates server spans for http requests
-     */
     @Bean
     Filter tracingFilter(HttpTracing httpTracing) {
         return TracingFilter.create(httpTracing);
@@ -138,11 +119,8 @@ public class TracingConfiguration extends WebMvcConfigurerAdapter {
     }
 
     @Autowired
-    SpanCustomizingAsyncHandlerInterceptor webMvcTracingCustomizer;
+    private SpanCustomizingAsyncHandlerInterceptor webMvcTracingCustomizer;
 
-    /**
-     * Decorates server spans with application-defined web tags
-     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(webMvcTracingCustomizer);

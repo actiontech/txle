@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * @author Gannalyo
- * @date 2019/2/21
+ * @since 2019/2/21
  */
 public class DataDictionaryService implements IDataDictionaryService {
 

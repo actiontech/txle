@@ -51,7 +51,7 @@ class GrpcStartable implements ServerStartable {
 
   GrpcStartable(GrpcServerConfig serverConfig, Tracing tracing, BindableService... services) {
     ServerBuilder<?> serverBuilder;
-    if (serverConfig.isSslEnable()){
+    if (serverConfig.isSslEnable()) {
       serverBuilder = NettyServerBuilder.forAddress(
           new InetSocketAddress(serverConfig.getHost(), serverConfig.getPort()));
 
@@ -64,9 +64,10 @@ class GrpcStartable implements ServerStartable {
       serverBuilder = ServerBuilder.forPort(serverConfig.getPort());
     }
 //    Arrays.stream(services).forEach(serverBuilder::addService);
+    // add interceptor for grpc server By Gannalyo
     Arrays.stream(services).forEach(service ->
             serverBuilder.addService(ServerInterceptors.intercept(service,
-                    GrpcTracing.create(tracing).newServerInterceptor())));// add interceptor for grpc server By Gannalyo
+                    GrpcTracing.create(tracing).newServerInterceptor())));
     server = serverBuilder.build();
   }
 

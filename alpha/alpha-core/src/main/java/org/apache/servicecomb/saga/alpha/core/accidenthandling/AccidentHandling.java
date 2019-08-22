@@ -12,7 +12,7 @@ import java.util.Map;
  * Accident Handling.
  *
  * @author Gannalyo
- * @date 2019/06/14
+ * @since 2019/06/14
  */
 @Entity
 @Table(name = "Accident")
@@ -26,8 +26,10 @@ public class AccidentHandling {
     private String globaltxid;
     private String localtxid;
 
-    private int type;// 1-rollback_error, 2-send_msg_error
-    private int status;// 0-init, 1-sending, 2-success, 3-fail
+    // 1-rollback_error, 2-send_msg_error
+    private int type;
+    // 0-init, 1-sending, 2-success, 3-fail
+    private int status;
     private String bizinfo;
     private String remark;
     private Date createtime;

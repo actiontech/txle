@@ -16,7 +16,7 @@ public class TxleJpaRepositoryProxyFactory<R extends JpaRepository<T, I>, T, I e
     }
 
     @Autowired
-    TxleJpaRepositoryInterceptor txleJpaRepositoryInterceptor;
+    private TxleJpaRepositoryInterceptor txleJpaRepositoryInterceptor;
 
     protected RepositoryFactorySupport createRepositoryFactory(EntityManager entityManager) {
         try {

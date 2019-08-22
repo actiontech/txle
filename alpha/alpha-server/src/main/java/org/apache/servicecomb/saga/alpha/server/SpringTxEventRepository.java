@@ -284,7 +284,8 @@ class SpringTxEventRepository implements TxEventRepository {
       if (TxAbortedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
-            txMap.put("status_db", 1);// 异常状态
+            // 异常状态
+            txMap.put("status_db", 1);
             txMap.put("status", statusValueName.get("1"));
             break;
           }
@@ -297,12 +298,15 @@ class SpringTxEventRepository implements TxEventRepository {
       if (SagaEndedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
-            txMap.put("endTime", sdf.format(event.creationTime()));// ****设置结束时间****
+            // ****设置结束时间****
+            txMap.put("endTime", sdf.format(event.creationTime()));
             if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
-              txMap.put("status_db", 3);// 正常结束
+              // 正常结束
+              txMap.put("status_db", 3);
               txMap.put("status", statusValueName.get("3"));
             } else {
-              txMap.put("status_db", 4);// 异常结束
+              // 异常结束
+              txMap.put("status_db", 4);
               txMap.put("status", statusValueName.get("4"));
             }
             break;
@@ -312,13 +316,16 @@ class SpringTxEventRepository implements TxEventRepository {
     });
 
     resultTxEventList.forEach(txMap -> {
-      if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {// 正常状态场景才去验证是否暂停
+      // 正常状态场景才去验证是否暂停
+      if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
         txEventList.forEach(event -> {
           if (event.globalTxId().equals(txMap.get("globalTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
             List<TxEvent> pauseContinueEventList = eventRepo.selectPausedAndContinueEvent(event.globalTxId());
             if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-              if (pauseContinueEventList.size() % 2 == 1) {// 暂停状态
-                txMap.put("status_db", 2);// 暂停
+              // 暂停状态
+              if (pauseContinueEventList.size() % 2 == 1) {
+                // 暂停
+                txMap.put("status_db", 2);
                 txMap.put("status", statusValueName.get("2"));
               }
             }
@@ -346,7 +353,8 @@ class SpringTxEventRepository implements TxEventRepository {
       if (TxAbortedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.localTxId().equals(txMap.get("localTxId").toString())) {
-            txMap.put("status_db", 1);// 异常状态
+            // 异常状态
+            txMap.put("status_db", 1);
             txMap.put("status", statusValueName.get("1"));
             break;
           }
@@ -359,12 +367,15 @@ class SpringTxEventRepository implements TxEventRepository {
       if (TxEndedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.localTxId().equals(txMap.get("localTxId").toString())) {
-            txMap.put("endTime", sdf.format(event.creationTime()));// ****设置结束时间****
+            // ****设置结束时间****
+            txMap.put("endTime", sdf.format(event.creationTime()));
             if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
-              txMap.put("status_db", 3);// 正常结束
+              // 正常结束
+              txMap.put("status_db", 3);
               txMap.put("status", statusValueName.get("3"));
             } else {
-              txMap.put("status_db", 4);// 异常结束
+              // 异常结束
+              txMap.put("status_db", 4);
               txMap.put("status", statusValueName.get("4"));
             }
             break;
@@ -374,13 +385,16 @@ class SpringTxEventRepository implements TxEventRepository {
     });
 
     resultTxEventList.forEach(txMap -> {
-      if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {// 正常状态场景才去验证是否暂停
+      // 正常状态场景才去验证是否暂停
+      if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
         txEventList.forEach(event -> {
           if (event.localTxId().equals(txMap.get("localTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
             List<TxEvent> pauseContinueEventList = eventRepo.selectPausedAndContinueEvent(event.globalTxId());
             if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-              if (pauseContinueEventList.size() % 2 == 1) {// 暂停状态
-                txMap.put("status_db", 2);// 暂停
+              // 暂停状态
+              if (pauseContinueEventList.size() % 2 == 1) {
+                // 暂停
+                txMap.put("status_db", 2);
                 txMap.put("status", statusValueName.get("2"));
               }
             }

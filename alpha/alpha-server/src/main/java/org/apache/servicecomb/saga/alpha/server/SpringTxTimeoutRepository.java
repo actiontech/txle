@@ -17,19 +17,17 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import static org.apache.servicecomb.saga.alpha.core.TaskStatus.PENDING;
-
-import java.lang.invoke.MethodHandles;
-import java.util.Date;
-import java.util.List;
-
-import javax.transaction.Transactional;
-
 import org.apache.servicecomb.saga.alpha.core.TxTimeout;
 import org.apache.servicecomb.saga.alpha.core.TxTimeoutRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.PageRequest;
+
+import javax.transaction.Transactional;
+import java.lang.invoke.MethodHandles;
+import java.util.Date;
+import java.util.List;
+
+import static org.apache.servicecomb.saga.alpha.core.TaskStatus.PENDING;
 
 public class SpringTxTimeoutRepository implements TxTimeoutRepository {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());

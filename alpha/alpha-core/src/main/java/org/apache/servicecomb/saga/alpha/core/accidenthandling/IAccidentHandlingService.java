@@ -7,7 +7,7 @@ import java.util.Map;
  * Accident Handling Repository.
  *
  * @author Gannalyo
- * @date 2019/06/14
+ * @since 2019/06/14
  */
 public interface IAccidentHandlingService {
 

@@ -17,16 +17,9 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import javax.persistence.*;
+
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
-
-import java.util.Date;
-
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.Version;
 
 @Entity
 @Table(name = "Command")
@@ -46,7 +39,6 @@ public class Command {
   private byte[] payloads;
   private String status;
 
-  private Date lastModified;
   private String category;
 
   @Version
@@ -76,7 +68,6 @@ public class Command {
     this.category = category;
     this.payloads = payloads;
     this.status = status;
-    this.lastModified = new Date();
   }
 
   public Command(long id,
@@ -150,15 +141,15 @@ public class Command {
 
   @Override
   public String toString() {
-    return "Command{" +
-        "eventId=" + eventId +
-        ", serviceName='" + serviceName + '\'' +
-        ", instanceId='" + instanceId + '\'' +
-        ", globalTxId='" + globalTxId + '\'' +
-        ", localTxId='" + localTxId + '\'' +
-        ", parentTxId='" + parentTxId + '\'' +
-        ", compensationMethod='" + compensationMethod + '\'' +
-        ", category='" + category + '\'' +
-        '}';
+    return "Command{"
+            + "eventId=" + eventId
+            + ", serviceName='" + serviceName + '\''
+            + ", instanceId='" + instanceId + '\''
+            + ", globalTxId='" + globalTxId + '\''
+            + ", localTxId='" + localTxId + '\''
+            + ", parentTxId='" + parentTxId + '\''
+            + ", compensationMethod='" + compensationMethod + '\''
+            + ", category='" + category + '\''
+            + '}';
   }
 }

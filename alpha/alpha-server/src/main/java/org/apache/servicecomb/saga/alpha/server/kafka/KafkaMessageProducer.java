@@ -27,7 +27,7 @@ import java.util.List;
  * Kafka message producer.
  *
  * @author Gannalyo
- * @date 2018/12/3
+ * @since 2018/12/3
  */
 public class KafkaMessageProducer implements IKafkaMessageProducer {
 
@@ -39,10 +39,10 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     private IKafkaMessageRepository kafkaMessageRepository;
 
     @Autowired
-    IAccidentHandlingService accidentHandlingService;
+    private IAccidentHandlingService accidentHandlingService;
 
     @Autowired
-    IConfigCenterService dbDegradationConfigService;
+    private IConfigCenterService dbDegradationConfigService;
 
     private String topic;
 

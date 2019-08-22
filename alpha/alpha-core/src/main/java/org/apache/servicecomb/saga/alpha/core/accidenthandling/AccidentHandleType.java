@@ -4,7 +4,7 @@ package org.apache.servicecomb.saga.alpha.core.accidenthandling;
  * An enum for the type of accident handling.
  *
  * @author Gannalyo
- * @date 2019/06/14
+ * @since 2019/06/14
  */
 public enum AccidentHandleType {
     ROLLBACK_ERROR,

@@ -35,7 +35,6 @@ import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionarySer
 import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferRepository;
 import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
-import org.apache.servicecomb.saga.alpha.server.restapi.TransactionRestApi;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -86,6 +85,9 @@ class AlphaConfig {
   @Value("${spring.cloud.consul.discovery.instanceId:\"\"}")
   private String consulInstanceId;
 
+  @Value("${alpha.event.pollingInterval:500}")
+  private int eventPollingInterval;
+
   @Bean
   Map<String, Map<String, OmegaCallback>> omegaCallbacks() {
     return new ConcurrentHashMap<>();
@@ -95,7 +97,7 @@ class AlphaConfig {
   OmegaCallback omegaCallback(Map<String, Map<String, OmegaCallback>> callbacks) {
     return new PushBackOmegaCallback(pendingCompensations, new CompositeOmegaCallback(callbacks));
   }
-  
+
   @Bean
   TxEventRepository springTxEventRepository(TxEventEnvelopeRepository eventRepo) {
     return new SpringTxEventRepository(eventRepo);
@@ -117,13 +119,19 @@ class AlphaConfig {
   }
 
   @Bean
-  GrpcServerConfig grpcServerConfig() { return new GrpcServerConfig(); }
+  GrpcServerConfig grpcServerConfig() {
+    return new GrpcServerConfig();
+  }
 
   @Bean
-  IConfigCenterService dbDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) { return new DBDegradationConfigService(configCenterEntityRepository); }
+  IConfigCenterService dbDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
+    return new DBDegradationConfigService(configCenterEntityRepository);
+  }
 
   @Bean
-  IDataDictionaryService dataDictionaryService(DataDictionaryEntityRepository dataDictionaryEntityRepository) { return new DataDictionaryService(dataDictionaryEntityRepository); }
+  IDataDictionaryService dataDictionaryService(DataDictionaryEntityRepository dataDictionaryEntityRepository) {
+    return new DataDictionaryService(dataDictionaryEntityRepository);
+  }
 
   @Bean
   TxleJpaRepositoryInterceptor txleJpaRepositoryInterceptor() {
@@ -142,7 +150,6 @@ class AlphaConfig {
 
   @Bean
   TxConsistentService txConsistentService(
-      @Value("${alpha.event.pollingInterval:500}") int eventPollingInterval,
       GrpcServerConfig serverConfig,
       ScheduledExecutorService scheduler,
       TxEventRepository eventRepository,
@@ -152,18 +159,17 @@ class AlphaConfig {
       Map<String, Map<String, OmegaCallback>> omegaCallbacks,
       IKafkaMessageProducer kafkaMessageProducer,
       IConfigCenterService dbDegradationConfigService,
-      TxleMetrics txleMetrics,
       Tracing tracing,
       IAccidentHandlingService accidentHandlingService) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
-        omegaCallback, kafkaMessageProducer, txleMetrics, eventPollingInterval, consulClient, serverName, serverPort, consulInstanceId).run();
+        omegaCallback, kafkaMessageProducer, eventPollingInterval, consulClient, serverName, serverPort, consulInstanceId).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
-    ServerStartable startable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService, tracing, accidentHandlingService);
-    new Thread(startable::start).start();
+    ServerStartable starTable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService, tracing, accidentHandlingService);
+    new Thread(starTable::start).start();
 
     return consistentService;
   }
@@ -172,10 +178,6 @@ class AlphaConfig {
                                     Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing, IAccidentHandlingService accidentHandlingService) {
     return new GrpcStartable(serverConfig, tracing,
         new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService));
-  }
-  
-  public TransactionRestApi transactionRestApi(TxConsistentService txConsistentService) {
-	  return new TransactionRestApi(txConsistentService);
   }
 
   @Bean

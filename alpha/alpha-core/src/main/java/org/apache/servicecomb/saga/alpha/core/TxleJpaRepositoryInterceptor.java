@@ -8,10 +8,10 @@ import java.lang.reflect.Method;
 
 public class TxleJpaRepositoryInterceptor {
     @Autowired
-    TxleMetrics txleMetrics;
+    private TxleMetrics txleMetrics;
 
-    public Object doFilter(MethodInvocation Invocation) throws Throwable {
-        Method method = Invocation.getMethod();
+    public Object doFilter(MethodInvocation invocation) throws Throwable {
+        Method method = invocation.getMethod();
         Query queryAnnotation = method.getAnnotation(Query.class);
         String sql = method.getName();
         if (queryAnnotation != null) {
@@ -19,9 +19,9 @@ public class TxleJpaRepositoryInterceptor {
             // It'll not have a boundary if append arguments to metrics variables, that's not allowed, because it maybe lead to prometheus' death, so have to abandon arguments.
         }
 
-        String globalTxId = txleMetrics.startMarkSQLDurationAndCount(sql, queryAnnotation == null, Invocation.getArguments());
+        String globalTxId = txleMetrics.startMarkSQLDurationAndCount(sql, queryAnnotation == null, invocation.getArguments());
 
-        Object obj = Invocation.proceed();
+        Object obj = invocation.proceed();
 
         txleMetrics.endMarkSQLDuration(globalTxId);
 

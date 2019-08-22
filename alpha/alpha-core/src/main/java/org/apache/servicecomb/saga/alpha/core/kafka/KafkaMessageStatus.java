@@ -4,7 +4,7 @@ package org.apache.servicecomb.saga.alpha.core.kafka;
  * An enum for the status of kafka message.
  *
  * @author Gannalyo
- * @date 2018/12/13
+ * @since 2018/12/13
  */
 public enum KafkaMessageStatus {
     INIT,

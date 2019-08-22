@@ -48,13 +48,13 @@ public class UIRestApi {
     private IDataDictionaryService dataDictionaryService;
 
     @Autowired
-    TxleMetrics txleMetrics;
+    private TxleMetrics txleMetrics;
 
     @Autowired
-    IAccidentHandlingService accidentHandlingService;
+    private IAccidentHandlingService accidentHandlingService;
 
     @Autowired
-    CacheRestApi cacheRestApi;
+    private CacheRestApi cacheRestApi;
 
     public UIRestApi(TableFieldRepository tableFieldRepository, TxEventRepository eventRepository) {
         this.tableFieldRepository = tableFieldRepository;
@@ -110,7 +110,7 @@ public class UIRestApi {
                     map.keySet().forEach(key -> resultMap.put(key.toLowerCase(), map.get(key)));
                     resultList.add(resultMap);
                 });
-                txStartedEventList.clear();// 释放内存
+                txStartedEventList.clear();
                 rv.setData(JSONObject.parseArray(JSON.toJSONString(resultList, SerializerFeature.WriteMapNullValue)));
                 rv.setTotal(eventRepository.findTxCount(searchText));
             }
@@ -125,16 +125,36 @@ public class UIRestApi {
     // 前端获取字段名称时统一为小写，但jpa实体为驼峰式，故此处转义
     // 除TxEvent、Command和Timeout外，其它所有数据表(含新)均为小写字段名称
     private String convertToEventEntityFieldName(String fieldName) {
-        if ("surrogateId".equalsIgnoreCase(fieldName)) return "surrogateId";
-        if ("serviceName".equalsIgnoreCase(fieldName)) return "serviceName";
-        if ("instanceId".equalsIgnoreCase(fieldName)) return "instanceId";
-        if ("creationTime".equalsIgnoreCase(fieldName)) return "creationTime";
-        if ("globalTxId".equalsIgnoreCase(fieldName)) return "globalTxId";
-        if ("localTxId".equalsIgnoreCase(fieldName)) return "localTxId";
-        if ("parentTxId".equalsIgnoreCase(fieldName)) return "parentTxId";
-        if ("compensationMethod".equalsIgnoreCase(fieldName)) return "compensationMethod";
-        if ("expiryTime".equalsIgnoreCase(fieldName)) return "expiryTime";
-        if ("retryMethod".equalsIgnoreCase(fieldName)) return "retryMethod";
+        if ("surrogateId".equalsIgnoreCase(fieldName)) {
+            return "surrogateId";
+        }
+        if ("serviceName".equalsIgnoreCase(fieldName)) {
+            return "serviceName";
+        }
+        if ("instanceId".equalsIgnoreCase(fieldName)) {
+            return "instanceId";
+        }
+        if ("creationTime".equalsIgnoreCase(fieldName)) {
+            return "creationTime";
+        }
+        if ("globalTxId".equalsIgnoreCase(fieldName)) {
+            return "globalTxId";
+        }
+        if ("localTxId".equalsIgnoreCase(fieldName)) {
+            return "localTxId";
+        }
+        if ("parentTxId".equalsIgnoreCase(fieldName)) {
+            return "parentTxId";
+        }
+        if ("compensationMethod".equalsIgnoreCase(fieldName)) {
+            return "compensationMethod";
+        }
+        if ("expiryTime".equalsIgnoreCase(fieldName)) {
+            return "expiryTime";
+        }
+        if ("retryMethod".equalsIgnoreCase(fieldName)) {
+            return "retryMethod";
+        }
         return fieldName;
     }
 
@@ -156,7 +176,7 @@ public class UIRestApi {
                         map.keySet().forEach(key -> resultMap.put(key.toLowerCase(), map.get(key)));
                         resultList.add(resultMap);
                     });
-                    subTxList.clear();// 释放内存
+                    subTxList.clear();
                     rv.setData(JSONObject.parseArray(JSON.toJSONString(resultList, SerializerFeature.WriteMapNullValue)));
                 }
             }
@@ -196,7 +216,8 @@ public class UIRestApi {
                 return ResponseEntity.badRequest().body(rv);
             }
 
-            List<String> globalTxIdList = new ArrayList<>();// Arrays.asList(globalTxIds.split(","));// 这样写，后续将不能执行remove方法
+            // Arrays.asList(globalTxIds.split(","));// 这样写，后续将不能执行remove方法
+            List<String> globalTxIdList = new ArrayList<>();
             for (String globalTxId : globalTxIds.split(",")) {
                 globalTxIdList.add(globalTxId);
             }
@@ -207,13 +228,16 @@ public class UIRestApi {
                 AtomicReference<String> operationAdjective = new AtomicReference<>("pause".equals(operation) ? "suspended" : "recover".equals(operation) ? "normal" : "terminated");
                 txEventList.forEach(event -> {
                     if (SagaEndedEvent.name().equals(event.type())) {
-                        globalTxIdList.remove(event.globalTxId());// 移除已结束的
+                        // 移除已结束的
+                        globalTxIdList.remove(event.globalTxId());
                     } else {
                         List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
                         if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-                            if ("pause".equals(operation) && pauseContinueEventList.size() % 2 == 1) {// 移除暂停的
+                            if ("pause".equals(operation) && pauseContinueEventList.size() % 2 == 1) {
+                                // 移除暂停的
                                 globalTxIdList.remove(event.globalTxId());
-                            } else if ("recover".equals(operation) && pauseContinueEventList.size() % 2 == 0) {// 移除非暂停的
+                            } else if ("recover".equals(operation) && pauseContinueEventList.size() % 2 == 0) {
+                                // 移除非暂停的
                                 globalTxIdList.remove(event.globalTxId());
                             }
                         }
@@ -223,28 +247,29 @@ public class UIRestApi {
                     rv.setMessage("All global transactions have been over or " + operationAdjective.get() + ".");
                     return ResponseEntity.ok(rv);
                 }
-            }
 
-            txEventList.forEach(event -> {
-                if (globalTxIdList.contains(event.globalTxId())) {
-                    globalTxIdList.remove(event.globalTxId());
-                    String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
-                    String typeName = AdditionalEventType.SagaPausedEvent.name();
-                    if ("recover".equals(operation)) {
-                        typeName = AdditionalEventType.SagaContinuedEvent.name();
-                    } else if ("terminate".equals(operation)) {
-                        typeName = EventType.TxAbortedEvent.name();
+                txEventList.forEach(event -> {
+                    if (globalTxIdList.contains(event.globalTxId())) {
+                        globalTxIdList.remove(event.globalTxId());
+                        String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
+                        String typeName = AdditionalEventType.SagaPausedEvent.name();
+                        if ("recover".equals(operation)) {
+                            typeName = AdditionalEventType.SagaContinuedEvent.name();
+                        } else if ("terminate".equals(operation)) {
+                            typeName = EventType.TxAbortedEvent.name();
+                        }
+                        TxEvent txEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
+                        eventRepository.save(txEvent);
+                        if ("terminate".equals(operation)) {
+                            // Do not compensate after terminating.
+                            TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
+                            endedEvent.setSurrogateId(null);
+                            eventRepository.save(endedEvent);
+                        }
+                        txleMetrics.countTxNumber(event, false, false);
                     }
-                    TxEvent txEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
-                    eventRepository.save(txEvent);
-                    if ("terminate".equals(operation)) {// TODO 终止后应进行补偿
-                        TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
-                        endedEvent.setSurrogateId(null);
-                        eventRepository.save(endedEvent);
-                    }
-                    txleMetrics.countTxNumber(event, false, false);
-                }
-            });
+                });
+            }
         } catch (Exception e) {
             rv.setMessage("Failed to " + operation + " global transactions, param [" + globalTxIds + "].");
             LOG.error(rv.getMessage(), e);
@@ -264,8 +289,8 @@ public class UIRestApi {
             }
 
             // 1.暂停全局事务配置
-            String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
-            configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ip_port + " - pauseAllTransaction"));
+            String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
+            configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ipPort + " - pauseAllTransaction"));
 
             // 2.对未结束且未暂停的全局事务逐一设置暂停事件，不会出现某全局事务还未等设置暂停事件就结束的情况，因为上面先生成了暂停配置
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
@@ -276,7 +301,8 @@ public class UIRestApi {
                 unendedTxEventList.forEach(event -> {
                     List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
                     if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-                        if (pauseContinueEventList.size() % 2 == 1) {// 移除暂停的
+                        if (pauseContinueEventList.size() % 2 == 1) {
+                            // 移除暂停的
                             globalTxIdList.remove(event.globalTxId());
                         }
                     }
@@ -287,7 +313,7 @@ public class UIRestApi {
 
                 unendedTxEventList.forEach(event -> {
                     if (globalTxIdList.contains(event.globalTxId())) {
-                        TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaPausedEvent.name(), "", 0, "", 0, event.category(), null);
+                        TxEvent pausedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaPausedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
                         txleMetrics.countTxNumber(event, false, false);
                     }
@@ -324,7 +350,8 @@ public class UIRestApi {
                 unendedTxEventList.forEach(event -> {
                     List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
                     if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-                        if (pauseContinueEventList.size() % 2 == 0) {// 移除非暂停的
+                        if (pauseContinueEventList.size() % 2 == 0) {
+                            // 移除非暂停的
                             globalTxIdList.remove(event.globalTxId());
                         }
                     }
@@ -333,10 +360,10 @@ public class UIRestApi {
                     return ResponseEntity.ok(rv);
                 }
 
-                String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
+                String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
                 unendedTxEventList.forEach(event -> {
                     if (globalTxIdList.contains(event.globalTxId())) {
-                        TxEvent pausedEvent = new TxEvent(ip_port, ip_port, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
+                        TxEvent pausedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
                         txleMetrics.countTxNumber(event, false, false);
                     }
@@ -354,14 +381,15 @@ public class UIRestApi {
     @GetMapping("/degradeGlobalTransaction")
     public ResponseEntity<ReturnValue> degradeGlobalTransaction() {
         ReturnValue rv = new ReturnValue();
-        try {// 已经开启但未结束的全局事务在执行过程中遇到全局事务服务降级，则本全局事务中后续的业务按照无全局事务运行，因为服务降级的目的不是为了保证全局事务，而是为了保证主业务能正常继续运行
+        try {
+            // 已经开启但未结束的全局事务在执行过程中遇到全局事务服务降级，则本全局事务中后续的业务按照无全局事务运行，因为服务降级的目的不是为了保证全局事务，而是为了保证主业务能正常继续运行
             boolean enabledTx = configCenterService.isEnabledConfig(null, null, ConfigCenterType.GlobalTx);
             if (!enabledTx) {
                 rv.setMessage("Sever has been degraded for the Global Transaction.");
                 return ResponseEntity.ok(rv);
             }
-            String ip_port = request.getRemoteAddr() + ":" + request.getRemotePort();
-            boolean enabled = configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTx, "disabled", ip_port + " - degradeGlobalTransaction"));
+            String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
+            boolean enabled = configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTx, "disabled", ipPort + " - degradeGlobalTransaction"));
             if (!enabled) {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);

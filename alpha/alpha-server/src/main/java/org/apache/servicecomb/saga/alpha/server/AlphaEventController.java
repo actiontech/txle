@@ -64,7 +64,7 @@ class AlphaEventController {
   }
 
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  private static class TxEventVo extends TxEvent {
+  private static final class TxEventVo extends TxEvent {
     private TxEventVo(TxEvent event) {
       super(event);
     }

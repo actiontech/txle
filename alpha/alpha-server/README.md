@@ -61,7 +61,7 @@ Contributions are welcomed and greatly appreciated. See [CONTRIBUTION.md](https:
 ## Community TODO
 
 * IRC: [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/txle.png)](https://kiwiirc.com/client/irc.freenode.net/?nick=user|?&theme=cli#txle)
-* QQ group: 669663113
+* QQ group: 696990638
 * [If you're using txle, please let us know.](https://wj.qq.com/s/2291106/09f4)
 * wechat subscription QR code
   

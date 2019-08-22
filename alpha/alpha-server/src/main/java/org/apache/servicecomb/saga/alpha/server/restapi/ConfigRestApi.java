@@ -1,11 +1,11 @@
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.servicecomb.saga.alpha.server.ApplicationContextUtil;
 import org.apache.servicecomb.saga.alpha.server.ConfigLoading;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaMessageProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ConfigRestApi {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigRestApi.class);
+
+    @Autowired
+    private ApplicationContext ctx;
 
     @GetMapping("/health")
     public String consulCheckServerHealth() {
@@ -34,14 +37,13 @@ public class ConfigRestApi {
     @GetMapping("/reloadConfig")
     public String reloadAllConfig() {
         reloadKafkaConfig();
-        reloadDBConfig();
+//        reloadDBConfig();
         return "ok";
     }
 
     // To inject new value for some property to some bean again.
     private String reInjectPropertyToBean(String beanName, Class clazz, String propertyName, Object propertyValue) {
         try {
-            ApplicationContext ctx = ApplicationContextUtil.getApplicationContext();
             DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) ctx.getAutowireCapableBeanFactory();
             BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(clazz);
             beanDefinitionBuilder.addPropertyValue(propertyName, propertyValue);

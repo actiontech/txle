@@ -5,7 +5,7 @@ package org.apache.servicecomb.saga.alpha.core.accidenthandling;
  * 发送中、发送成功、发送失败、处理成功、处理失败
  *
  * @author Gannalyo
- * @date 2019/06/14
+ * @since 2019/06/14
  */
 public enum AccidentHandleStatus {
     SENDING,

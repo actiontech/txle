@@ -34,20 +34,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AccidentHandlingService implements IAccidentHandlingService {
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private static final PageRequest pageRequest = new PageRequest(0, 100);
+    private static final PageRequest PAGEREQUEST = new PageRequest(0, 100);
     private final String accidentPlatformAddress;
     private final int retries;
-    private final int interval;// default is 1s
+    // default is 1s
     private final RestTemplate restTemplate;
+    private final int interval;
 
     @Autowired
-    IConfigCenterService dbDegradationConfigService;
+    private IConfigCenterService dbDegradationConfigService;
 
     @Autowired
-    TxEventRepository eventRepository;
+    private TxEventRepository eventRepository;
 
     @Autowired
-    TxleMetrics txleMetrics;
+    private TxleMetrics txleMetrics;
 
     @Autowired
     private IDataDictionaryService dataDictionaryService;
@@ -66,7 +67,8 @@ public class AccidentHandlingService implements IAccidentHandlingService {
     public boolean save(AccidentHandling accidentHandling) {
         try {
             AccidentHandling savedAccident = accidentHandlingEntityRepository.save(accidentHandling);
-            if (savedAccident != null) {// 设置保存后的id
+            if (savedAccident != null) {
+                // 设置保存后的id
                 accidentHandling.setId(savedAccident.getId());
             }
             return true;
@@ -78,7 +80,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
 
     @Override
     public List<AccidentHandling> findAccidentHandlingList() {
-        return accidentHandlingEntityRepository.findAccidentHandlingList(pageRequest);
+        return accidentHandlingEntityRepository.findAccidentHandlingList(PAGEREQUEST);
     }
 
     @Override
@@ -108,7 +110,8 @@ public class AccidentHandlingService implements IAccidentHandlingService {
                 if (result.get()) {
                     accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_OK.toInteger());
                     scheduler.shutdownNow();
-                    txleMetrics.countSuccessfulNumber();// TODO prometheus内部方法持续循环，无法该行代码后的代码
+                    // TODO prometheus内部方法持续循环，无法该行代码后的代码
+                    txleMetrics.countSuccessfulNumber();
                 } else if (invokeTimes.incrementAndGet() > 1 + this.retries) {
                     accidentHandlingEntityRepository.updateAccidentStatusByIdList(Arrays.asList(savedAccident.getId()), AccidentHandleStatus.SEND_FAIL.toInteger());
                     LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Failed to report msg to Accident Platform.");
@@ -222,6 +225,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
     }
 
     private boolean saveAccidentHandling(AccidentHandling accident) {
+        boolean result = false;
         try {
             if (accident.getServicename() == null || accident.getInstanceid() == null || "".equals(accident.getServicename()) || "".equals(accident.getInstanceid())) {
                 Optional<TxEvent> event = eventRepository.findTxStartedEvent(accident.getGlobaltxid(), accident.getLocaltxid());
@@ -230,11 +234,14 @@ public class AccidentHandlingService implements IAccidentHandlingService {
                     accident.setInstanceid(event.get().instanceId());
                 }
             }
-            return accidentHandlingEntityRepository.save(accident) != null;
-        } catch (Exception e) {// That's not too important for main business to throw an exception.
+            result = accidentHandlingEntityRepository.save(accident) != null;
+        } catch (Exception e) {
+            // That's not too important for main business to throw an exception.
             LOG.error("Failed to save accident to db, accident [{}].", accident, e);
+        } finally {
+            LOG.error("Saved accident to db, result [{}] and accident [{}].", result, accident);
         }
-        return false;
+        return result;
     }
 
     private boolean reportTask(String jsonParams) {
@@ -248,6 +255,8 @@ public class AccidentHandlingService implements IAccidentHandlingService {
             result = TxleConstants.OK.equals(reportResponse);
         } catch (Exception e) {
             LOG.error("Failed to report msg [{}] to Accident Platform [{}].", jsonParams, this.accidentPlatformAddress, e);
+        } finally {
+            LOG.error("Reported accident to platform, result [{}], platform address [{}] and accident [{}].", result, this.accidentPlatformAddress, jsonParams);
         }
         return result;
     }
