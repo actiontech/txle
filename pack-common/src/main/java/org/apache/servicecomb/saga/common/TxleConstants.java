@@ -9,7 +9,8 @@ public final class TxleConstants {
     public static final String LOG_DEBUG_PREFIX = "[txle debug] ";
     public static final String LOG_ERROR_PREFIX = "[txle error] ";
     public static final String ACTION_SQL = " /**txle_sql**/";
-    public static final String SPECIAL_KEY = "txle-special-key";// Usage in org.apache.servicecomb.saga.alpha.server.GrpcTxEventEndpointImpl.onTxEvent
+    // Usage in org.apache.servicecomb.saga.alpha.server.GrpcTxEventEndpointImpl.onTxEvent
+    public static final String SPECIAL_KEY = "txle-special-key";
 
     public static final String OK = "ok";
     public static final String ERROR = "error";

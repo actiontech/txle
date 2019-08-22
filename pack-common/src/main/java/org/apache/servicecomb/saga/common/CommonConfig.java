@@ -24,7 +24,8 @@ public class CommonConfig {
 
     @Bean
     public ClientHttpRequestFactory simpleClientHttpRequestFactory() {
-        return new SimpleClientHttpRequestFactory();// setReadTimeout(5000); setConnectTimeout(15000);
+        // setReadTimeout(5000); setConnectTimeout(15000);
+        return new SimpleClientHttpRequestFactory();
     }
 
 }
