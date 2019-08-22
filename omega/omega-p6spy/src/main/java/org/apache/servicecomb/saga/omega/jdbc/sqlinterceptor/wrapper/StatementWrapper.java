@@ -9,12 +9,12 @@ import java.sql.*;
  * To wrap the Statement.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class StatementWrapper implements Statement {
 
     private final Statement statement;
-    protected final JdbcEventListener eventListener;
+    private final JdbcEventListener eventListener;
 
     public static Statement wrap(Statement statement, JdbcEventListener eventListener) {
         if (statement == null) {

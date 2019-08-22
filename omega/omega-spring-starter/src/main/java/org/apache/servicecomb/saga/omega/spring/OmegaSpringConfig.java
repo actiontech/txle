@@ -36,6 +36,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
+import javax.annotation.PostConstruct;
 import java.util.Arrays;
 
 @Configuration
@@ -84,9 +85,9 @@ class OmegaSpringConfig {
     return new ClientAccidentHandlingService();
   }
 
-  @Bean
-  TxleStaticConfig txleStaticConfig() {
-    return new TxleStaticConfig();
+  @PostConstruct
+  void init() {
+    TxleStaticConfig.initTxleStaticConfig();
   }
 
   @Bean
@@ -115,13 +116,10 @@ class OmegaSpringConfig {
         tracing);
 
     sender.onConnected();
-    
-    Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-      @Override
-      public void run() {
-        sender.onDisconnected();
-        sender.close();
-      }
+
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      sender.onDisconnected();
+      sender.close();
     }));
     return sender;
   }

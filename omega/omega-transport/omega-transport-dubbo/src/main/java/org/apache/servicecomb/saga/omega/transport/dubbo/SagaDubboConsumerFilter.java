@@ -19,23 +19,15 @@ package org.apache.servicecomb.saga.omega.transport.dubbo;
 
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.extension.Activate;
-import com.alibaba.dubbo.config.spring.extension.SpringExtensionFactory;
-import com.alibaba.dubbo.rpc.Filter;
-import com.alibaba.dubbo.rpc.Invocation;
-import com.alibaba.dubbo.rpc.Invoker;
-import com.alibaba.dubbo.rpc.Result;
-import com.alibaba.dubbo.rpc.RpcException;
-
-import java.lang.invoke.MethodHandles;
-
+import com.alibaba.dubbo.rpc.*;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_CATEGORY_KEY;
-import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_ID_KEY;
-import static org.apache.servicecomb.saga.omega.context.OmegaContext.LOCAL_TX_ID_KEY;
+import java.lang.invoke.MethodHandles;
+
+import static org.apache.servicecomb.saga.omega.context.OmegaContext.*;
 
 /**
  * add saga transaction id to dubbo invocation

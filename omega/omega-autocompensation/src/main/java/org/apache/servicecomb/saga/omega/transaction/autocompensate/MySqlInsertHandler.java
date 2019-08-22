@@ -17,179 +17,181 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 
-	private static MySqlInsertHandler mySqlInsertHandler = null;
-	private static final Logger LOG = LoggerFactory.getLogger(MySqlInsertHandler.class);
+    private static volatile MySqlInsertHandler mySqlInsertHandler = null;
+    private static final Logger LOG = LoggerFactory.getLogger(MySqlInsertHandler.class);
 
-	public static MySqlInsertHandler newInstance() {
-		if (mySqlInsertHandler == null) {
-			synchronized (MySqlInsertHandler.class) {
-				if (mySqlInsertHandler == null) {
-					mySqlInsertHandler = new MySqlInsertHandler();
-				}
-			}
-		}
-		return mySqlInsertHandler;
-	}
-	
-	@Override
-	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement,
-											String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
-		ResultSet rs = null;
-		try {
-			MySqlInsertStatement insertStatement = (MySqlInsertStatement) sqlStatement;
-			// 1.take table's name out
-			String tableName = insertStatement.getTableName().toString();
-			standbyParams.put("tablename",tableName);
-			standbyParams.put("operation", "insert");
+    public static MySqlInsertHandler newInstance() {
+        if (mySqlInsertHandler == null) {
+            synchronized (MySqlInsertHandler.class) {
+                if (mySqlInsertHandler == null) {
+                    mySqlInsertHandler = new MySqlInsertHandler();
+                }
+            }
+        }
+        return mySqlInsertHandler;
+    }
 
-			// 2.take primary-key's name out
-			String primaryKeyName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
+    @Override
+    public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement,
+                                            String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+        ResultSet rs = null;
+        try {
+            MySqlInsertStatement insertStatement = (MySqlInsertStatement) sqlStatement;
+            // 1.take table's name out
+            String tableName = insertStatement.getTableName().toString();
+            standbyParams.put("tablename", tableName);
+            standbyParams.put("operation", "insert");
 
-			// 3.take primary-key's value out
-			Set<Object> primaryKeyValues = getGeneratedKey(delegate);
-			StringBuffer ids = new StringBuffer();
-			primaryKeyValues.forEach(value -> {
-				if (ids.length() == 0) {
-					ids.append(value);
-				} else {
-					ids.append(", " + value);
-				}
-			});
-			standbyParams.put("ids", ids);
-			LOG.debug(TxleConstants.logDebugPrefixWithTime() + "The primary keys info is [" + primaryKeyName + " = " + ids.toString() + "] to table [" + tableName + "].");
+            // 2.take primary-key's name out
+            String primaryKeyName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
 
-			// 4.take the new data out
-			List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
+            // 3.take primary-key's value out
+            Set<Object> primaryKeyValues = getGeneratedKey(delegate);
+            StringBuffer ids = new StringBuffer();
+            primaryKeyValues.forEach(value -> {
+                if (ids.length() == 0) {
+                    ids.append(value);
+                } else {
+                    ids.append(", " + value);
+                }
+            });
+            standbyParams.put("ids", ids);
+            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "The primary keys info is [" + primaryKeyName + " = " + ids.toString() + "] to table [" + tableName + "].");
 
-			// 5.save txle_undo_log
+            // 4.take the new data out
+            List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
+
+            // 5.save txle_undo_log
 //			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + TxleConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
-			String compensateSql = constructCompensateSql(delegate, insertStatement, tableName, newDataList);
+            String compensateSql = constructCompensateSql(delegate, insertStatement, tableName, newDataList);
 
-			// start to mark duration for business sql By Gannalyo.
-			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
+            // start to mark duration for business sql By Gannalyo.
+            ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
 
-			boolean result = this.saveTxleUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
+            boolean result = this.saveTxleUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
 
-			// end mark duration for maintaining sql By Gannalyo.
-			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
+            // end mark duration for maintaining sql By Gannalyo.
+            ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
-			return  result;
-		} catch (SQLException e) {
-			LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for insert SQL.", e);
-			throw e;
-		} finally {
-			if (rs != null) {
-				try {
-					rs.close();
-				} catch (SQLException e) {
-					LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for insert SQL.", e);
-				}
-			}
-		}
-	}
-	
-	private String constructCompensateSql(PreparedStatement delegate, MySqlInsertStatement insertStatement, String tableName, List<Map<String, Object>> newDataList) throws SQLException {
-		if (newDataList == null || newDataList.isEmpty()) {
-			throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Could not get the new data when constructed the 'compensateSql' for executing insert SQL.");
-		}
-		
-		Map<String, String> columnNameType = this.selectColumnNameType(delegate, tableName);
-		StringBuffer compensateSqls = new StringBuffer();
-		for (Map<String, Object> dataMap : newDataList) {
-			this.resetColumnValueByDBType(columnNameType, dataMap);
-			String whereSqlForCompensation = this.constructWhereSqlForCompensation(dataMap);
-			
-			String compensateSql = String.format("DELETE FROM %s WHERE %s" + TxleConstants.ACTION_SQL + ";", tableName, whereSqlForCompensation);
-			if (compensateSqls.length() == 0) {
-				compensateSqls.append(compensateSql);
-			} else {
-				compensateSqls.append("\n" + compensateSql);
-			}
-		}
-		
-		return compensateSqls.toString();
-	}
-	
-	private Set<Object> getGeneratedKey(PreparedStatement preparedStatement) throws SQLException {
-		Set<Object> primaryKeyValue = new HashSet<>();
-		ResultSet rs = null;
-		try {
-			rs = preparedStatement.getGeneratedKeys();
-			while (rs != null && rs.next()) {
-				primaryKeyValue.add(rs.getObject(1));
-			}
-		} catch (Exception e) {
-			LOG.error("Failed to execute method 'getGeneratedKey'." );
-		} finally {
-			if (rs != null) {
-				rs.close();
-			}
-		}
-		return primaryKeyValue;
-	}
+            return result;
+        } catch (SQLException e) {
+            LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for insert SQL.", e);
+            throw e;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                    LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for insert SQL.", e);
+                }
+            }
+        }
+    }
 
-	private List<Map<String, Object>> selectNewData(PreparedStatement delegate, String tableName, String primaryKeyName, Set<Object> primaryKeyValues) throws SQLException {
-		PreparedStatement preparedStatement = null;
-		ResultSet dataResultSet = null;
-		try {
-			String sql = constructNewDataSql(primaryKeyValues);
+    private String constructCompensateSql(PreparedStatement delegate, MySqlInsertStatement insertStatement, String tableName, List<Map<String, Object>> newDataList) throws SQLException {
+        if (newDataList == null || newDataList.isEmpty()) {
+            throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Could not get the new data when constructed the 'compensateSql' for executing insert SQL.");
+        }
+
+        Map<String, String> columnNameType = this.selectColumnNameType(delegate, tableName);
+        StringBuffer compensateSqls = new StringBuffer();
+        for (Map<String, Object> dataMap : newDataList) {
+            this.resetColumnValueByDBType(columnNameType, dataMap);
+            String whereSqlForCompensation = this.constructWhereSqlForCompensation(dataMap);
+
+            String compensateSql = String.format("DELETE FROM %s WHERE %s" + TxleConstants.ACTION_SQL + ";", tableName, whereSqlForCompensation);
+            if (compensateSqls.length() == 0) {
+                compensateSqls.append(compensateSql);
+            } else {
+                compensateSqls.append("\n" + compensateSql);
+            }
+        }
+
+        return compensateSqls.toString();
+    }
+
+    private Set<Object> getGeneratedKey(PreparedStatement preparedStatement) throws SQLException {
+        Set<Object> primaryKeyValue = new HashSet<>();
+        ResultSet rs = null;
+        try {
+            rs = preparedStatement.getGeneratedKeys();
+            while (rs != null && rs.next()) {
+                primaryKeyValue.add(rs.getObject(1));
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to execute method 'getGeneratedKey'.");
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+        }
+        return primaryKeyValue;
+    }
+
+    private List<Map<String, Object>> selectNewData(PreparedStatement delegate, String tableName, String primaryKeyName, Set<Object> primaryKeyValues) throws SQLException {
+        PreparedStatement preparedStatement = null;
+        ResultSet dataResultSet = null;
+        try {
+            String sql = constructNewDataSql(primaryKeyValues);
 //			dataResultSet = delegate.getResultSet();// it's result is null.
 
-			// start to mark duration for business sql By Gannalyo.
-			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
+            // start to mark duration for business sql By Gannalyo.
+            ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
 
-			String[] params = new String[2 + primaryKeyValues.size()];
-			params[0] = tableName;
-			params[1] = primaryKeyName;
-			AtomicInteger index = new AtomicInteger(2);
-			primaryKeyValues.forEach(value -> {params[index.getAndIncrement()] = String.valueOf(value);});
+            String[] params = new String[2 + primaryKeyValues.size()];
+            params[0] = tableName;
+            params[1] = primaryKeyName;
+            AtomicInteger index = new AtomicInteger(2);
+            primaryKeyValues.forEach(value -> {
+                params[index.getAndIncrement()] = String.valueOf(value);
+            });
 
-			preparedStatement = delegate.getConnection().prepareStatement(String.format(sql, params));
-			dataResultSet = preparedStatement.executeQuery();
+            preparedStatement = delegate.getConnection().prepareStatement(String.format(sql, params));
+            dataResultSet = preparedStatement.executeQuery();
 
-			// end mark duration for maintaining sql By Gannalyo.
-			ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
+            // end mark duration for maintaining sql By Gannalyo.
+            ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
-			List<Map<String, Object>> newDataList = new ArrayList<>();
-			while (dataResultSet.next()) {
-				Map<String, Object> dataMap = new HashMap<String, Object>();
-				ResultSetMetaData metaData = dataResultSet.getMetaData();
-				for (int i = 1; i <= metaData.getColumnCount(); i++) {
-					String column = metaData.getColumnName(i);
-					dataMap.put(column, dataResultSet.getObject(column));
-				}
+            List<Map<String, Object>> newDataList = new ArrayList<>();
+            while (dataResultSet.next()) {
+                Map<String, Object> dataMap = new HashMap<String, Object>();
+                ResultSetMetaData metaData = dataResultSet.getMetaData();
+                for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                    String column = metaData.getColumnName(i);
+                    dataMap.put(column, dataResultSet.getObject(column));
+                }
 
-				newDataList.add(dataMap);
-			}
-			return newDataList;
-		} finally {
-			if (preparedStatement != null) {
-				preparedStatement.close();
-			}
-			if (dataResultSet != null) {
-				dataResultSet.close();
-			}
-		}
-	}
+                newDataList.add(dataMap);
+            }
+            return newDataList;
+        } finally {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+            if (dataResultSet != null) {
+                dataResultSet.close();
+            }
+        }
+    }
 
-	private String constructNewDataSql(Set<Object> primaryKeyValues) {
-		if (primaryKeyValues != null && !primaryKeyValues.isEmpty()) {
-			StringBuffer sql = new StringBuffer("SELECT * FROM %s T WHERE T.%s IN (");
-			if (primaryKeyValues.size() < 1000) {
-				for (int i = 0; i < primaryKeyValues.size(); i ++) {
-					if (i == 0) {
-						sql.append("%s");
-					} else {
-						sql.append(", %s");
-					}
-				}
-			} else {
-				// TODO Do not forget to handle a case which the value size is more 1000.
-			}
-			sql.append(")");
-			return sql.toString();
-		}
-		return "";
-	}
+    private String constructNewDataSql(Set<Object> primaryKeyValues) {
+        if (primaryKeyValues != null && !primaryKeyValues.isEmpty()) {
+            StringBuffer sql = new StringBuffer("SELECT * FROM %s T WHERE T.%s IN (");
+            if (primaryKeyValues.size() < 1000) {
+                for (int i = 0; i < primaryKeyValues.size(); i++) {
+                    if (i == 0) {
+                        sql.append("%s");
+                    } else {
+                        sql.append(", %s");
+                    }
+                }
+//            } else {
+                // TODO Do not forget to handle a case which the value size is more 1000.
+            }
+            sql.append(")");
+            return sql.toString();
+        }
+        return "";
+    }
 
 }

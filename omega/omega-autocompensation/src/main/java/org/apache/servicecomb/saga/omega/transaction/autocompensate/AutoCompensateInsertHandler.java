@@ -9,27 +9,27 @@ import java.util.Map;
 
 public class AutoCompensateInsertHandler extends AutoCompensateHandler {
 
-	private static AutoCompensateInsertHandler autoCompensateInsertHandler = null;
+    private static volatile AutoCompensateInsertHandler autoCompensateInsertHandler = null;
 
-	public static AutoCompensateInsertHandler newInstance() {
-		if (autoCompensateInsertHandler == null) {
-			synchronized (AutoCompensateInsertHandler.class) {
-				if (autoCompensateInsertHandler == null) {
-					autoCompensateInsertHandler = new AutoCompensateInsertHandler();
-				}
-			}
-		}
-		return autoCompensateInsertHandler;
-	}
-	
-	@Override
-	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
-		
-		if (JdbcConstants.MYSQL.equals(sqlStatement.getDbType())) {
-			return MySqlInsertHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
-		}
-		
-		return false;
-	}
+    public static AutoCompensateInsertHandler newInstance() {
+        if (autoCompensateInsertHandler == null) {
+            synchronized (AutoCompensateInsertHandler.class) {
+                if (autoCompensateInsertHandler == null) {
+                    autoCompensateInsertHandler = new AutoCompensateInsertHandler();
+                }
+            }
+        }
+        return autoCompensateInsertHandler;
+    }
+
+    @Override
+    public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+
+        if (JdbcConstants.MYSQL.equals(sqlStatement.getDbType())) {
+            return MySqlInsertHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
+        }
+
+        return false;
+    }
 
 }

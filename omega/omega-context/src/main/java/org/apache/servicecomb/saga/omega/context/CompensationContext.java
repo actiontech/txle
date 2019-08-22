@@ -46,7 +46,7 @@ public class CompensationContext {
     CompensationContextInternal contextInternal = contexts.get(compensationMethod);
 
     String oldGlobalTxId = omegaContext.globalTxId();
-    String oldLocalTxId= omegaContext.localTxId();
+    String oldLocalTxId = omegaContext.localTxId();
     try {
     	// for auto-compensation By Gannalyo
     	if (TxleConstants.AUTO_COMPENSABLE_METHOD.equals(compensationMethod)) {

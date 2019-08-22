@@ -7,7 +7,7 @@ import java.util.Map;
  * An information bean for the PreparedStatement.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class PreparedStatementInformation {
     private final String sql;
@@ -23,7 +23,7 @@ public class PreparedStatementInformation {
 
     public String getSqlWithValues() {
         final StringBuilder sb = new StringBuilder();
-        final String statementQuery = sql;//getStatementQuery();
+        final String statementQuery = sql;
 
         int currentParameter = 0;
         for (int pos = 0; pos < statementQuery.length(); pos++) {

@@ -19,12 +19,12 @@ import java.util.Map;
 public class AutoCompensateDao implements IAutoCompensateDao {
 
     @Autowired
-    JdbcTemplate jdbcTemplate;
+    private JdbcTemplate jdbcTemplate;
 
     public void setDataSource(DataSource dataSource) {
         if (dataSource != null && (jdbcTemplate.getDataSource() == null || !dataSource.equals(jdbcTemplate.getDataSource()))) {
             synchronized (AutoCompensateDao.class) {
-                if (dataSource != null && (jdbcTemplate.getDataSource() == null || !dataSource.equals(jdbcTemplate.getDataSource()))) {
+                if (jdbcTemplate.getDataSource() == null || !dataSource.equals(jdbcTemplate.getDataSource())) {
                     jdbcTemplate.setDataSource(dataSource);
                 }
             }

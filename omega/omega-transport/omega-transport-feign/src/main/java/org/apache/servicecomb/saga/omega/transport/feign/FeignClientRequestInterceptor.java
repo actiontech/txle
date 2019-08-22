@@ -44,7 +44,7 @@ public class FeignClientRequestInterceptor implements RequestInterceptor {
 
     @Override
     public void apply(RequestTemplate input) {
-        if (omegaContext!= null && omegaContext.globalTxId() != null) {
+        if (omegaContext != null && omegaContext.globalTxId() != null) {
             input.header(GLOBAL_TX_ID_KEY, omegaContext.globalTxId());
             input.header(LOCAL_TX_ID_KEY, omegaContext.localTxId());
             input.header(GLOBAL_TX_CATEGORY_KEY, omegaContext.category());

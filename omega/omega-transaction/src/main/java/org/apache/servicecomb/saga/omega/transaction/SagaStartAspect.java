@@ -59,7 +59,8 @@ public class SagaStartAspect {
         CompensableSqlMetrics.setIsMonitorSql(ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger(), context.category()).getStatus());
       }
 
-      isProceed = true;// no matter following result.
+      // no matter following result.
+      isProceed = true;
       Object result = joinPoint.proceed();
 
       if (alphaResponse.enabledTx()) {
@@ -81,7 +82,8 @@ public class SagaStartAspect {
       }
 
       // 容错降级逻辑：1.如果没有执行过业务方法，且开启了容错降级，那么此处执行业务方法  2.如果开启了容错配置，无论异常与执行业务方法顺序如何，都需要保证已执行过的业务不能被全局事务回滚掉
-      if (!isProceed && isFaultTolerant) {// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+      // In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+      if (!isProceed && isFaultTolerant) {
           return joinPoint.proceed();
       }
       throw throwable;

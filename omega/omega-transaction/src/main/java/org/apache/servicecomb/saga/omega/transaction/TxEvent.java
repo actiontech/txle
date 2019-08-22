@@ -113,16 +113,8 @@ public class TxEvent {
 
   @Override
   public String toString() {
-    return type.name() + "{" +
-        "globalTxId='" + globalTxId + '\'' +
-        ", localTxId='" + localTxId + '\'' +
-        ", parentTxId='" + parentTxId + '\'' +
-        ", compensationMethod='" + compensationMethod + '\'' +
-        ", timeout=" + timeout +
-        ", retryMethod='" + retryMethod + '\'' +
-        ", category='" + category + '\'' +
-        ", retries=" + retries +
-        ", payloads=" + Arrays.toString(payloads) +
-        '}';
+    return type.name() + "{" + "globalTxId='" + globalTxId + '\'' + ", localTxId='" + localTxId + '\'' + ", parentTxId='" + parentTxId + '\'' + ", compensationMethod='"
+            + compensationMethod + '\'' + ", timeout=" + timeout + ", retryMethod='" + retryMethod + '\'' + ", category='" + category + '\'' + ", retries=" + retries
+            + ", payloads=" + Arrays.toString(payloads) + '}';
   }
 }

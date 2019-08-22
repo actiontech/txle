@@ -33,11 +33,12 @@ import java.util.List;
 public class RestTemplateConfig {
 
   @Bean
-  public RestTemplate restTemplate(@Autowired(required=false) OmegaContext context, @Autowired Tracing tracing) {
+  public RestTemplate restTemplate(@Autowired(required = false) OmegaContext context, @Autowired Tracing tracing) {
     RestTemplate template = new RestTemplate();
     List<ClientHttpRequestInterceptor> interceptors = template.getInterceptors();
     interceptors.add(new TransactionClientHttpRequestInterceptor(context));
-    interceptors.add(TracingClientHttpRequestInterceptor.create(tracing));// add interceptor for rest's request server By Gannalyo
+    // add interceptor for rest's request server By Gannalyo
+    interceptors.add(TracingClientHttpRequestInterceptor.create(tracing));
     template.setInterceptors(interceptors);
     return template;
   }

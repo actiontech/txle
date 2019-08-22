@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * @author Gannalyo
- * @date 2019/3/8
+ * @since 2019/3/8
  */
 public class CommonPrometheusMetrics extends Collector {
     private static final Logger LOG = LoggerFactory.getLogger(CompensableSqlMetrics.class);
@@ -24,25 +24,32 @@ public class CommonPrometheusMetrics extends Collector {
     // mark duration
     // To store 'globalTxId' for aborted events, it is the aim to avoid counting repeat event number. Do not need to pay more attention on restart, cluster and concurrence.
     protected static final Gauge TXLE_SQL_TIME_SECONDS_TOTAL = buildGauge("txle_sql_time_seconds_total", "Total seconds spent executing sql.");
-    protected static final ThreadLocal<Gauge.Timer> gaugeTimer = new ThreadLocal<>();
+    protected static final ThreadLocal<Gauge.Timer> GAUGE_TIMER = new ThreadLocal<>();
 
     protected static final Counter TXLE_SQL_TOTAL = buildCounter("txle_sql_total", "SQL total number.");
     private static boolean httpServer = false;
-    protected static volatile boolean isMonitorSql = true;
+    private static volatile boolean isMonitorSql = true;
 
     public CommonPrometheusMetrics(String promMetricsPort) {
         try {
-            if (httpServer) return;
+            if (httpServer) {
+                return;
+            }
             // Default port logic: the default port 8098 if it's null. If not null, use the config value.
             int metricsPort = Integer.parseInt(promMetricsPort);
             if (metricsPort > 0) {
                 // Initialize Prometheus's Metrics Server.
-                new HTTPServer(metricsPort);// To establish the metrics server immediately without checking the port status.
-                httpServer = true;
+                // To establish the metrics server immediately without checking the port status.
+                new HTTPServer(metricsPort);
+                setHttpServer(true);
             }
         } catch (IOException e) {
             LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Initialize txle sql metrics server exception, please check the port " + promMetricsPort + ". " + e);
         }
+    }
+
+    private static void setHttpServer(boolean httpServer) {
+        CommonPrometheusMetrics.httpServer = httpServer;
     }
 
     private static Gauge buildGauge(String name, String help) {
@@ -62,7 +69,7 @@ public class CommonPrometheusMetrics extends Collector {
         }
 
         // TODO If this method was invoked for many times in the same thread, then the later value will cover the early value.
-        gaugeTimer.set(TXLE_SQL_TIME_SECONDS_TOTAL.labels(isBizSql + "", serviceName, category).startTimer());
+        GAUGE_TIMER.set(TXLE_SQL_TIME_SECONDS_TOTAL.labels(isBizSql + "", serviceName, category).startTimer());
         TXLE_SQL_TOTAL.labels(isBizSql + "", serviceName, category).inc();
     }
 
@@ -74,11 +81,11 @@ public class CommonPrometheusMetrics extends Collector {
     }
 
     public void endMarkSQLDuration() {
-        Gauge.Timer timer = gaugeTimer.get();
+        Gauge.Timer timer = GAUGE_TIMER.get();
         if (timer != null) {
             timer.setDuration();
         }
-        gaugeTimer.remove();
+        GAUGE_TIMER.remove();
     }
 
     @Override
@@ -88,5 +95,9 @@ public class CommonPrometheusMetrics extends Collector {
 
     public static void setIsMonitorSql(boolean isEnabled) {
         isMonitorSql = isEnabled;
+    }
+
+    public static boolean isMonitorSql() {
+        return isMonitorSql;
     }
 }

@@ -7,8 +7,10 @@ public class OmegaContextServiceConfig extends OmegaContext {
     // Do not need think about concurrency situation, due to they're one-to-one with current application.
     private String serviceName;
     private String instanceId;
-    private boolean isAutoCompensate;// compensation or auto-compensation
-    private boolean isEnabledAutoCompensateTx;// true: record undo_log, otherwise do nothing, just for auto-compensation.
+    // compensation or auto-compensation
+    private boolean isAutoCompensate;
+    // true: record undo_log, otherwise do nothing, just for auto-compensation.
+    private boolean isEnabledAutoCompensateTx;
 
     public void setServiceName(String serviceName) {
         this.serviceName = serviceName;

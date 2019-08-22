@@ -78,10 +78,6 @@ public class OmegaContext {
 
   @Override
   public String toString() {
-    return "OmegaContext{" +
-        "globalTxId=" + globalTxId.get() +
-        ", localTxId=" + localTxId.get() +
-        ", category=" + category.get() +
-        '}';
+    return "OmegaContext{" + "globalTxId=" + globalTxId.get() + ", localTxId=" + localTxId.get() + ", category=" + category.get() + '}';
   }
 }

@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * To define compound event listener for storing and invoking different event listeners only.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class CompoundJdbcEventListener extends JdbcEventListener {
     private final List<JdbcEventListener> eventListeners;

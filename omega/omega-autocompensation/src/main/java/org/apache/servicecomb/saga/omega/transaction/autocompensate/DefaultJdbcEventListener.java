@@ -250,7 +250,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
 
     // To construct business information, and then report to the txle Server.
     private void constructBusinessInfoToServer(Map<String, Object> standbyParams) {
-        final Logger LOG = LoggerFactory.getLogger(PreparedStatementWrapper.class);
+        final Logger log = LoggerFactory.getLogger(PreparedStatementWrapper.class);
         try {
             if (standbyParams == null || standbyParams.isEmpty()) {
                 return;
@@ -270,7 +270,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
             MessageSender messageSender = ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class);
             messageSender.reportMessageToServer(new KafkaMessage(globalTxId, localTxId, dbdrivername, dburl, dbusername, tableName, operation, ids));
         } catch (Exception e) {
-            LOG.error("Failed to execute the method 'constructBusinessInfoToServer'.", e);
+            log.error("Failed to execute the method 'constructBusinessInfoToServer'.", e);
         }
     }
 }

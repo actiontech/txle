@@ -10,7 +10,7 @@ import org.springframework.core.annotation.Order;
 
 /**
  * This config is imported to the EnableOmega annotation.
- * 
+ *
  * @author Gannalyo
  * @since 2018-07-30
  */

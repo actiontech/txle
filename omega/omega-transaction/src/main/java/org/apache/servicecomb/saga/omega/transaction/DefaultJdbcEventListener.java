@@ -6,7 +6,6 @@ import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.CallableStatem
 import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.PreparedStatementInformation;
 import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.ResultSetInformation;
 import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.listener.JdbcEventListener;
-import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.PreparedStatementWrapper;
 import org.apache.servicecomb.saga.omega.transaction.monitor.CompensableSqlMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

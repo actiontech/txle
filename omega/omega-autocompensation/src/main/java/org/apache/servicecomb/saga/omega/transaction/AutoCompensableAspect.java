@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * An interceptor for some methods which annotate the AutoCompensable annotation.
- * 
+ *
  * @author Gannalyo
  * @since 2018-07-30
  */
@@ -45,7 +45,7 @@ public class AutoCompensableAspect {
 
 			int retries = autoCompensable.retries();
 			AutoCompensableRecoveryPolicy recoveryPolicy = AutoCompensableRecoveryPolicyFactory.getRecoveryPolicy(retries);
-			
+
 			return recoveryPolicy.apply(joinPoint, autoCompensable, autoCompensableInterceptor, context, localTxId, retries, autoCompensateService);
 		} catch (Throwable e) {
 			LOG.error(TxleConstants.LOG_ERROR_PREFIX + "Fail to execute AutoCompensableAspect, context [{}], method [{}]", context,

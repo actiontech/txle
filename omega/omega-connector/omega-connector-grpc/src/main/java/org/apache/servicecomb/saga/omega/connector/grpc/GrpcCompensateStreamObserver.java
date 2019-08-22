@@ -46,7 +46,7 @@ class GrpcCompensateStreamObserver implements StreamObserver<GrpcCompensateComma
 
   @Override
   public void onNext(GrpcCompensateCommand command) {
-    LOG.info("Received compensate command, global tx id: {}, local tx id: {}, compensation method: {}",
+    LOG.error("Received compensate command, global tx id: {}, local tx id: {}, compensation method: {}",
         command.getGlobalTxId(), command.getLocalTxId(), command.getCompensationMethod());
 
     // receive alpha compensation command. TODO to verify if alpha establish a connection actively.

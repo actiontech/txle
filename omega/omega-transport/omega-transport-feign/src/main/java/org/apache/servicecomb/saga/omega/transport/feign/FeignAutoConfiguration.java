@@ -30,7 +30,7 @@ public class FeignAutoConfiguration {
     @Bean
     @ConditionalOnClass(RequestInterceptor.class)
     @ConditionalOnBean(OmegaContext.class)
-    public RequestInterceptor feignClientRequestInterceptor(OmegaContext omegaContext){
+    public RequestInterceptor feignClientRequestInterceptor(OmegaContext omegaContext) {
         return new FeignClientRequestInterceptor(omegaContext);
     }
 }

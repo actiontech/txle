@@ -6,7 +6,7 @@ import java.text.SimpleDateFormat;
  * To convert value type from Object to String.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class Value {
 
