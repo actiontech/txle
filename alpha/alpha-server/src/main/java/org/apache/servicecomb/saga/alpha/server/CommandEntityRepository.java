@@ -45,12 +45,14 @@ public interface CommandEntityRepository extends CrudRepository<Command, Long> {
       @Param("globalTxId") String globalTxId,
       @Param("localTxId") String localTxId);
 
+  // 为避免补偿命令从NEW直接更改为DONE。场景：高并发情况，某异常全局事务可能会保存补偿命令后立即保存结束命令(TxConsistentService166-168行)，若该操作在检测补偿和更新补偿状态间发生(EvenScanner142-143行)，则该补偿命令将不被执行。
   @Transactional
   @Modifying(clearAutomatically = true)
   @Query("UPDATE org.apache.servicecomb.saga.alpha.core.Command c "
       + "SET c.status = :status "
       + "WHERE c.globalTxId = :globalTxId "
-      + "  AND c.localTxId = :localTxId")
+      + "  AND c.localTxId = :localTxId"
+      + "  AND c.status = 'PENDING'")
   void updateStatusByGlobalTxIdAndLocalTxId(
       @Param("status") String status,
       @Param("globalTxId") String globalTxId,
