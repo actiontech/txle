@@ -7,13 +7,14 @@ import java.util.Map;
  * An information bean for the ResultSetStatement.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class ResultSetInformation {
 
     private final Map<String, Value> resultMap = new LinkedHashMap<String, Value>();
 
-    public ResultSetInformation() {}
+    public ResultSetInformation() {
+    }
 
     public void setColumnValue(String columnName, Object value) {
         resultMap.put(columnName, new Value(value));

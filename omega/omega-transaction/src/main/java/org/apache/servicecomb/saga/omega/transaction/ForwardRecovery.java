@@ -55,7 +55,7 @@ public class ForwardRecovery extends DefaultRecovery {
 
           if (remains > 0) {
             remains--;
-          } else if (remains == 0 ) {
+          } else if (remains == 0) {
             LOG.error(
                     "Retried sub tx failed maximum times, global tx id: {}, local tx id: {}, method: {}, retried times: {}",
                     context.globalTxId(), context.localTxId(), method.toString(), retries);

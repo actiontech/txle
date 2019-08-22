@@ -6,19 +6,22 @@ package org.apache.servicecomb.saga.omega.context;
  * @author Gannalyo
  * @since 2018-07-30
  */
-public class CurrentThreadOmegaContext {
-	
-	private static final ThreadLocal<OmegaContextServiceConfig> curThreadOmegaContext = new ThreadLocal<>();
+public final class CurrentThreadOmegaContext {
+
+	private static final ThreadLocal<OmegaContextServiceConfig> CUR_THREAD_OMEGA_CONTEXT = new ThreadLocal<>();
+
+	private CurrentThreadOmegaContext() {
+	}
 
 	public static void putThreadGlobalLocalTxId(OmegaContextServiceConfig context) {
-		curThreadOmegaContext.set(context);
+		CUR_THREAD_OMEGA_CONTEXT.set(context);
 	}
-	
+
 	public static OmegaContextServiceConfig getContextFromCurThread() {
-		return curThreadOmegaContext.get();
+		return CUR_THREAD_OMEGA_CONTEXT.get();
 	}
 	public static String getGlobalTxIdFromCurThread() {
-		OmegaContextServiceConfig context = curThreadOmegaContext.get();
+		OmegaContextServiceConfig context = CUR_THREAD_OMEGA_CONTEXT.get();
 		if (context != null) {
 			return context.globalTxId();
 		}
@@ -26,7 +29,7 @@ public class CurrentThreadOmegaContext {
 	}
 
 	public static String getLocalTxIdFromCurThread() {
-		OmegaContextServiceConfig context = curThreadOmegaContext.get();
+		OmegaContextServiceConfig context = CUR_THREAD_OMEGA_CONTEXT.get();
 		if (context != null) {
 			return context.localTxId();
 		}
@@ -34,7 +37,7 @@ public class CurrentThreadOmegaContext {
 	}
 
 	public static String getServiceNameFromCurThread() {
-		OmegaContextServiceConfig context = curThreadOmegaContext.get();
+		OmegaContextServiceConfig context = CUR_THREAD_OMEGA_CONTEXT.get();
 		if (context != null) {
 			return context.serviceName();
 		}
@@ -42,7 +45,7 @@ public class CurrentThreadOmegaContext {
 	}
 
 	public static boolean isAutoCompensate() {
-		OmegaContextServiceConfig context = curThreadOmegaContext.get();
+		OmegaContextServiceConfig context = CUR_THREAD_OMEGA_CONTEXT.get();
 		if (context != null) {
 			return context.isAutoCompensate();
 		}
@@ -50,7 +53,7 @@ public class CurrentThreadOmegaContext {
 	}
 
 	public static boolean isEnabledAutoCompensateTx() {
-		OmegaContextServiceConfig context = curThreadOmegaContext.get();
+		OmegaContextServiceConfig context = CUR_THREAD_OMEGA_CONTEXT.get();
 		if (context != null) {
 			return context.isEnabledAutoCompensateTx();
 		}
@@ -58,7 +61,7 @@ public class CurrentThreadOmegaContext {
 	}
 
 	public static void clearCache() {
-		curThreadOmegaContext.remove();
+		CUR_THREAD_OMEGA_CONTEXT.remove();
 	}
-	
+
 }

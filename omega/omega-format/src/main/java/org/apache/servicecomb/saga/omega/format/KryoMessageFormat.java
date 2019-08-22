@@ -32,22 +32,17 @@ public class KryoMessageFormat implements MessageFormat {
 
   private static final int DEFAULT_BUFFER_SIZE = 4096;
 
-  private static final KryoFactory factory = new KryoFactory() {
-    @Override
-    public Kryo create() {
-      return new Kryo();
-    }
-  };
+  private static final KryoFactory FACTORY = () -> new Kryo();
 
-  private static final KryoPool pool = new KryoPool.Builder(factory).softReferences().build();
+  private static final KryoPool POOL = new KryoPool.Builder(FACTORY).softReferences().build();
 
   @Override
   public byte[] serialize(Object[] objects) {
     Output output = new Output(DEFAULT_BUFFER_SIZE, -1);
 
-    Kryo kryo = pool.borrow();
+    Kryo kryo = POOL.borrow();
     kryo.writeObjectOrNull(output, objects, Object[].class);
-    pool.release(kryo);
+    POOL.release(kryo);
 
     return output.toBytes();
   }
@@ -57,9 +52,9 @@ public class KryoMessageFormat implements MessageFormat {
     try {
       Input input = new Input(new ByteArrayInputStream(message));
 
-      Kryo kryo = pool.borrow();
+      Kryo kryo = POOL.borrow();
       Object[] objects = kryo.readObjectOrNull(input, Object[].class);
-      pool.release(kryo);
+      POOL.release(kryo);
 
       return objects;
     } catch (KryoException e) {

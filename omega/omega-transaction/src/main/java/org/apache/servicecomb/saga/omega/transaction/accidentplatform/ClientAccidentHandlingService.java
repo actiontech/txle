@@ -16,9 +16,12 @@ public class ClientAccidentHandlingService {
         JsonObject jsonObject = new JsonParser().parse(jsonParams).getAsJsonObject();
         String category = null;
         JsonElement categoryJson = jsonObject.get("category");
-        if (categoryJson != null) category = categoryJson.getAsString();
+        if (categoryJson != null) {
+            category = categoryJson.getAsString();
+        }
 
-        if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger(), category).getStatus()) {// 差错平台上报支持配置降级功能，未降级场景才进行上报
+        // 差错平台上报支持配置降级功能，未降级场景才进行上报
+        if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger(), category).getStatus()) {
             String serviceName = "", instanceId = "", globalTxId = "", localTxId = "", bizinfo = "", remark = "";
             int type = 1;
             JsonElement jsonElement = jsonObject.get("servicename");

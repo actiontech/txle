@@ -11,7 +11,7 @@ import java.util.logging.Logger;
  * To wrap the database driver.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class Driver implements java.sql.Driver {
 
@@ -22,7 +22,7 @@ public class Driver implements java.sql.Driver {
     }
 
     // To store a global list for drivers.
-    private static final List<java.sql.Driver> driverList = collectRegisteredDrivers();
+    private static final List<java.sql.Driver> DRIVER_LIST = collectRegisteredDrivers();
 
     /**
      * To collect all drivers which come from 'java.sql.DriverManager.getDrivers()'.
@@ -70,7 +70,7 @@ public class Driver implements java.sql.Driver {
 
     protected java.sql.Driver findPassthru(String url) throws SQLException {
         java.sql.Driver passthru = null;
-        for (java.sql.Driver driver : driverList) {
+        for (java.sql.Driver driver : DRIVER_LIST) {
             try {
                 if (driver.acceptsURL(url)) {
                     passthru = driver;

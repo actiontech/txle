@@ -18,21 +18,18 @@
 
 package org.apache.servicecomb.saga.omega.transport.resttemplate;
 
-import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_ID_KEY;
-import static org.apache.servicecomb.saga.omega.context.OmegaContext.LOCAL_TX_ID_KEY;
-import static org.apache.servicecomb.saga.omega.context.OmegaContext.GLOBAL_TX_CATEGORY_KEY;
-
-import java.io.IOException;
-import java.lang.invoke.MethodHandles;
-
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+
+import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+
+import static org.apache.servicecomb.saga.omega.context.OmegaContext.*;
 
 class TransactionClientHttpRequestInterceptor implements ClientHttpRequestInterceptor {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -46,7 +43,7 @@ class TransactionClientHttpRequestInterceptor implements ClientHttpRequestInterc
   public ClientHttpResponse intercept(HttpRequest request, byte[] body,
       ClientHttpRequestExecution execution) throws IOException {
 
-    if (omegaContext!= null && omegaContext.globalTxId() != null) {
+    if (omegaContext != null && omegaContext.globalTxId() != null) {
       request.getHeaders().add(GLOBAL_TX_ID_KEY, omegaContext.globalTxId());
       request.getHeaders().add(LOCAL_TX_ID_KEY, omegaContext.localTxId());
       request.getHeaders().add(GLOBAL_TX_CATEGORY_KEY, omegaContext.category());

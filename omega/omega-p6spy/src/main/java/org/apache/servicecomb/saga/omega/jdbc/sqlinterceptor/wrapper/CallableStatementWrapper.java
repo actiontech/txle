@@ -15,6 +15,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
 
     private final CallableStatement delegate;
     private final CallableStatementInformation statementInformation;
+    private final JdbcEventListener eventListener;
 
     public static CallableStatement wrap(CallableStatement delegate, CallableStatementInformation callableStatementInformation, JdbcEventListener eventListener) {
         if (delegate == null) {
@@ -26,6 +27,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
     protected CallableStatementWrapper(CallableStatement delegate, CallableStatementInformation callableStatementInformation, JdbcEventListener eventListener) {
         super(delegate, callableStatementInformation, eventListener);
         this.delegate = delegate;
+        this.eventListener = eventListener;
         statementInformation = callableStatementInformation;
     }
 
@@ -43,7 +45,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, val, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, val, e);
         }
     }
 
@@ -56,7 +58,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, null, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, null, e);
         }
     }
 
@@ -69,7 +71,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -82,7 +84,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -95,7 +97,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -108,7 +110,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -121,7 +123,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -134,7 +136,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -147,7 +149,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -160,7 +162,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -173,7 +175,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -186,7 +188,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -199,7 +201,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -212,7 +214,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -225,7 +227,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -238,7 +240,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -251,7 +253,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -264,7 +266,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -277,7 +279,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -290,7 +292,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -303,7 +305,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
         }
     }
 
@@ -316,7 +318,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -329,7 +331,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -342,7 +344,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -355,7 +357,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, null, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, null, e);
         }
     }
 
@@ -368,7 +370,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -381,7 +383,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
         }
     }
 
@@ -394,7 +396,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
         }
     }
 
@@ -407,7 +409,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
         }
     }
 
@@ -420,7 +422,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
         }
     }
 
@@ -433,7 +435,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, inputStream, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, inputStream, e);
         }
     }
 
@@ -446,7 +448,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
         }
     }
 
@@ -459,7 +461,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, xmlObject, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, xmlObject, e);
         }
     }
 
@@ -472,7 +474,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -485,7 +487,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -498,7 +500,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -511,7 +513,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -524,7 +526,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
         }
     }
 
@@ -537,7 +539,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -550,7 +552,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, x, e);
         }
     }
 
@@ -563,7 +565,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
         }
     }
 
@@ -576,7 +578,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, value, e);
         }
     }
 
@@ -589,7 +591,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
         }
     }
 
@@ -602,7 +604,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, inputStream, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, inputStream, e);
         }
     }
 
@@ -615,7 +617,7 @@ public class CallableStatementWrapper extends PreparedStatementWrapper implement
             e = sqle;
             throw e;
         } finally {
-            eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
+            this.eventListener.onAfterCallableStatementSet(statementInformation, parameterName, reader, e);
         }
     }
 

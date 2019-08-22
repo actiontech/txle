@@ -39,7 +39,8 @@ class CompensableInterceptor implements EventAwareInterceptor {
       int retries, Object... message) {
     AlphaResponse response = sender.send(new TxStartedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod,
             timeout, retriesMethod, retries, context.category(), message));
-    readConfigFromServer();// read 'sqlmonitor' config before executing business sql, the aim is to monitor business sql or not.
+    // read 'sqlmonitor' config before executing business sql, the aim is to monitor business sql or not.
+    readConfigFromServer();
     return response;
   }
 

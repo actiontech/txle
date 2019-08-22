@@ -19,7 +19,8 @@ package org.apache.servicecomb.saga.omega.transaction;
 
 public class AlphaResponse {
     private final boolean aborted;
-    private final boolean paused;// The paused status for global transaction By Gannalyo
+    // The paused status for global transaction By Gannalyo
+    private final boolean paused;
     private final boolean enabledTx;
 
     public AlphaResponse(boolean aborted) {

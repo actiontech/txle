@@ -127,7 +127,7 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
 
   @Override
   public void onConnected() {
-    for(MessageSender sender :senders.keySet()){
+    for (MessageSender sender : senders.keySet()) {
       try {
         sender.onConnected();
       } catch (Exception e) {
@@ -150,7 +150,7 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
   @Override
   public void close() {
     scheduler.shutdown();
-    for(ManagedChannel channel : channels) {
+    for (ManagedChannel channel : channels) {
       channel.shutdownNow();
     }
   }
@@ -182,7 +182,7 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
 
   @Override
   public GrpcConfigAck readConfigFromServer(int type, String category) {
-    return senders.keySet().iterator().next().readConfigFromServer(type,category);
+    return senders.keySet().iterator().next().readConfigFromServer(type, category);
   }
 
   AlphaResponse send(TxEvent event, MessageSenderPicker messageSenderPicker) {
@@ -203,7 +203,10 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
         // TODO 发生异常时，浏览器一直转圈圈
         // very large latency on exception
         senders.put(messageSender, Long.MAX_VALUE);
-        try {Thread.sleep(10000);} catch (InterruptedException e1) {}
+          try {
+              Thread.sleep(10000);
+          } catch (InterruptedException e1) {
+          }
       }
     } while (!Thread.currentThread().isInterrupted());
 

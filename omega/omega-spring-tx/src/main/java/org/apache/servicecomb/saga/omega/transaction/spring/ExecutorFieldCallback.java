@@ -17,6 +17,13 @@
 
 package org.apache.servicecomb.saga.omega.transaction.spring;
 
+import org.apache.servicecomb.saga.omega.context.OmegaContext;
+import org.apache.servicecomb.saga.omega.transaction.spring.annotations.OmegaContextAware;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.util.ReflectionUtils.FieldCallback;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -27,14 +34,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
-
-import org.apache.servicecomb.saga.omega.context.OmegaContext;
-import org.apache.servicecomb.saga.omega.transaction.spring.annotations.OmegaContextAware;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.util.ReflectionUtils.FieldCallback;
 
 class ExecutorFieldCallback implements FieldCallback {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -66,7 +65,7 @@ class ExecutorFieldCallback implements FieldCallback {
     field.set(bean, ExecutorProxy.newInstance(field.get(bean), field.getType(), omegaContext));
   }
 
-  private static class RunnableProxy implements InvocationHandler {
+  private static final class RunnableProxy implements InvocationHandler {
 
     private final String globalTxId;
     private final String localTxId;
@@ -108,7 +107,7 @@ class ExecutorFieldCallback implements FieldCallback {
     }
   }
 
-  private static class ExecutorProxy implements InvocationHandler {
+  private static final class ExecutorProxy implements InvocationHandler {
     private final Object target;
     private final OmegaContext omegaContext;
 

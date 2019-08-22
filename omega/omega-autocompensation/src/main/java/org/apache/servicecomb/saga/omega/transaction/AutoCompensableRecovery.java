@@ -80,7 +80,8 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 				interceptor.onError(parentTxId, TxleConstants.AUTO_COMPENSABLE_METHOD, e);
 			}
 
-			if (!isProceed && isFaultTolerant) {// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+			// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+			if (!isProceed && isFaultTolerant) {
 				return joinPoint.proceed();
 			}
 
@@ -95,12 +96,10 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 		try {
 			// To clear cache for datasource mapping when the cache size is more than fifty.
 			Set<String> localTxIdSet = DataSourceMappingCache.getCacheLocalTxIdSet();
-			if (localTxIdSet != null && localTxIdSet.size() > 50) {
+			if (localTxIdSet != null && localTxIdSet.size() > 0) {
 				// Open a new thread for saving time of the main thread.
 				ExecutorService executorService = Executors.newSingleThreadExecutor();
-				executorService.execute(() -> {
-					DataSourceMappingCache.clear(interceptor.fetchLocalTxIdOfEndedGlobalTx(localTxIdSet));
-				});
+				executorService.execute(() -> DataSourceMappingCache.clear(interceptor.fetchLocalTxIdOfEndedGlobalTx(localTxIdSet)));
 				executorService.shutdown();
 			}
 		} catch (Exception e) {

@@ -6,7 +6,7 @@ import java.util.List;
  * Refer to the website "https://github.com/VitaNuova/eclipselinkexporter/blob/master/src/main/java/prometheus/exporter/EclipseLinkStatisticsCollector.java".
  *
  * @author Gannalyo
- * @date 20181024
+ * @since 20181024
  */
 public class AutoCompensableSqlMetrics extends CommonPrometheusMetrics {
     public AutoCompensableSqlMetrics(String promMetricsPort) {
@@ -14,7 +14,9 @@ public class AutoCompensableSqlMetrics extends CommonPrometheusMetrics {
     }
 
     public void startMarkSQLDurationAndCount(String sql, boolean isBizSql) {
-        if (!isMonitorSql) return;
+        if (!isMonitorSql()) {
+            return;
+        }
         super.startMarkSQLDurationAndCount(sql, isBizSql);
     }
 

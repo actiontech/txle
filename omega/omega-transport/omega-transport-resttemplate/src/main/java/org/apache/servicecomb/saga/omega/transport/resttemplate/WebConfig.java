@@ -41,7 +41,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 
   @Autowired
-  public WebConfig(@Autowired(required=false) OmegaContext omegaContext) {
+  public WebConfig(@Autowired(required = false) OmegaContext omegaContext) {
     this.omegaContext = omegaContext;
   }
 

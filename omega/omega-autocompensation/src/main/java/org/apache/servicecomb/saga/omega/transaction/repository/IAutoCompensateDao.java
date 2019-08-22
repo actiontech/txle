@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * The data interface for auto-compensation.
  * Aim to execute complex and special SQL.
- * 
+ *
  * @author Gannalyo
  * @since 201807-30
  */
@@ -15,8 +15,8 @@ public interface IAutoCompensateDao {
 
 	/**
 	 * To execute the dynamic auto-compensation SQL.
-	 * 
-	 * @param autoCompensateSql
+	 *
+	 * @param autoCompensateSql SQL for auto compensation.
 	 * @return result
 	 * @author Gannalyo
 	 * @since 201807-30

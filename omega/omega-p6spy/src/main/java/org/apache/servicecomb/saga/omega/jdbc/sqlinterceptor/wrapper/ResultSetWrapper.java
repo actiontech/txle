@@ -15,7 +15,7 @@ import java.util.Map;
  * To wrap the ResultSet.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class ResultSetWrapper implements ResultSet {
     private final ResultSet delegate;

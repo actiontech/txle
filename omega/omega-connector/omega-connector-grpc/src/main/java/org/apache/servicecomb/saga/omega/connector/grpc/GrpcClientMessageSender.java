@@ -34,11 +34,15 @@ import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.GrpcTxEvent.Builder;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceStub;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.lang.invoke.MethodHandles;
 import java.util.HashSet;
 import java.util.Set;
 
 public class GrpcClientMessageSender implements MessageSender {
+  private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final String target;
   private final TxEventServiceStub asyncEventService;
 
@@ -60,7 +64,8 @@ public class GrpcClientMessageSender implements MessageSender {
       MessageHandler handler) {
     this.target = address;
     this.asyncEventService = TxEventServiceGrpc.newStub(channel);
-    this.blockingEventService = TxEventServiceGrpc.newBlockingStub(channel);//.withDeadlineAfter(20, TimeUnit.SECONDS); // 这个应该是GRPC客户端和服务端的连接超时设置，如果设置的话，一旦超时则整个连接将不可用，应给通道内的每个请求设置超时时间
+    //.withDeadlineAfter(20, TimeUnit.SECONDS); // 这个应该是GRPC客户端和服务端的连接超时设置，如果设置的话，一旦超时则整个连接将不可用，应给通道内的每个请求设置超时时间
+    this.blockingEventService = TxEventServiceGrpc.newBlockingStub(channel);
     this.serializer = serializer;
     this.deserializer = deserializer;
 
@@ -98,19 +103,25 @@ public class GrpcClientMessageSender implements MessageSender {
         context.setServiceName(serviceConfig.getServiceName());
         context.setInstanceId(serviceConfig.getInstanceId());
       }
-    } catch (Exception e) {}
+    } catch (Exception e) {
+    }
 
 //    blockingEventService.withDeadlineAfter(5, TimeUnit.SECONDS);// TODO 设置本次通信的超时时间
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
-	while (grpcAck.getPaused()) {// It's a manual operation to pause transaction, so it can accept to pause for one minute.
-      try {Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60) * 1000);} catch (InterruptedException e) {}
-		grpcAck = blockingEventService.onTxEvent(convertEvent(event));
-		if (!grpcAck.getPaused()) {
-			break;
-		}
-	}
+    // It's a manual operation to pause transaction, so it can accept to pause for one minute.
+    while (grpcAck.getPaused()) {
+      try {
+        Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60) * 1000);
+      } catch (InterruptedException e) {
+      }
+      grpcAck = blockingEventService.onTxEvent(convertEvent(event));
+      if (!grpcAck.getPaused()) {
+        break;
+      }
+    }
 
-    return new AlphaResponse(grpcAck.getAborted(), grpcAck.getPaused(), grpcAck.getIsEnabledTx());// To append the pause status for global transaction By Gannalyo
+    // To append the pause status for global transaction By Gannalyo
+    return new AlphaResponse(grpcAck.getAborted(), grpcAck.getPaused(), grpcAck.getIsEnabledTx());
   }
 
   @Override
@@ -161,12 +172,15 @@ public class GrpcClientMessageSender implements MessageSender {
             .setBizinfo(accident.getBizinfo())
             .setRemark(accident.getRemark())
             .build();
+    LOG.error("Client is reporting accident to server, accident [{}].", accident);
     return blockingEventService.onAccident(grpcAccident).getStatus() + "";
   }
 
   @Override
   public GrpcConfigAck readConfigFromServer(int type, String category) {
-    if (category == null) category = "";
+    if (category == null) {
+        category = "";
+    }
     return blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setCategory(category).setType(type).build());
   }
 

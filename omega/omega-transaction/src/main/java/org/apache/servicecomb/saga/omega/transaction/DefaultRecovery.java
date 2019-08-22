@@ -91,7 +91,8 @@ public class DefaultRecovery implements RecoveryPolicy {
         interceptor.onError(parentTxId, compensationSignature, throwable);
       }
 
-      if (!isProceed && isFaultTolerant) {// In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+      // In case of exception, to execute business if it is not proceed yet when the fault-tolerant degradation is enabled fro global transaction.
+      if (!isProceed && isFaultTolerant) {
           return joinPoint.proceed();
       }
       throw throwable;

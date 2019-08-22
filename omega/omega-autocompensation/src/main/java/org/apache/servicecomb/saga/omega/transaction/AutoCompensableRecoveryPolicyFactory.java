@@ -17,17 +17,22 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
-public class AutoCompensableRecoveryPolicyFactory {
+public final class AutoCompensableRecoveryPolicyFactory {
   private static final AutoCompensableRecoveryPolicy DEFAULT_RECOVERY = new AutoCompensableRecovery();
 
   private static final AutoCompensableRecoveryPolicy FORWARD_RECOVERY = new AutoCompensableForwardRecovery();
+
+  private AutoCompensableRecoveryPolicyFactory() {
+  }
 
   /**
    * If retries == 0, use the default recovery to execute only once.
    * If retries > 0, it will use the forward recovery and retry the given times at most.
    * If retries < 0, it will use the forward recovery and retry forever until interrupted.
+   * @param retries times for retrying
+   * @return AutoCompensableRecoveryPolicy
    */
-  static AutoCompensableRecoveryPolicy getRecoveryPolicy(int retries) {
+  protected static AutoCompensableRecoveryPolicy getRecoveryPolicy(int retries) {
     return retries != 0 ? FORWARD_RECOVERY : DEFAULT_RECOVERY;
   }
 }

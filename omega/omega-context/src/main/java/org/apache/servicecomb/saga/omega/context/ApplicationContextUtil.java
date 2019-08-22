@@ -7,11 +7,16 @@ import org.springframework.context.ApplicationContextAware;
 public class ApplicationContextUtil implements ApplicationContextAware {
     private static ApplicationContext context;
 
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.context = applicationContext;
+    public void setApplicationContext(ApplicationContext context) throws BeansException {
+        setContext(context);
+    }
+
+    private static void setContext(ApplicationContext context) {
+        ApplicationContextUtil.context = context;
     }
 
     public static ApplicationContext getApplicationContext() {
         return context;
     }
+
 }

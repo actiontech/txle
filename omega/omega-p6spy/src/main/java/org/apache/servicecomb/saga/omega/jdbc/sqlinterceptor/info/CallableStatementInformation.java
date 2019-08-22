@@ -1,13 +1,14 @@
 package org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
  * An information bean for the CallableStatement.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class CallableStatementInformation extends PreparedStatementInformation {
     private final Map<String, Value> namedParameterValues = new HashMap<String, Value>();
@@ -37,8 +38,10 @@ public class CallableStatementInformation extends PreparedStatementInformation {
         }
 
         // add named parameters
-        for (String name : namedParameterValues.keySet()) {
-            appendParameter(parameters, name, namedParameterValues.get(name));
+        Iterator<Map.Entry<String, Value>> iterator = namedParameterValues.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, Value> entry = iterator.next();
+            appendParameter(parameters, entry.getKey(), entry.getValue());
         }
 
         result.append(parameters);

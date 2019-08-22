@@ -16,12 +16,13 @@ import java.util.Map;
  * To wrap the PreparedStatement.
  *
  * @author Gannalyo
- * @date 20190129
+ * @since 20190129
  */
 public class PreparedStatementWrapper extends StatementWrapper implements PreparedStatement {
 
     private final PreparedStatement preparedStatement;
     private final PreparedStatementInformation preparedStatementInformation;
+    private final JdbcEventListener eventListener;
 
     public static PreparedStatement wrap(PreparedStatement preparedStatement, PreparedStatementInformation preparedStatementInformation, JdbcEventListener eventListener) {
         if (preparedStatement == null) {
@@ -34,6 +35,7 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
         super(delegate, eventListener);
         this.preparedStatement = delegate;
         this.preparedStatementInformation = preparedStatementInformation;
+        this.eventListener = eventListener;
     }
 
     @Override
@@ -59,7 +61,8 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
         int rowCount = 0;
         Map<JdbcEventListener, Object> listenerParams = null;
         try {
-            listenerParams = null;//(Map<JdbcEventListener, Object>) eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, preparedStatementInformation);
+            //(Map<JdbcEventListener, Object>) eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, preparedStatementInformation);
+            listenerParams = null;
             // 函数onBeforeExecuteUpdateWithReturnValue有返回值，导致在CompoundJdbcEventListener.onBeforeExecuteUpdateWithReturnValue中调用时仅执行了手动补偿中的对应方法，自动补偿中的对应方法无法被执行，去掉返回值可正常执行
             eventListener.onBeforeExecuteUpdate(preparedStatement, preparedStatementInformation);
 
@@ -334,7 +337,8 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
         boolean result = false;
         Map<JdbcEventListener, Object> listenerParams = null;
         try {
-            listenerParams = null;//(Map<JdbcEventListener, Object>) eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, preparedStatementInformation);
+            //(Map<JdbcEventListener, Object>) eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, preparedStatementInformation);
+            listenerParams = null;
             // 函数onBeforeExecuteUpdateWithReturnValue有返回值，导致在CompoundJdbcEventListener.onBeforeExecuteUpdateWithReturnValue中调用时仅执行了手动补偿中的对应方法，自动补偿中的对应方法无法被执行，去掉返回值可正常执行
             eventListener.onBeforeExecuteUpdate(preparedStatement, preparedStatementInformation);
 
