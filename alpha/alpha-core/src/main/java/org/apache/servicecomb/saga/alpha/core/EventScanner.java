@@ -159,17 +159,15 @@ public class EventScanner implements Runnable {
         MILLISECONDS);
   }
 
+  // Once current server is elected as a leader, then it's always leader until dies.
   private boolean isMaster() {
-    boolean result = consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue();
-    if (result) {
-      if (!isMaster) {
-        log.error("Session " + serverName + "-" + serverPort + " is leader.");
+    if (!isMaster) {
+      isMaster = consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue();
+      if (isMaster) {
+        log.error("Server " + serverName + "-" + serverPort + " is leader.");
       }
-      isMaster = true;
-    } else {
-      isMaster = false;
     }
-    return result;
+    return isMaster;
   }
 
   private void updateTimeoutStatus() {
