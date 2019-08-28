@@ -409,6 +409,8 @@ public class EventScanner implements Runnable {
     }
     String serverHost = "127.0.0.1";
     try {
+      destroyConsulCriticalServices();
+      // TODO 判断当前leader是否可达，如果不可达则剔除其session，重新竞选leader
       // To create a key for leader election no matter if it is exists.
       consulClient.setKVValue(CONSUL_LEADER_KEY, CONSUL_LEADER_KEY_VALUE);
       NewSession session = new NewSession();
@@ -420,23 +422,33 @@ public class EventScanner implements Runnable {
     } finally {
       try {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-          // To deregister service could not destroy session so that current service still held the lock for leader's key.
-          // So to destroy session was necessary as well.
-          consulClient.sessionDestroy(consulSessionId, null);
-          // consulClient.agentServiceDeregister(consulInstanceId);
-          List<Check> checkList = consulClient.getHealthChecksState(null).getValue();
-          checkList.forEach(check -> {
-            if (check.getStatus() != Check.CheckStatus.PASSING || check.getServiceId().equals(consulInstanceId)) {
-              consulClient.agentCheckDeregister(check.getCheckId());
-              consulClient.agentServiceDeregister(check.getServiceId());
-            }
-          });
+          destroyConsulCriticalServices();
         }));
       } catch (Exception e) {
         log.error("Failed to add ShutdownHook for destroying/deregistering Consul Session, Checks and Services, serverName [{}], serverPort [{}].", serverName, serverPort, e);
       }
     }
     return consulSessionId;
+  }
+
+  private void destroyConsulCriticalServices() {
+    // To deregister service could not destroy session so that current service still held the lock for leader's key.
+    // So to destroy session was necessary as well.
+    if (consulSessionId != null) {
+      consulClient.sessionDestroy(consulSessionId, null);
+    }
+    // consulClient.agentServiceDeregister(consulInstanceId);
+    List<Check> checkList = consulClient.getHealthChecksState(null).getValue();
+    if (checkList != null) {
+      log.error("checkList size = " + checkList.size());
+    }
+    checkList.forEach(check -> {
+      if (check.getStatus() != Check.CheckStatus.PASSING || check.getServiceId().equals(consulInstanceId)) {
+        log.error("Executing shutdown method, check id = " + check.getCheckId() + ", service id = " + check.getServiceId() + " .");
+        consulClient.agentCheckDeregister(check.getCheckId());
+        consulClient.agentServiceDeregister(check.getServiceId());
+      }
+    });
   }
 
   public static String getConsulSessionId() {
