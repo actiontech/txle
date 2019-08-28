@@ -64,9 +64,8 @@ Stop successfully!
 
 ## 社区 TODO
 
-* IRC: [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/txle.png)](https://kiwiirc.com/client/irc.freenode.net/?nick=user|?&theme=cli#txle)
-* QQ group: 669663113
-* [如果您正在使用txle，请告诉我们。](https://wj.qq.com/s/2291106/09f4)
+* [![Gitter](https://badges.gitter.im/actiontech-txle/community.svg)](https://gitter.im/actiontech-txle/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+* QQ group: 696990638
 * 开源社区问下公众号
   
   ![dble](./docs/QR_code.png)
