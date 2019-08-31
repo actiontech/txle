@@ -12,6 +12,7 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.google.gson.GsonBuilder;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
+import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
@@ -60,7 +61,7 @@ public class UIRestApi {
     private IAccidentHandlingService accidentHandlingService;
 
     @Autowired
-    private CacheRestApi cacheRestApi;
+    private ITxleCache txleCache;
 
     public UIRestApi(TableFieldRepository tableFieldRepository, TxEventRepository eventRepository) {
         this.tableFieldRepository = tableFieldRepository;
@@ -272,6 +273,12 @@ public class UIRestApi {
                             endedEvent.setSurrogateId(null);
                             eventRepository.save(endedEvent);
                         }
+                        // Set cache for global transaction status.
+                        if ("pause".equals(operation)) {
+                            txleCache.putForDistributedTxSuspendStatusCache(event.globalTxId(), true);
+                        } else {
+                            txleCache.removeForDistributedTxStatusCache(event.globalTxId());
+                        }
                         txleMetrics.countTxNumber(event, false, false);
                     }
                 });
@@ -289,6 +296,11 @@ public class UIRestApi {
         ReturnValue rv = new ReturnValue();
         try {
             // 检测是否已暂停全局事务
+            final String pauseAllGlobalTxKey = TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger());
+            if (txleCache.getConfigCache().getOrDefault(pauseAllGlobalTxKey, false)) {
+                return ResponseEntity.ok(rv);
+            }
+
             List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.PauseGlobalTx.toInteger());
             if (configCenterList != null && !configCenterList.isEmpty()) {
                 return ResponseEntity.ok(rv);
@@ -297,6 +309,7 @@ public class UIRestApi {
             // 1.暂停全局事务配置
             String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
             configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ipPort + " - pauseAllTransaction"));
+            txleCache.putForDistributedConfigCache(pauseAllGlobalTxKey, true);
 
             // 2.对未结束且未暂停的全局事务逐一设置暂停事件，不会出现某全局事务还未等设置暂停事件就结束的情况，因为上面先生成了暂停配置
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
@@ -307,7 +320,8 @@ public class UIRestApi {
                 unendedTxEventList.forEach(event -> {
                     List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
                     if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-                        if (pauseContinueEventList.size() % 2 == 1) {
+                        TxEvent pausedEvent = pauseContinueEventList.get(0);
+                        if (AdditionalEventType.SagaPausedEvent.name().equals(pausedEvent.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(pausedEvent.type())) {
                             // 移除暂停的
                             globalTxIdList.remove(event.globalTxId());
                         }
@@ -343,8 +357,6 @@ public class UIRestApi {
                 ConfigCenter configCenter = configCenterList.get(0);
                 configCenter.setStatus(ConfigCenterStatus.Historical.toInteger());
                 configCenterService.updateConfigCenter(configCenter);
-                cacheRestApi.removeForDistributedCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
-                return ResponseEntity.ok(rv);
             }
 
             // 2.对未结束且未暂停的全局事务逐一设置暂停事件，不会出现某全局事务还未等设置暂停事件就结束的情况，因为上面先生成了暂停配置
@@ -369,17 +381,19 @@ public class UIRestApi {
                 String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
                 unendedTxEventList.forEach(event -> {
                     if (globalTxIdList.contains(event.globalTxId())) {
-                        TxEvent pausedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
-                        eventRepository.save(pausedEvent);
+                        TxEvent continuedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
+                        eventRepository.save(continuedEvent);
                         txleMetrics.countTxNumber(event, false, false);
                     }
                 });
-                cacheRestApi.removeForDistributedCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
             }
         } catch (Exception e) {
             rv.setMessage("Failed to recover all global transactions.");
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+        } finally {
+            txleCache.removeForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
+            txleCache.getTxSuspendStatusCache().clear();
         }
         return ResponseEntity.ok(rv);
     }
@@ -399,6 +413,8 @@ public class UIRestApi {
             if (!enabled) {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
+            } else {
+                txleCache.putForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()), false);
             }
         } catch (Exception e) {
             rv.setMessage("Failed to degrade global transaction.");
@@ -415,6 +431,7 @@ public class UIRestApi {
             List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.GlobalTx.toInteger());
             if (configCenterList == null || configCenterList.isEmpty()) {
                 rv.setMessage("Sever has been started for the Global Transaction.");
+                txleCache.removeForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
                 return ResponseEntity.ok(rv);
             }
 
@@ -424,7 +441,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                cacheRestApi.putForDistributedCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()), true);
+                txleCache.removeForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
             }
         } catch (Exception e) {
             rv.setMessage("Failed to start global transaction.");

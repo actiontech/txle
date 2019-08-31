@@ -10,6 +10,8 @@ import brave.Tracing;
 import com.ecwid.consul.v1.ConsulClient;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
+import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
+import org.apache.servicecomb.saga.alpha.server.cache.TxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
@@ -135,6 +137,11 @@ class AlphaConfig {
   @Bean
   IDataTransferService dataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
     return new DataTransferService(dataTransferRepository, txEventRepository);
+  }
+
+  @Bean
+  ITxleCache txleCache() {
+    return new TxleCache();
   }
 
   @Bean
