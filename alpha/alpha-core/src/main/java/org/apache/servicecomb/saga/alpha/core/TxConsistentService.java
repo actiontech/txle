@@ -6,6 +6,7 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
@@ -13,6 +14,7 @@ import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,9 @@ public class TxConsistentService {
 
 	@Autowired
 	private IDataDictionaryService dataDictionaryService;
+
+	@Autowired
+	private ITxleCache txleCache;
 
   private final List<String> types = Arrays.asList(TxEndedEvent.name(), TxAbortedEvent.name(), SagaEndedEvent.name());
   private final Set<String> serverNameIdCategory = new HashSet<>();
@@ -213,50 +218,53 @@ public class TxConsistentService {
 		}
 		boolean isPaused = false;
 		try {
-			boolean enabledTx = configCenterService.isEnabledConfig(null, null, ConfigCenterType.PauseGlobalTx);
-			if (enabledTx) {
-				return true;
-			}
+            final String pauseAllGlobalTxKey = TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger());
+            if (txleCache.getConfigCache().getOrDefault(pauseAllGlobalTxKey, false)) {
+                // paused all global transactions.
+                return true;
+            }
 
-			// 由于暂停事务可能性极小且selectPausedAndContinueEvent查询较慢，故先快速查询是否有暂停或暂停自动恢复的事件
-			List<String> typeList = eventRepository.selectAllTypeByGlobalTxId(globalTxId);
-			if (typeList == null || typeList.isEmpty()) {
-				return false;
-			}
+            if (!txleCache.getTxSuspendStatusCache().getOrDefault(globalTxId, false)) {
+                // return false directly if it's not suspended.
+                return false;
+            } else {
+                // 由于暂停事务可能性极小且selectPausedAndContinueEvent查询较慢，故先快速查询是否有暂停或暂停自动恢复的事件
+                List<String> typeList = eventRepository.selectAllTypeByGlobalTxId(globalTxId);
+                if (typeList == null || typeList.isEmpty()) {
+                    return false;
+                }
 
-			AtomicBoolean isContainPauseEvent = new AtomicBoolean(false);
-			typeList.forEach(t -> {
-				if (AdditionalEventType.SagaPausedEvent.name().equals(t) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(t)) {
-					isContainPauseEvent.set(true);
-				}
-			});
-			if (!isContainPauseEvent.get()) {
-				return false;
-			}
+                AtomicBoolean isContainPauseEvent = new AtomicBoolean(false);
+                typeList.forEach(t -> {
+                    if (AdditionalEventType.SagaPausedEvent.name().equals(t) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(t)) {
+                        isContainPauseEvent.set(true);
+                    }
+                });
+                if (!isContainPauseEvent.get()) {
+                    return false;
+                }
+            }
 
-			List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(globalTxId);
-			if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-				isPaused = pauseContinueEventList.size() % 2 == 1;
-				if (isPaused) {
-					TxEvent event = pauseContinueEventList.get(0);
-					if (event != null) {
-						Date expiryTime = event.expiryTime();
-						if (expiryTime.compareTo(new Date()) < 1) {
-							try {
-								// was due, create the event 'SagaAutoContinueEvent' to make event to continue running.
-								eventRepository.save(new TxEvent(event.serviceName(),
-										event.instanceId(), event.globalTxId(), event.localTxId(), event.parentTxId(),
-										AdditionalEventType.SagaAutoContinuedEvent.name(), "", 0, "", 0, event.category(), event.payloads()));
-								isPaused = false;
-							} catch (Exception e) {
-								isPaused = true;
-								LOG.error("Fail to save the event 'SagaAutoContinuedEvent'.", e);
-							}
-						}
-					}
-				}
-			}
-		} catch (Exception e) {
+            // If paused, continue to verify the expire for auto-recovery
+            List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(globalTxId);
+            if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
+                TxEvent event = pauseContinueEventList.get(0);
+                if (event != null && AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type())) {
+                    isPaused = true;
+                    if (event.expiryTime().compareTo(new Date()) < 1) {
+                        try {
+                            // was due, create the event 'SagaAutoContinueEvent' to make event to continue running.
+                            eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.localTxId(), event.parentTxId(),
+                                    AdditionalEventType.SagaAutoContinuedEvent.name(), "", 0, "", 0, event.category(), event.payloads()));
+                            isPaused = false;
+                        } catch (Exception e) {
+                            isPaused = true;
+                            LOG.error("Fail to save the event 'SagaAutoContinuedEvent'.", e);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
 			LOG.error("Fail to execute the method 'isGlobalTxPaused'.", e);
 		}
 		return isPaused;

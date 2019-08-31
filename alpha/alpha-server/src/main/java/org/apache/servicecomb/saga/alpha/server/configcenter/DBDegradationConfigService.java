@@ -6,12 +6,12 @@
 
 package org.apache.servicecomb.saga.alpha.server.configcenter;
 
+import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
-import org.apache.servicecomb.saga.alpha.server.restapi.CacheRestApi;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
@@ -37,7 +37,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
     private IDataDictionaryService dataDictionaryService;
 
     @Autowired
-    private CacheRestApi cacheRestApi;
+    private ITxleCache txleCache;
 
     public DBDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
         this.configCenterEntityRepository = configCenterEntityRepository;
@@ -66,10 +66,13 @@ public class DBDegradationConfigService implements IConfigCenterService {
     @Override
     public boolean isEnabledConfig(String instanceId, String category, ConfigCenterType type) {
         String configKey = TxleConstants.constructConfigCacheKey(instanceId, category, type.toInteger());
-        Enumeration<String> configKeys = cacheRestApi.keys();
+        Enumeration<String> configKeys = txleCache.getConfigCache().keys();
         while (configKeys.hasMoreElements()) {
             if (configKey.equals(configKeys.nextElement())) {
-                return cacheRestApi.get(configKey);
+                Boolean result = txleCache.getConfigCache().get(configKey);
+                if (result != null) {
+                    return result;
+                }
             }
         }
 
@@ -124,17 +127,17 @@ public class DBDegradationConfigService implements IConfigCenterService {
                     }
                 }
                 boolean result = TxleConstants.ENABLED.equals(value);
-                cacheRestApi.putForDistributedCache(configKey, result);
+                txleCache.putForDistributedConfigCache(configKey, result);
                 return result;
             }
         }
 
         // All of configs except fault-tolerant are enabled by default.
         if (ConfigCenterType.PauseGlobalTx.equals(type) || ConfigCenterType.GlobalTxFaultTolerant.equals(type) || ConfigCenterType.CompensationFaultTolerant.equals(type) || ConfigCenterType.AutoCompensationFaultTolerant.equals(type)) {
-            cacheRestApi.putForDistributedCache(configKey, false);
+            txleCache.putForDistributedConfigCache(configKey, false);
             return false;
         }
-        cacheRestApi.putForDistributedCache(configKey, true);
+        txleCache.putForDistributedConfigCache(configKey, true);
         return true;
     }
 
@@ -163,7 +166,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
         if ((config.getCategory() + "").length() == 0) {
             config.setCategory(null);
         }
-        cacheRestApi.putForDistributedCache(TxleConstants.constructConfigCacheKey(config.getInstanceid(), config.getCategory(), config.getType()), TxleConstants.ENABLED.equals(config.getValue()));
+        txleCache.putForDistributedConfigCache(TxleConstants.constructConfigCacheKey(config.getInstanceid(), config.getCategory(), config.getType()), TxleConstants.ENABLED.equals(config.getValue()));
         return configCenterEntityRepository.save(config) != null;
     }
 
@@ -172,7 +175,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
         ConfigCenter config = configCenterEntityRepository.findOne(id);
         if (config != null) {
             configCenterEntityRepository.delete(id);
-            cacheRestApi.removeForDistributedCache(TxleConstants.constructConfigCacheKey(config.getInstanceid(), config.getCategory(), config.getType()));
+            txleCache.removeForDistributedConfigCache(TxleConstants.constructConfigCacheKey(config.getInstanceid(), config.getCategory(), config.getType()));
         }
         return true;
     }
