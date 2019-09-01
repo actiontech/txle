@@ -111,7 +111,7 @@ public class TxConsistentService {
 			// We could intercept this method or use the Observer Design model on it, the aim is to handle some operations around it, but apparently, it is not easy to maintain code, so we reserved this idea.
 			// 保存事件前，检查是否已经存在某子事务的某种事件，如果存在则不再保存。如：检测某事务超时后，若在下次检测时做出补偿处理，则会保存多条超时事件信息，为避免则先检测是否存在
 			// 即使数据表结构对globalTxI、localTxId、type做了联合唯一约束，但最好还是先检测吧，尽量避免触发数据库唯一约束异常
-//			if (!eventRepository.checkIsExistsTxCompensatedEvent(globalTxId, localTxId, type)) {
+//			if (!eventRepository.checkIsExistsEventType(globalTxId, localTxId, type)) {
 				try {
 					eventRepository.save(event);
 					if (SagaStartedEvent.name().equals(type)) {
@@ -140,7 +140,7 @@ public class TxConsistentService {
 									// 结束全局事务前，检测到超时，保存超时记录
 									timeoutRepository.save(txTimeout);
 									TxEvent abortedEvent = toTxAbortedEvent(txTimeout);
-									if (!eventRepository.checkIsExistsTxCompensatedEvent(globalTxId, localTxId, abortedEvent.type())) {
+									if (!eventRepository.checkIsExistsEventType(globalTxId, localTxId, abortedEvent.type())) {
 										// 依据超时记录生成异常事件
 										eventRepository.save(abortedEvent);
 									}
@@ -156,7 +156,8 @@ public class TxConsistentService {
 
 					if (TxAbortedEvent.name().equals(type)) {
 						// 验证是否最终异常，即排除非最后一次重试时的异常。如果全局事务标识等于子事务标识情况的异常，说明是全局事务异常。否则说明子事务异常，则需验证是否是子事务的最终异常。
-						if (event.globalTxId().equals(event.localTxId()) || eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId())) {
+						if (globalTxId.equals(localTxId) || eventRepository.checkTxIsAborted(globalTxId, localTxId)) {
+							txleCache.getTxAbortStatusCache().put(globalTxId, true);
 							if (!globalTxId.equals(localTxId)) {
 								// 当出现非超时的异常情况时记录待补偿命令，超时异常由定时器负责
 								// 带有超时的子事务执行失败时，本地事务回滚，记录异常事件【后】，被检测为超时，则该失败的子事务又被回滚一次
@@ -169,7 +170,12 @@ public class TxConsistentService {
 							} else {
 								// 说明是全局事务异常终止
 								commandRepository.saveWillCompensateCommandsWhenGlobalTxAborted(globalTxId);
-								// To save SagaEndedEvent and send message to Kafka after compensating in the file 'EventScanner'.
+								// To save SagaEndedEvent and send message to Kafka for the first sub-transaction, if not, do them after compensating in the file 'EventScanner'.
+								if (eventRepository.selectSubTxCount(globalTxId) <= 1) {
+									TxEvent sagaEndedEvent = new TxEvent(event.serviceName(), event.instanceId(), globalTxId, globalTxId, null, SagaEndedEvent.name(), "", event.category(), new byte[0]);
+									eventRepository.save(sagaEndedEvent);
+									kafkaMessageProducer.send(sagaEndedEvent);
+								}
 							}
 						}
 					}
@@ -199,8 +205,9 @@ public class TxConsistentService {
 		return false;
 	}
 //    return !eventRepository.findTransactions(event.globalTxId(), TxAbortedEvent.name()).isEmpty();
-	// 先查询是否含Aborted事件，如果含有再确定是否为重试情况，而不是一下子都确定好，因为存在异常事件的不多，这样性能上会快些
-	TxEvent abortedTxEvent = eventRepository.selectAbortedTxEvent(event.globalTxId());
+    return txleCache.getTxAbortStatusCache().getOrDefault(event.globalTxId(), false);
+    // 先查询是否含Aborted事件，如果含有再确定是否为重试情况，而不是一下子都确定好，因为存在异常事件的不多，这样性能上会快些
+    /*TxEvent abortedTxEvent = eventRepository.selectAbortedTxEvent(event.globalTxId());
 	if (abortedTxEvent != null) {
 		if (abortedTxEvent.globalTxId().equals(abortedTxEvent.localTxId())) {
 			// 说明全局事务异常，否则说明子事务异常，继续验证是否重试中的异常还是重试完成最终异常
@@ -209,7 +216,7 @@ public class TxConsistentService {
 		// 	验证是否最终异常，即排除非最后一次重试时的异常
 		return eventRepository.checkTxIsAborted(abortedTxEvent.globalTxId(), abortedTxEvent.localTxId());
 	}
-  	return false;
+  	return false;*/
   }
 
 	public boolean isGlobalTxPaused(String globalTxId, String type) {

@@ -11,6 +11,8 @@ import com.ecwid.consul.v1.ConsulClient;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
+import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxEndedClearCacheListener;
+import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxListener;
 import org.apache.servicecomb.saga.alpha.server.cache.TxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
@@ -145,6 +147,18 @@ class AlphaConfig {
   }
 
   @Bean
+  GlobalTxListener globalTxListener() {
+    return new GlobalTxListener();
+  }
+
+  @Bean
+  GlobalTxEndedClearCacheListener globalTxEndedListener(GlobalTxListener globalTxListener) {
+    GlobalTxEndedClearCacheListener globalTxEndedClearCacheListener = new GlobalTxEndedClearCacheListener();
+    globalTxListener.addObserver(globalTxEndedClearCacheListener);
+    return globalTxEndedClearCacheListener;
+  }
+
+  @Bean
   TxConsistentService txConsistentService(
       GrpcServerConfig serverConfig,
       ScheduledExecutorService scheduler,
@@ -156,11 +170,12 @@ class AlphaConfig {
       IKafkaMessageProducer kafkaMessageProducer,
       IConfigCenterService dbDegradationConfigService,
       Tracing tracing,
-      IAccidentHandlingService accidentHandlingService) {
+      IAccidentHandlingService accidentHandlingService,
+      ITxleCache txleCache) {
 
     new EventScanner(scheduler,
         eventRepository, commandRepository, timeoutRepository,
-        omegaCallback, kafkaMessageProducer, eventPollingInterval, consulClient, serverName, serverPort, consulInstanceId).run();
+        omegaCallback, kafkaMessageProducer, eventPollingInterval, consulClient, txleCache, serverName, serverPort, consulInstanceId).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 

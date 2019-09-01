@@ -12,6 +12,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.servicecomb.saga.alpha.core.*;
+import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
@@ -106,6 +107,9 @@ public class AlphaIntegrationTest {
 
   @Autowired
   private ConsulClient consulClient;
+
+  @Autowired
+  private ITxleCache txleCache;
 
   private static final Queue<GrpcCompensateCommand> receivedCommands = new ConcurrentLinkedQueue<>();
 
@@ -583,6 +587,6 @@ public class AlphaIntegrationTest {
         omegaCallback,
         kafkaMessageProducer,
         1,
-        consulClient, "").run();
+        consulClient, txleCache, "").run();
   }
 }

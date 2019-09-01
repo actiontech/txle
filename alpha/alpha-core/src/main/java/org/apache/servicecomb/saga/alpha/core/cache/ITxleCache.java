@@ -17,12 +17,18 @@ public interface ITxleCache {
 
     ConcurrentHashMap<String, Boolean> getTxSuspendStatusCache();
 
+    ConcurrentHashMap<String, Boolean> getTxAbortStatusCache();
+
     void putForDistributedConfigCache(String key, Boolean value);
 
     void putForDistributedTxSuspendStatusCache(String key, Boolean value);
 
+    void putForDistributedTxAbortStatusCache(String key, Boolean value);
+
     void removeForDistributedConfigCache(String key);
 
-    void removeForDistributedTxStatusCache(String key);
+    void removeForDistributedTxSuspendStatusCache(String key);
+
+    void removeForDistributedTxAbortStatusCache(String key);
 
 }

@@ -277,7 +277,7 @@ public class UIRestApi {
                         if ("pause".equals(operation)) {
                             txleCache.putForDistributedTxSuspendStatusCache(event.globalTxId(), true);
                         } else {
-                            txleCache.removeForDistributedTxStatusCache(event.globalTxId());
+                            txleCache.removeForDistributedTxSuspendStatusCache(event.globalTxId());
                         }
                         txleMetrics.countTxNumber(event, false, false);
                     }

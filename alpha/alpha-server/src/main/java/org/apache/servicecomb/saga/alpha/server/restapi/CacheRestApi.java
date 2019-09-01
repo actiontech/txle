@@ -35,20 +35,38 @@ public class CacheRestApi {
         }
     }
 
-    @PostMapping("/putTxStatusCache")
-    public void putTxStatusCache(@RequestBody String cacheKV) {
+    @PostMapping("/putTxSuspendStatusCache")
+    public void putTxSuspendStatusCache(@RequestBody String cacheKV) {
         if (cacheKV != null) {
             String[] arrKV = cacheKV.split(",");
             txleCache.getTxSuspendStatusCache().put(arrKV[0], Boolean.valueOf(arrKV[1]));
         }
     }
 
-    @PostMapping("/removeTxStatusCache")
-    public void removeTxStatusCache(@RequestBody String cacheKV) {
+    @PostMapping("/removeTxSuspendStatusCache")
+    public void removeTxSuspendStatusCache(@RequestBody String cacheKV) {
         if (cacheKV != null) {
             txleCache.getTxSuspendStatusCache().remove(cacheKV.split(",")[0]);
             if (txleCache.getTxSuspendStatusCache().isEmpty()) {
                 txleCache.getTxSuspendStatusCache().clear();
+            }
+        }
+    }
+
+    @PostMapping("/putTxAbortStatusCache")
+    public void putTxAbortStatusCache(@RequestBody String cacheKV) {
+        if (cacheKV != null) {
+            String[] arrKV = cacheKV.split(",");
+            txleCache.getTxAbortStatusCache().put(arrKV[0], Boolean.valueOf(arrKV[1]));
+        }
+    }
+
+    @PostMapping("/removeTxAbortStatusCache")
+    public void removeTxAbortStatusCache(@RequestBody String cacheKV) {
+        if (cacheKV != null) {
+            txleCache.getTxAbortStatusCache().remove(cacheKV.split(",")[0]);
+            if (txleCache.getTxAbortStatusCache().isEmpty()) {
+                txleCache.getTxAbortStatusCache().clear();
             }
         }
     }
