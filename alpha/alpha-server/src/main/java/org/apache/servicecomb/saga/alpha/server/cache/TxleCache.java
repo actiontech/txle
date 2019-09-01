@@ -35,6 +35,7 @@ public class TxleCache implements ITxleCache {
     private final ConcurrentHashMap<String, Boolean> configCache = new ConcurrentHashMap<>();
     // Store the identifies of global transaction when they have been suspended only. Do not use the 'configCache' variable so that free up memory for this variable in an even better fashion.
     private final ConcurrentHashMap<String, Boolean> txSuspendStatusCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Boolean> txAbortStatusCache = new ConcurrentHashMap<>();
 
     @Autowired
     private ConsulClient consulClient;
@@ -46,13 +47,15 @@ public class TxleCache implements ITxleCache {
     private int serverPort;
 
     public ConcurrentHashMap<String, Boolean> getConfigCache() {
-        configCache.keySet().forEach(key -> System.err.println(key + " = " + configCache.get(key)));
         return configCache;
     }
 
     public ConcurrentHashMap<String, Boolean> getTxSuspendStatusCache() {
-        txSuspendStatusCache.keySet().forEach(key -> System.err.println(key + " = " + txSuspendStatusCache.get(key)));
         return txSuspendStatusCache;
+    }
+
+    public ConcurrentHashMap<String, Boolean> getTxAbortStatusCache() {
+        return txAbortStatusCache;
     }
 
     public void putForDistributedConfigCache(String key, Boolean value) {
@@ -60,15 +63,23 @@ public class TxleCache implements ITxleCache {
     }
 
     public void putForDistributedTxSuspendStatusCache(String key, Boolean value) {
-        refreshDistributedCache(key, value.toString(), "/putTxStatusCache");
+        refreshDistributedCache(key, value.toString(), "/putTxSuspendStatusCache");
+    }
+
+    public void putForDistributedTxAbortStatusCache(String key, Boolean value) {
+        refreshDistributedCache(key, value.toString(), "/putTxAbortStatusCache");
     }
 
     public void removeForDistributedConfigCache(String key) {
         refreshDistributedCache(key, "", "/removeConfigCache");
     }
 
-    public void removeForDistributedTxStatusCache(String key) {
-        refreshDistributedCache(key, "", "/removeTxStatusCache");
+    public void removeForDistributedTxSuspendStatusCache(String key) {
+        refreshDistributedCache(key, "", "/removeTxSuspendStatusCache");
+    }
+
+    public void removeForDistributedTxAbortStatusCache(String key) {
+        refreshDistributedCache(key, "", "/removeTxAbortStatusCache");
     }
 
     public void refreshDistributedCache(String cacheKey, String cacheValue, String restApi) {
@@ -104,12 +115,16 @@ public class TxleCache implements ITxleCache {
     private void callLocalFunction(String function, String cacheKey, String cacheValue) {
         if ("/putConfigCache".equals(function)) {
             putConfigCache(cacheKey + "," + cacheValue);
-        } else if ("/putTxStatusCache".equals(function)) {
-            putTxStatusCache(cacheKey + "," + cacheValue);
+        } else if ("/putTxSuspendStatusCache".equals(function)) {
+            putTxSuspendStatusCache(cacheKey + "," + cacheValue);
+        } else if ("/putTxAbortStatusCache".equals(function)) {
+            putTxAbortStatusCache(cacheKey + "," + cacheValue);
         } else if ("/removeConfigCache".equals(function)) {
             removeConfigCache(cacheKey + "," + cacheValue);
-        } else if ("/removeTxStatusCache".equals(function)) {
-            removeTxStatusCache(cacheKey + "," + cacheValue);
+        } else if ("/removeTxSuspendStatusCache".equals(function)) {
+            removeTxSuspendStatusCache(cacheKey + "," + cacheValue);
+        } else if ("/removeTxAbortStatusCache".equals(function)) {
+            removeTxAbortStatusCache(cacheKey + "," + cacheValue);
         }
     }
 
@@ -129,18 +144,34 @@ public class TxleCache implements ITxleCache {
         }
     }
 
-    private void putTxStatusCache(String cacheKV) {
+    private void putTxSuspendStatusCache(String cacheKV) {
         if (cacheKV != null) {
             String[] arrKV = cacheKV.split(",");
             txSuspendStatusCache.put(arrKV[0], Boolean.valueOf(arrKV[1]));
         }
     }
 
-    private void removeTxStatusCache(String cacheKV) {
+    private void removeTxSuspendStatusCache(String cacheKV) {
         if (cacheKV != null) {
             txSuspendStatusCache.remove(cacheKV.split(",")[0]);
             if (txSuspendStatusCache.isEmpty()) {
                 txSuspendStatusCache.clear();
+            }
+        }
+    }
+
+    private void putTxAbortStatusCache(String cacheKV) {
+        if (cacheKV != null) {
+            String[] arrKV = cacheKV.split(",");
+            txAbortStatusCache.put(arrKV[0], Boolean.valueOf(arrKV[1]));
+        }
+    }
+
+    private void removeTxAbortStatusCache(String cacheKV) {
+        if (cacheKV != null) {
+            txAbortStatusCache.remove(cacheKV.split(",")[0]);
+            if (txAbortStatusCache.isEmpty()) {
+                txAbortStatusCache.clear();
             }
         }
     }

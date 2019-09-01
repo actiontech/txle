@@ -11,6 +11,7 @@ import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
+import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ class SpringTxEventRepository implements TxEventRepository {
   @Autowired
   private IDataDictionaryService dataDictionaryService;
 
+  @Autowired
+  private GlobalTxListener globalTxListener;
+
   SpringTxEventRepository(TxEventEnvelopeRepository eventRepo) {
     this.eventRepo = eventRepo;
   }
@@ -39,12 +43,8 @@ class SpringTxEventRepository implements TxEventRepository {
     TxEvent saveEvent = eventRepo.save(event);
     if (saveEvent != null) {
       event.setSurrogateId(saveEvent.id());
+      globalTxListener.listenEvent(event);
     }
-  }
-
-  @Override
-  public Optional<List<TxEvent>> findFirstAbortedGlobalTransaction() {
-    return eventRepo.findFirstAbortedGlobalTxByType();
   }
 
   @Override
@@ -64,45 +64,9 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public List<TxEvent> findTransactions(String globalTxId, String type) {
-    return eventRepo.findByEventGlobalTxIdAndEventType(globalTxId, type);
-  }
-
-  @Override
-  public List<TxEvent> findFirstUncompensatedEventByIdGreaterThan(long id, String type) {
-//    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(type, SINGLE_TX_EVENT_REQUEST);
-    return eventRepo.findFirstByTypeAndSurrogateIdGreaterThan(type, id);
-  }
-
-  @Override
   public List<TxEvent> findSequentialCompensableEventOfUnended(long unendedMinEventId) {
     return eventRepo.findSequentialCompensableEventOfUnended(unendedMinEventId);
   }
-
-  @Override
-  public void deleteDuplicateEvents(String type) {
-    eventRepo.deleteByType(type);
-  }
-
-  @Override
-  public void deleteDuplicateEventsByTypeAndSurrogateIds(String type, List<Long> maxSurrogateIdList) {
-    eventRepo.deleteDuplicateEventsByTypeAndSurrogateIds(type, maxSurrogateIdList);
-  }
-
-  @Override
-  public List<Long> getMaxSurrogateIdGroupByGlobalTxIdByType(String type) {
-    return eventRepo.getMaxSurrogateIdGroupByGlobalTxIdByType(type);
-  }
-
-  @Override
-  public Iterable<TxEvent> findAll() {
-    return eventRepo.findAll();
-  }
-
-  @Override
-	public TxEvent findOne(long id) {
-		return eventRepo.findOne(id);
-	}
 
   @Override
   public List<String> selectAllTypeByGlobalTxId(String globalTxId) {
@@ -115,28 +79,13 @@ class SpringTxEventRepository implements TxEventRepository {
 	}
 
   @Override
-  public long count() {
-    return eventRepo.count();
-  }
-
-  @Override
-  public boolean checkIsRetriedEvent(String globalTxId) {
-    return eventRepo.checkIsRetriedEvent(globalTxId) > 0;
-  }
-
-  @Override
   public Set<String> selectEndedGlobalTx(Set<String> localTxIdSet) {
     return eventRepo.selectEndedGlobalTx(localTxIdSet);
   }
 
   @Override
-  public boolean checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type) {
-    return eventRepo.checkIsExistsTxCompensatedEvent(globalTxId, localTxId, type) > 0;
-  }
-
-  @Override
-  public TxEvent selectAbortedTxEvent(String globalTxId) {
-    return eventRepo.selectAbortedTxEvent(globalTxId);
+  public boolean checkIsExistsEventType(String globalTxId, String localTxId, String type) {
+    return eventRepo.checkIsExistsEventType(globalTxId, localTxId, type) > 0;
   }
 
   @Override
@@ -231,11 +180,6 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
-  public List<TxEvent> selectSpecialColumnsOfTxEventByGlobalTxIds(List<String> globalTxIdList) {
-    return eventRepo.selectSpecialColumnsOfTxEventByGlobalTxIds(globalTxIdList);
-  }
-
-  @Override
   public List<TxEvent> selectUnendedTxEvents(long unendedMinEventId) {
     return eventRepo.selectUnendedTxEvents(unendedMinEventId);
   }
@@ -253,6 +197,16 @@ class SpringTxEventRepository implements TxEventRepository {
   @Override
   public List<Long> selectEndedEventIdsWithinSomePeriod(int pageIndex, int pageSize, Date startTime, Date endTime) {
     return eventRepo.selectEndedEventIdsWithinSomePeriod(new PageRequest(pageIndex, pageSize), startTime, endTime);
+  }
+
+  @Override
+  public TxEvent selectEventByGlobalTxIdType(String globalTxId, String type) {
+    return eventRepo.selectEventByGlobalTxIdType(globalTxId, type);
+  }
+
+  @Override
+  public long selectSubTxCount(String globalTxId) {
+    return eventRepo.selectSubTxCount(globalTxId);
   }
 
   // 计算全局事务的状态

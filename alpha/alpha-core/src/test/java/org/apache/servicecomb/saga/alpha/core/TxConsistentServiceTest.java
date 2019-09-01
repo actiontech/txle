@@ -6,25 +6,19 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
-import static com.seanyinx.github.unit.scaffolding.Randomness.uniquify;
-import static java.util.Collections.emptyList;
-import static org.apache.servicecomb.saga.common.EventType.SagaEndedEvent;
-import static org.apache.servicecomb.saga.common.EventType.SagaStartedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxAbortedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxEndedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.stream.Collectors;
-
 import org.apache.servicecomb.saga.common.EventType;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
+
+import static com.seanyinx.github.unit.scaffolding.Randomness.uniquify;
+import static java.util.Collections.emptyList;
+import static org.apache.servicecomb.saga.common.EventType.*;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 public class TxConsistentServiceTest {
   private final Deque<TxEvent> events = new ConcurrentLinkedDeque<>();
@@ -32,11 +26,6 @@ public class TxConsistentServiceTest {
     @Override
     public void save(TxEvent event) {
       events.add(event);
-    }
-
-    @Override
-    public Optional<List<TxEvent>> findFirstAbortedGlobalTransaction() {
-      return Optional.empty();
     }
 
     @Override
@@ -57,45 +46,9 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public List<TxEvent> findTransactions(String globalTxId, String type) {
-      return events.stream()
-          .filter(event -> globalTxId.equals(event.globalTxId()) && type.equals(event.type()))
-          .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<TxEvent> findFirstUncompensatedEventByIdGreaterThan(long id, String type) {
-      return emptyList();
-    }
-
-    @Override
     public List<TxEvent> findSequentialCompensableEventOfUnended(long unendedMinEventId) {
       return null;
     }
-
-      @Override
-    public void deleteDuplicateEvents(String type) {
-    }
-
-    @Override
-    public void deleteDuplicateEventsByTypeAndSurrogateIds(String type, List<Long> maxSurrogateIdList) {
-
-    }
-
-    @Override
-    public List<Long> getMaxSurrogateIdGroupByGlobalTxIdByType(String type) {
-      return null;
-    }
-
-    @Override
-    public Iterable<TxEvent> findAll() {
-      return null;
-    }
-
-    @Override
-	public TxEvent findOne(long id) {
-		return null;
-	}
 
     @Override
     public List<String> selectAllTypeByGlobalTxId(String globalTxId) {
@@ -108,28 +61,13 @@ public class TxConsistentServiceTest {
 	}
 
     @Override
-    public long count() {
-      return 0;
-    }
-
-    @Override
-    public boolean checkIsRetriedEvent(String globalTxId) {
-      return false;
-    }
-
-    @Override
     public Set<String> selectEndedGlobalTx(Set<String> localTxIdSet) {
       return null;
     }
 
     @Override
-    public boolean checkIsExistsTxCompensatedEvent(String globalTxId, String localTxId, String type) {
+    public boolean checkIsExistsEventType(String globalTxId, String localTxId, String type) {
       return false;
-    }
-
-    @Override
-    public TxEvent selectAbortedTxEvent(String globalTxId) {
-      return null;
     }
 
     @Override
@@ -158,11 +96,6 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public List<TxEvent> selectSpecialColumnsOfTxEventByGlobalTxIds(List<String> globalTxIdList) {
-      return null;
-    }
-
-    @Override
     public List<TxEvent> selectUnendedTxEvents(long unendedMinEventId) {
       return null;
     }
@@ -182,6 +115,15 @@ public class TxConsistentServiceTest {
       return null;
     }
 
+    @Override
+    public TxEvent selectEventByGlobalTxIdType(String globalTxId, String type) {
+      return null;
+    }
+
+    @Override
+    public long selectSubTxCount(String globalTxId) {
+      return 0;
+    }
   };
 
   private final String globalTxId = UUID.randomUUID().toString();
