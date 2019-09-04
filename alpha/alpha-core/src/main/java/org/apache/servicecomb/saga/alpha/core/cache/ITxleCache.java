@@ -7,6 +7,7 @@
 package org.apache.servicecomb.saga.alpha.core.cache;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * @author Gannalyo
@@ -15,20 +16,36 @@ import java.util.concurrent.ConcurrentHashMap;
 public interface ITxleCache {
     ConcurrentHashMap<String, Boolean> getConfigCache();
 
-    ConcurrentHashMap<String, Boolean> getTxSuspendStatusCache();
+    ConcurrentSkipListSet<CacheEntity> getTxSuspendStatusCache();
 
-    ConcurrentHashMap<String, Boolean> getTxAbortStatusCache();
+    ConcurrentSkipListSet<CacheEntity> getTxAbortStatusCache();
 
-    void putForDistributedConfigCache(String key, Boolean value);
+    boolean getTxSuspendStatus(String globalTxId);
 
-    void putForDistributedTxSuspendStatusCache(String key, Boolean value);
+    boolean getTxAbortStatus(String globalTxId);
 
-    void putForDistributedTxAbortStatusCache(String key, Boolean value);
+    void putDistributedConfigCache(String key, Boolean value);
 
-    void removeForDistributedConfigCache(String key);
+    void putDistributedTxSuspendStatusCache(String key, Boolean value, int expire);
 
-    void removeForDistributedTxSuspendStatusCache(String key);
+    void putDistributedTxAbortStatusCache(String key, Boolean value, int expire);
 
-    void removeForDistributedTxAbortStatusCache(String key);
+    void removeDistributedConfigCache(String key);
+
+    void removeDistributedTxSuspendStatusCache(String key);
+
+    void removeDistributedTxAbortStatusCache(String key);
+
+    void putLocalConfigCache(String key, Boolean value);
+
+    void putLocalTxSuspendStatusCache(String key, Boolean value, int expire);
+
+    void putLocalTxAbortStatusCache(String key, Boolean value, int expire);
+
+    void removeLocalConfigCache(String key);
+
+    void removeLocalTxSuspendStatusCache(String key);
+
+    void removeLocalTxAbortStatusCache(String key);
 
 }

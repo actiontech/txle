@@ -72,7 +72,7 @@ class AlphaConfig {
   @Value("${spring.application.name:\"\"}")
   private String serverName;
 
-  @Value("${spring.server.port:8090}")
+  @Value("${server.port:8090}")
   private int serverPort;
 
   @Value("${spring.cloud.consul.discovery.instanceId:\"\"}")

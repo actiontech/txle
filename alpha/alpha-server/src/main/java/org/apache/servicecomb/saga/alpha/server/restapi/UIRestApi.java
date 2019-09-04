@@ -275,9 +275,9 @@ public class UIRestApi {
                         }
                         // Set cache for global transaction status.
                         if ("pause".equals(operation)) {
-                            txleCache.putForDistributedTxSuspendStatusCache(event.globalTxId(), true);
+                            txleCache.putDistributedTxSuspendStatusCache(event.globalTxId(), true, 60);
                         } else {
-                            txleCache.removeForDistributedTxSuspendStatusCache(event.globalTxId());
+                            txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
                         }
                         txleMetrics.countTxNumber(event, false, false);
                     }
@@ -309,7 +309,7 @@ public class UIRestApi {
             // 1.暂停全局事务配置
             String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
             configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ipPort + " - pauseAllTransaction"));
-            txleCache.putForDistributedConfigCache(pauseAllGlobalTxKey, true);
+            txleCache.putDistributedConfigCache(pauseAllGlobalTxKey, true);
 
             // 2.对未结束且未暂停的全局事务逐一设置暂停事件，不会出现某全局事务还未等设置暂停事件就结束的情况，因为上面先生成了暂停配置
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
@@ -392,7 +392,7 @@ public class UIRestApi {
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         } finally {
-            txleCache.removeForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
+            txleCache.removeDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
             txleCache.getTxSuspendStatusCache().clear();
         }
         return ResponseEntity.ok(rv);
@@ -414,7 +414,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                txleCache.putForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()), false);
+                txleCache.putDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()), false);
             }
         } catch (Exception e) {
             rv.setMessage("Failed to degrade global transaction.");
@@ -431,7 +431,7 @@ public class UIRestApi {
             List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.GlobalTx.toInteger());
             if (configCenterList == null || configCenterList.isEmpty()) {
                 rv.setMessage("Sever has been started for the Global Transaction.");
-                txleCache.removeForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
+                txleCache.removeDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
                 return ResponseEntity.ok(rv);
             }
 
@@ -441,7 +441,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                txleCache.removeForDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
+                txleCache.removeDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
             }
         } catch (Exception e) {
             rv.setMessage("Failed to start global transaction.");

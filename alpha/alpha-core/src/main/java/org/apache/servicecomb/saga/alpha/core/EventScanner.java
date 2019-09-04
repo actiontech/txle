@@ -189,7 +189,7 @@ public class EventScanner implements Runnable {
         eventRepository.save(abortedEvent);
         // 保存超时情况下的待补偿命令，当前超时全局事务下的所有应该补偿的子事件的待补偿命令 By Gannalyo
         commandRepository.saveWillCompensateCommandsForTimeout(abortedEvent.globalTxId());
-        txleCache.getTxAbortStatusCache().put(abortedEvent.globalTxId(), true);
+        txleCache.putDistributedTxAbortStatusCache(abortedEvent.globalTxId(), true, 2);
       }
     });
   }
@@ -234,7 +234,7 @@ public class EventScanner implements Runnable {
 
     CurrentThreadContext.put(event.globalTxId(), event);
 
-    markSagaEnded(event);
+//    markSagaEnded(event);
   }
 
   private void markSagaEnded(TxEvent event) {
@@ -387,7 +387,7 @@ public class EventScanner implements Runnable {
     }
     checkList.forEach(check -> {
       if (check.getStatus() != Check.CheckStatus.PASSING || check.getServiceId().equals(consulInstanceId)) {
-        log.error("Executing shutdown method, check id = " + check.getCheckId() + ", service id = " + check.getServiceId() + " .");
+        log.error("Executing method 'destroyConsulCriticalServices', check id = " + check.getCheckId() + ", service id = " + check.getServiceId() + " .");
         consulClient.agentCheckDeregister(check.getCheckId());
         consulClient.agentServiceDeregister(check.getServiceId());
       }
