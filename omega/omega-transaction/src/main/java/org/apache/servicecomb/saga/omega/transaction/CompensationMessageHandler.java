@@ -31,6 +31,7 @@ public class CompensationMessageHandler implements MessageHandler {
     } catch (Exception e) {
       LOG.error("Failed to execute 'onReceive.context.apply' localTxId {}", localTxId, e);
     }
-    sender.send(new TxCompensatedEvent(globalTxId, localTxId, parentTxId, compensationMethod));
+    // Executing compensation at the server's side. That can save performance and be conveniently to manage.
+//    sender.send(new TxCompensatedEvent(globalTxId, localTxId, parentTxId, compensationMethod));
   }
 }

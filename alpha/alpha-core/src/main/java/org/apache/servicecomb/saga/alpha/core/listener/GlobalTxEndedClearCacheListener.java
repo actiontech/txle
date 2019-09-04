@@ -33,8 +33,8 @@ public class GlobalTxEndedClearCacheListener implements Observer {
 			TxEvent event = ((GlobalTxListener) arg0).getEvent();
 			log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
 			if (EventType.SagaEndedEvent.name().equals(event.type())) {
-				txleCache.removeForDistributedTxSuspendStatusCache(event.globalTxId());
-				txleCache.removeForDistributedTxAbortStatusCache(event.globalTxId());
+				txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
+				txleCache.removeDistributedTxAbortStatusCache(event.globalTxId());
 			}
 		}
 	}
