@@ -118,21 +118,25 @@ public class SpringCommandRepository implements CommandRepository {
   }
 
   private void saveWillCompensateCommands(List<TxEvent> txStartedEvents, String method) {
-    if (txStartedEvents != null && !txStartedEvents.isEmpty()) {
-      Set<Long> eventIdSet = new HashSet<>();
-      txStartedEvents.forEach(event -> eventIdSet.add(event.id()));
-      Set<Long> existCommandEventIdList = commandRepository.findExistCommandList(eventIdSet);
+    try {
+      if (txStartedEvents != null && !txStartedEvents.isEmpty()) {
+        Set<Long> eventIdSet = new HashSet<>();
+        txStartedEvents.forEach(event -> eventIdSet.add(event.id()));
+        Set<Long> existCommandEventIdList = commandRepository.findExistCommandList(eventIdSet);
 
-      txStartedEvents.forEach(event -> {
-        try {
-          if (!existCommandEventIdList.contains(event.id())) {
-            commandRepository.save(new Command(event));
-            eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.localTxId(), event.parentTxId(), TxCompensatedEvent.name(), event.compensationMethod(), event.category(), event.payloads()));
+        txStartedEvents.forEach(event -> {
+          try {
+            if (!existCommandEventIdList.contains(event.id())) {
+              commandRepository.save(new Command(event));
+              eventRepository.save(new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.localTxId(), event.parentTxId(), TxCompensatedEvent.name(), event.compensationMethod(), event.category(), event.payloads()));
+            }
+          } catch (Exception e) {
+            LOG.error("Failed to save command {} in method {}.", event, method);
           }
-        } catch (Exception e) {
-          LOG.warn("Failed to save command {} in method {}.", event, method);
-        }
-      });
+        });
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to save command {} in method {}.", txStartedEvents.toArray().toString(), method);
     }
   }
 

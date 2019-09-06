@@ -33,22 +33,15 @@ public class TxConsistentService {
   private final TxTimeoutRepository timeoutRepository;
 
   @Autowired
-  private IKafkaMessageProducer kafkaMessageProducer;
-
-  @Autowired
   private IKafkaMessageRepository kafkaMessageRepository;
 
 	@Autowired
     private TxleMetrics txleMetrics;
 
 	@Autowired
-	private IDataDictionaryService dataDictionaryService;
-
-	@Autowired
 	private ITxleCache txleCache;
 
   private final List<String> types = Arrays.asList(TxEndedEvent.name(), TxAbortedEvent.name(), SagaEndedEvent.name());
-  private final Set<String> serverNameIdCategory = new HashSet<>();
 
   public TxConsistentService(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository) {
     this.eventRepository = eventRepository;
@@ -107,21 +100,7 @@ public class TxConsistentService {
 			// We could intercept this method or use the Observer Design model on it, the aim is to handle some operations around it, but apparently, it is not easy to maintain code, so we reserved this idea.
 			// 保存事件前，检查是否已经存在某子事务的某种事件，如果存在则不再保存。如：检测某事务超时后，若在下次检测时做出补偿处理，则会保存多条超时事件信息，为避免则先检测是否存在
 			try {
-				if (SagaEndedEvent.name().equals(type)) {
-					if (eventRepository.checkIsExistsEventType(globalTxId, globalTxId, SagaEndedEvent.name())) {
-						return 1;
-					}
-				}
-
 				eventRepository.save(event);
-
-				if (SagaStartedEvent.name().equals(type)) {
-					// 当有新的全局事务时，设置最小id查询次数加1，即需要查询最小事件id
-					EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
-					this.putServerNameIdCategory(event);
-				} else if (TxStartedEvent.name().equals(type)) {
-					this.putServerNameIdCategory(event);
-				}
 
 				// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
 				if (TxEndedEvent.name().equals(type)) {
@@ -174,7 +153,6 @@ public class TxConsistentService {
 							commandRepository.saveWillCompensateCommandsWhenGlobalTxAborted(globalTxId);
 							TxEvent sagaEndedEvent = new TxEvent(event.serviceName(), event.instanceId(), globalTxId, globalTxId, null, SagaEndedEvent.name(), "", event.category(), new byte[0]);
 							eventRepository.save(sagaEndedEvent);
-							kafkaMessageProducer.send(sagaEndedEvent);
 						}
 					}
 				}
@@ -184,9 +162,6 @@ public class TxConsistentService {
 				txleMetrics.countTxNumber(event, false, event.retries() > 0);
 				// end duration.
 				txleMetrics.endMarkTxDuration(event);
-
-				// To send message to Kafka.
-				kafkaMessageProducer.send(event);
 			}
 
 			return 1;
@@ -309,18 +284,5 @@ public class TxConsistentService {
 				"",
 				timeout.category(),
 				("Transaction timeout").getBytes());
-	}
-
-	private void putServerNameIdCategory(TxEvent event) {
-		final String globalTxServer = "global-tx-server-info";
-		final String serverNameInstanceCategory = event.serviceName() + "__" + event.instanceId() + "__" + event.category();
-		boolean result = serverNameIdCategory.add(serverNameInstanceCategory);
-		if (result) {
-			new Thread(() -> {
-				int showOrder = dataDictionaryService.selectMaxShowOrder(globalTxServer);
-				final DataDictionaryItem ddItem = new DataDictionaryItem(globalTxServer, event.serviceName(), event.instanceId(), event.category(), showOrder + 1, 1, "");
-				dataDictionaryService.createDataDictionary(ddItem);
-			}).start();
-		}
 	}
 }
