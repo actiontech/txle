@@ -11,16 +11,16 @@ import com.ecwid.consul.v1.ConsulClient;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
-import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxEndedClearCacheListener;
-import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxListener;
-import org.apache.servicecomb.saga.alpha.server.cache.TxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.core.datatransfer.IDataTransferService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
+import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxListener;
+import org.apache.servicecomb.saga.alpha.core.listener.TxEventAfterPersistingListener;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
+import org.apache.servicecomb.saga.alpha.server.cache.TxleCache;
 import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
 import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionaryEntityRepository;
@@ -152,30 +152,30 @@ class AlphaConfig {
   }
 
   @Bean
-  GlobalTxEndedClearCacheListener globalTxEndedListener(GlobalTxListener globalTxListener) {
-    GlobalTxEndedClearCacheListener globalTxEndedClearCacheListener = new GlobalTxEndedClearCacheListener();
-    globalTxListener.addObserver(globalTxEndedClearCacheListener);
-    return globalTxEndedClearCacheListener;
+  TxEventAfterPersistingListener txEventAfterPersistingListener(GlobalTxListener globalTxListener) {
+    TxEventAfterPersistingListener txEventAfterPersistingListener = new TxEventAfterPersistingListener();
+    globalTxListener.addObserver(txEventAfterPersistingListener);
+    return txEventAfterPersistingListener;
   }
 
   @Bean
   TxConsistentService txConsistentService(
-      GrpcServerConfig serverConfig,
-      ScheduledExecutorService scheduler,
-      TxEventRepository eventRepository,
-      CommandRepository commandRepository,
-      TxTimeoutRepository timeoutRepository,
-      OmegaCallback omegaCallback,
-      Map<String, Map<String, OmegaCallback>> omegaCallbacks,
-      IKafkaMessageProducer kafkaMessageProducer,
-      IConfigCenterService dbDegradationConfigService,
-      Tracing tracing,
-      IAccidentHandlingService accidentHandlingService,
-      ITxleCache txleCache) {
+          GrpcServerConfig serverConfig,
+          ScheduledExecutorService scheduler,
+          TxEventRepository eventRepository,
+          CommandRepository commandRepository,
+          TxTimeoutRepository timeoutRepository,
+          OmegaCallback omegaCallback,
+          Map<String, Map<String, OmegaCallback>> omegaCallbacks,
+          IKafkaMessageProducer kafkaMessageProducer,
+          IConfigCenterService dbDegradationConfigService,
+          Tracing tracing,
+          IAccidentHandlingService accidentHandlingService,
+          ITxleCache txleCache) {
 
     new EventScanner(scheduler,
-        eventRepository, commandRepository, timeoutRepository,
-        omegaCallback, kafkaMessageProducer, eventPollingInterval, consulClient, txleCache, serverName, serverPort, consulInstanceId).run();
+            eventRepository, commandRepository, timeoutRepository,
+            omegaCallback, kafkaMessageProducer, eventPollingInterval, consulClient, txleCache, serverName, serverPort, consulInstanceId).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
@@ -188,7 +188,7 @@ class AlphaConfig {
   private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService,
                                     Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing, IAccidentHandlingService accidentHandlingService) {
     return new GrpcStartable(serverConfig, tracing,
-        new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService));
+            new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService));
   }
 
   @Bean
