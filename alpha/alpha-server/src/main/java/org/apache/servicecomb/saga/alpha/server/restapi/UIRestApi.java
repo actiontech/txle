@@ -108,7 +108,7 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> findTxList(@PathVariable int pageIndex, @PathVariable int pageSize, @PathVariable String orderName, @PathVariable String direction, @PathVariable String searchText) {
         ReturnValue rv = new ReturnValue();
         try {
-            // 后台的pageIndex默认从0开始，前端调用处为了直观从1开始，所以此处--pageIndex，若pageIndex<1则置为0
+            // To decrease the value of the variable 'pageIndex' for getting a compatible param which comes from UI.
             List<Map<String, Object>> txStartedEventList = eventRepository.findTxList(--pageIndex, pageSize, convertToEventEntityFieldName(orderName), direction, searchText);
             if (txStartedEventList != null && !txStartedEventList.isEmpty()) {
                 List<Map<String, Object>> resultList = new LinkedList<>();
@@ -129,8 +129,8 @@ public class UIRestApi {
         return ResponseEntity.ok(rv);
     }
 
-    // 前端获取字段名称时统一为小写，但jpa实体为驼峰式，故此处转义
-    // 除TxEvent、Command和Timeout外，其它所有数据表(含新)均为小写字段名称
+    // All of field names are lower case at front-end, but could not guarantee the format at back-end, so parts of field names need be converted.
+    // In fact, the filed names of all tables are lower case, except TxEvent, Command and Timeout.
     private String convertToEventEntityFieldName(String fieldName) {
         if ("surrogateId".equalsIgnoreCase(fieldName)) {
             return "surrogateId";
@@ -223,7 +223,8 @@ public class UIRestApi {
                 return ResponseEntity.badRequest().body(rv);
             }
 
-            // Arrays.asList(globalTxIds.split(","));// 这样写，后续将不能执行remove方法
+            // ps: The method "remove" of the container will not work according to following code.
+            // Arrays.asList(globalTxIds.split(","));
             List<String> globalTxIdList = new ArrayList<>();
             for (String globalTxId : globalTxIds.split(",")) {
                 globalTxIdList.add(globalTxId);
@@ -235,16 +236,13 @@ public class UIRestApi {
                 AtomicReference<String> operationAdjective = new AtomicReference<>("pause".equals(operation) ? "suspended" : "recover".equals(operation) ? "normal" : "terminated");
                 txEventList.forEach(event -> {
                     if (SagaEndedEvent.name().equals(event.type())) {
-                        // 移除已结束的
                         globalTxIdList.remove(event.globalTxId());
                     } else {
                         List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
                         if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
                             if ("pause".equals(operation) && pauseContinueEventList.size() % 2 == 1) {
-                                // 移除暂停的
                                 globalTxIdList.remove(event.globalTxId());
                             } else if ("recover".equals(operation) && pauseContinueEventList.size() % 2 == 0) {
-                                // 移除非暂停的
                                 globalTxIdList.remove(event.globalTxId());
                             }
                         }
@@ -295,7 +293,7 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> pauseAllGlobalTransactions() {
         ReturnValue rv = new ReturnValue();
         try {
-            // 检测是否已暂停全局事务
+            // Check the paused status of global transaction
             final String pauseAllGlobalTxKey = TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger());
             if (txleCache.getConfigCache().getOrDefault(pauseAllGlobalTxKey, false)) {
                 return ResponseEntity.ok(rv);
@@ -306,12 +304,12 @@ public class UIRestApi {
                 return ResponseEntity.ok(rv);
             }
 
-            // 1.暂停全局事务配置
+            // 1.Construct a global config for paused status.
             String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
             configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ipPort + " - pauseAllTransaction"));
             txleCache.putDistributedConfigCache(pauseAllGlobalTxKey, true);
 
-            // 2.对未结束且未暂停的全局事务逐一设置暂停事件，不会出现某全局事务还未等设置暂停事件就结束的情况，因为上面先生成了暂停配置
+            // 2.Construct a paused event for every global transaction as long as it is not paused and done.
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
             if (unendedTxEventList != null && !unendedTxEventList.isEmpty()) {
                 List<String> globalTxIdList = new ArrayList<>();
@@ -322,7 +320,6 @@ public class UIRestApi {
                     if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
                         TxEvent pausedEvent = pauseContinueEventList.get(0);
                         if (AdditionalEventType.SagaPausedEvent.name().equals(pausedEvent.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(pausedEvent.type())) {
-                            // 移除暂停的
                             globalTxIdList.remove(event.globalTxId());
                         }
                     }
@@ -351,7 +348,7 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> recoverAllGlobalTransactions() {
         ReturnValue rv = new ReturnValue();
         try {
-            // 1.去除暂停全局事务配置
+            // 1.Remove the global config for paused transaction
             List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.PauseGlobalTx.toInteger());
             if (configCenterList != null && !configCenterList.isEmpty()) {
                 ConfigCenter configCenter = configCenterList.get(0);
@@ -359,7 +356,7 @@ public class UIRestApi {
                 configCenterService.updateConfigCenter(configCenter);
             }
 
-            // 2.对未结束且未暂停的全局事务逐一设置暂停事件，不会出现某全局事务还未等设置暂停事件就结束的情况，因为上面先生成了暂停配置
+            // 2.Remove the paused event for every global transaction. in fact, add a recovery event.
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
             if (unendedTxEventList != null && !unendedTxEventList.isEmpty()) {
                 List<String> globalTxIdList = new ArrayList<>();
@@ -369,7 +366,6 @@ public class UIRestApi {
                     List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
                     if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
                         if (pauseContinueEventList.size() % 2 == 0) {
-                            // 移除非暂停的
                             globalTxIdList.remove(event.globalTxId());
                         }
                     }
@@ -402,7 +398,7 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> degradeGlobalTransaction() {
         ReturnValue rv = new ReturnValue();
         try {
-            // 已经开启但未结束的全局事务在执行过程中遇到全局事务服务降级，则本全局事务中后续的业务按照无全局事务运行，因为服务降级的目的不是为了保证全局事务，而是为了保证主业务能正常继续运行
+            // Business program will only run without global transaction in case of degrading, even though business program is running. As we all know, downgrading is meant to keep business running.
             boolean enabledTx = configCenterService.isEnabledConfig(null, null, ConfigCenterType.GlobalTx);
             if (!enabledTx) {
                 rv.setMessage("Sever has been degraded for the Global Transaction.");

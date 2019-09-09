@@ -102,7 +102,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
                     }
                     // To report message to Accident Platform.
                     JsonObject jsonParams = new JsonObject();
-                    jsonParams.addProperty("type", AccidentHandleType.SEND_MESSAGE_ERROR.toDescription());
+                    jsonParams.addProperty("type", AccidentHandleType.SEND_MESSAGE_ERROR.toString());
                     jsonParams.addProperty("globaltxid", event.globalTxId());
                     jsonParams.addProperty("localtxid", event.localTxId());
                     jsonParams.addProperty("instanceid", event.instanceId());

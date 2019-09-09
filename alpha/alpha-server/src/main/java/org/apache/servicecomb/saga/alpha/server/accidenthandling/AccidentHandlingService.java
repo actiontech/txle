@@ -74,7 +74,7 @@ public class AccidentHandlingService implements IAccidentHandlingService {
         try {
             AccidentHandling savedAccident = accidentHandlingEntityRepository.save(accidentHandling);
             if (savedAccident != null) {
-                // 设置保存后的id
+                // Set saved identify
                 accidentHandling.setId(savedAccident.getId());
             }
             return true;

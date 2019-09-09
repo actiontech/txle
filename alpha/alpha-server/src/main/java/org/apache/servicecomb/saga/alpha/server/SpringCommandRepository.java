@@ -6,21 +6,18 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import static org.apache.servicecomb.saga.alpha.core.TaskStatus.DONE;
-import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
-import static org.apache.servicecomb.saga.alpha.core.TaskStatus.PENDING;
-import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
-
-import java.lang.invoke.MethodHandles;
-import java.util.*;
-
-import javax.transaction.Transactional;
-
 import org.apache.servicecomb.saga.alpha.core.Command;
 import org.apache.servicecomb.saga.alpha.core.CommandRepository;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.transaction.Transactional;
+import java.lang.invoke.MethodHandles;
+import java.util.*;
+
+import static org.apache.servicecomb.saga.alpha.core.TaskStatus.*;
+import static org.apache.servicecomb.saga.common.EventType.TxCompensatedEvent;
 
 public class SpringCommandRepository implements CommandRepository {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -35,10 +32,10 @@ public class SpringCommandRepository implements CommandRepository {
 
   @Override
   public void saveCompensationCommands(String globalTxId) {
-    // 查询已结束但未补偿的子事务，之后保存该子事务的补偿命令，供后续补偿使用
-    List<TxEvent> events = eventRepository.findStartedEventsWithMatchingEndedButNotCompensatedEvents(globalTxId);
+    // When some sub-transaction has been done with exception and it is still not compensated, search its 'StartedEvent' for compensating.
+    List<TxEvent> events = eventRepository.findDoneAndUncompensatedSubTx(globalTxId);
     if (events == null || events.isEmpty()) {
-      LOG.debug("Executed method 'TxEventEnvelopeRepository.findStartedEventsWithMatchingEndedButNotCompensatedEvents' globalTxId {}.", globalTxId);
+      LOG.debug("Executed method 'TxEventEnvelopeRepository.findDoneAndUncompensatedSubTx' globalTxId {}.", globalTxId);
       return;
     }
 
@@ -143,14 +140,12 @@ public class SpringCommandRepository implements CommandRepository {
 
   @Override
   public List<Command> findUncompletedCommands(String globalTxId) {
-//    return commandRepository.findByGlobalTxIdAndStatus(globalTxId, NEW.name());
     return commandRepository.findUncompletedCommandByGlobalTxIdAndStatus(globalTxId, DONE.name());
   }
 
   @Transactional
   @Override
   public List<Command> findFirstCommandToCompensate() {
-//    List<Command> commands = commandRepository.findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
     List<Command> commands = commandRepository.findCommandByStatus("NEW");
 
     commands.forEach(command -> {

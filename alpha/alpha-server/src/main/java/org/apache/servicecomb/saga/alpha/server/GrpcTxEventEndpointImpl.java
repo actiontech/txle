@@ -79,7 +79,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         } catch (Exception e) {
             LOG.error("Encountered an exception when trying to disconnect.", e);
         } finally {
-            // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
+            // Guarantee to execute two following codes, if not, maybe see the error "io.grpc.StatusRuntimeException: UNKNOWN".
             responseObserver.onNext(GrpcAck.newBuilder().setAborted(false).build());
             responseObserver.onCompleted();
         }
@@ -121,7 +121,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         }
 
         if (!result) {
-            // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
+            // Guarantee to execute two following codes, if not, maybe see the error "io.grpc.StatusRuntimeException: UNKNOWN".
             responseObserver.onNext(GrpcAck.newBuilder().setAborted(false).setIsEnabledTx(result).build());
             responseObserver.onCompleted();
         }
@@ -162,7 +162,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'handleSupportTxPause'.", e);
         } finally {
-            // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
+            // Guarantee to execute two following codes, if not, maybe see the error "io.grpc.StatusRuntimeException: UNKNOWN".
             responseObserver.onNext(grpcAck);
             responseObserver.onCompleted();
         }
@@ -188,7 +188,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
             LOG.error("Encountered an exception when executing method 'fetchLocalTxIdOfEndedGlobalTx'.", e);
         } finally {
             // message.toBuilder().setPayloads(payloads);// Could not set payloads to the original object.
-            // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
+            // Guarantee to execute two following codes, if not, maybe see the error "io.grpc.StatusRuntimeException: UNKNOWN".
             if (payloads == null) {
                 responseObserver.onNext(GrpcAck.newBuilder().setAborted(false).build());
             } else {
@@ -230,7 +230,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onMessage'.", e);
         } finally {
-            // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
+            // Guarantee to execute two following codes, if not, maybe see the error "io.grpc.StatusRuntimeException: UNKNOWN".
             responseObserver.onNext(result ? msgAckTrue : msgAckFalse);
             responseObserver.onCompleted();
         }
@@ -250,7 +250,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onAccident'.", e);
         } finally {
-            // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
+            // Guarantee to execute two following codes, if not, maybe see the error "io.grpc.StatusRuntimeException: UNKNOWN".
             responseObserver.onNext(result ? msgAckTrue : msgAckFalse);
             responseObserver.onCompleted();
         }
@@ -272,7 +272,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onReadConfig'.", e);
         } finally {
-            // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
+            // Guarantee to execute two following codes, if not, maybe see the error "io.grpc.StatusRuntimeException: UNKNOWN".
             responseObserver.onNext(GrpcConfigAck.newBuilder().setStatus(isEnabledConfig).build());
             responseObserver.onCompleted();
         }

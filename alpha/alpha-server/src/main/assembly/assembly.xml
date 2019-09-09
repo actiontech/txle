@@ -11,12 +11,11 @@
 	xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
 	<id>package-server</id>
 	<formats>
-		<!--压缩文件类型：zip、tar、tar.gz/tgz、tar.bz2/tbz2、jar、dir、war -->
+		<!-- file type: zip、tar、tar.gz/tgz、tar.bz2/tbz2、jar、dir、war -->
 		<format>dir</format>
 	</formats>
 	<includeBaseDirectory>false</includeBaseDirectory>
 	<fileSets>
-		<!-- 需要包含的文件与输出的路径 -->
 		<fileSet>
 			<directory>src/main/resources</directory>
 			<!--<excludes>
@@ -26,10 +25,10 @@
 			<outputDirectory>/conf</outputDirectory>
 		</fileSet>
 		<fileSet>
-			<!-- 打包时把txle文件放在bin目录 -->
+			<!-- create '/bin' path and move 'txle' file into '/bin' -->
 			<directory></directory>
 			<outputDirectory>/bin</outputDirectory>
-			<!-- 此处赋值权限实际未生效，需要在最终打tar.gz包(即txle根目录下的pom.xml关联的assembly.xml文件中)设置 -->
+			<!-- It doesn't work to grant the executable authority here. Hence, have to grant in the parent file. -->
 			<includes>
 				<include>txle</include>
 			</includes>
@@ -42,7 +41,7 @@
 	</files>
 	<dependencySets>
 		<dependencySet>
-			<!-- 存放依赖位置，即压缩包下的根目录下的lib文件夹中 -->
+			<!-- stores related jars. -->
 			<outputDirectory>/lib</outputDirectory>
 			<scope>runtime</scope>
 		</dependencySet>

@@ -54,7 +54,6 @@ public class SpringTxTimeoutRepository implements TxTimeoutRepository {
   @Transactional
   @Override
   public List<TxTimeout> findFirstTimeout() {
-//    List<TxTimeout> timeoutEvents = timeoutRepo.findFirstTimeoutTxOrderByExpireTimeAsc(new PageRequest(0, 1), new Date());
     List<TxTimeout> timeoutEvents = timeoutRepo.findFirstTimeoutTxOrderByExpireTimeAsc(new Date());
     timeoutEvents.forEach(event -> timeoutRepo
         .updateStatusByGlobalTxIdAndLocalTxId(PENDING.name(), event.globalTxId(), event.localTxId()));

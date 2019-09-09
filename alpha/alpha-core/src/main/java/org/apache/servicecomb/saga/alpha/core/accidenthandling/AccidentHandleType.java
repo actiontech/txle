@@ -27,17 +27,6 @@ public enum AccidentHandleType {
         }
     }
 
-    public String toDescription() {
-        switch (this) {
-            case ROLLBACK_ERROR:
-                return "回滚失败";
-            case SEND_MESSAGE_ERROR:
-                return "上报信息至Kafka失败";
-            default:
-                return "回滚失败";
-        }
-    }
-
     public static AccidentHandleType convertTypeFromValue(int type) {
         switch (type) {
             case 1:
@@ -49,10 +38,4 @@ public enum AccidentHandleType {
         }
     }
 
-    public static AccidentHandleType convertTypeFromDescription(String description) {
-        if ("上报信息至Kafka失败".equals(description)) {
-            return SEND_MESSAGE_ERROR;
-        }
-        return ROLLBACK_ERROR;
-    }
 }

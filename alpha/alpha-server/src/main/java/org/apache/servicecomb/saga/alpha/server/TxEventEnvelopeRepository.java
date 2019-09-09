@@ -22,11 +22,9 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 
   @Query(value = "SELECT * FROM TxEvent t WHERE t.surrogateId > ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent t1 WHERE t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type)" +
-          // 查询超时事件要去除带有异常的，因为这种情况是未超时先异常了，所以无需再处理
           " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t2.globalTxId = t.globalTxId AND t2.type = 'TxAbortedEvent')" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<TxEvent> findTimeoutEvents(long unendedMinEventId, Date currentDateTime);
 
-  // 查询某未结束的全局事务中的超时未处理的记录，如果全局事务和子事务都设置了超时，则优先获取子事务的(其实哪个都可以)
   @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'TxAbortedEvent')" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId = ?1 AND type = 'SagaEndedEvent')" +
@@ -56,18 +54,17 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
       + "  AND t2.localTxId = t.localTxId "
       + "  AND t2.type = 'TxCompensatedEvent') "
       + "ORDER BY t.surrogateId ASC")
-  List<TxEvent> findStartedEventsWithMatchingEndedButNotCompensatedEvents(String globalTxId);
+  List<TxEvent> findDoneAndUncompensatedSubTx(String globalTxId);
 
-  // 全局事务异常时，查询需要补偿的子事务。超时场景同全局事务异常场景。
-  // 对于超时场景，仅补偿已完成且未被补偿过的子事务，因为未完成的子事务不确定最终是否会完成，如果最终为完成则会由客户端的本地事务回滚，如果最终成功完成，则是上报TxEndedEvent事件时对其进行补偿
-  // ps：语句中的t.globalTxId = t1.globalTxId条件不影响结果，但加此条件可触发saga_globalid_localid_type的联合索引，即不加会扫描无数条，加的话会直接一句联合索引定位到具体的一条
+  // Find sub-transactions which need to be compensated in case of global transaction is aborted.
+  // In the timeout case, just compensate the done sub-transactions. Because it could not be sure if the undone sub-transactions would complete finally.
+  // If the undone sub-transaction will complete successfully, then it will be compensated immediately after saving 'TxEndedEvent', opposite, it'll be rolled back in a local transaction.
+  // ps: The condition 't.globalTxId = t1.globalTxId' will not produce influence to the result. But it can improve the SQL performance due to it can trigger the index 'saga_globalid_localid_type'.
   @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent'" +
           " AND EXISTS (SELECT 1 FROM TxEvent t1 WHERE t.globalTxId = t1.globalTxId AND t1.localTxId = t.localTxId AND t1.type = 'TxEndedEvent')" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t.globalTxId = t2.globalTxId AND t2.localTxId = t.localTxId AND t2.type = 'TxCompensatedEvent')")
   List<TxEvent> findNeedCompensateEventForGlobalTxAborted(String globalTxId);
 
-  // 其实和超时场景检测语句findNeedCompensateEventForTimeout应该是一样的
-  // ps：语句中的t.globalTxId = t1.globalTxId条件不影响结果，但加此条件可触发saga_globalid_localid_type的联合索引，即不加会扫描无数条，加的话会直接一句联合索引定位到具体的一条
   @Query(value = "FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId != ?2 AND t.type = 'TxStartedEvent'" +
           " AND NOT EXISTS (SELECT 1 FROM TxEvent t2 WHERE t.globalTxId = t2.globalTxId AND t2.localTxId = t.localTxId AND t2.type = 'TxCompensatedEvent')")
   List<TxEvent> findNeedCompensateEventForException(String globalTxId, String localTxId);
@@ -97,7 +94,6 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query("FROM TxEvent T WHERE T.globalTxId IN ?1 ")
   List<TxEvent> selectTxEventByGlobalTxIds(List<String> globalTxIdList);
 
-  // FUNCTION('CONCAT_WS', ',', field1, field2...   以逗号分割，并支持字段值为null，当字段值为null时会视为空字符串
   @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.serviceName, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime)" +
           " FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND FUNCTION('CONCAT_WS', ',', T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
   List<TxEvent> findTxList(Pageable pageable, String searchText);

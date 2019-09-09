@@ -266,7 +266,6 @@ public class TxleMetrics extends Collector {
             globalTxId = event.globalTxId();
         }
         gaugeTimer.set(txleSqlTimeSecondsTotal.labels(false + "", serviceName, category).startTimer());
-        // 成功情况2条，需要回滚前查provide1，记录p1待补偿命令，下p1补偿，更新待补偿命令为done，记录p1对应的SagaEndedEvent，共7条。
         txleSqlTotal.labels(false + "", serviceName, category).inc();
 
         return globalTxId;
