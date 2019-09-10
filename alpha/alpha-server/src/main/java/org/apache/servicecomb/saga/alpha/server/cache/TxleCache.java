@@ -22,7 +22,6 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.PostConstruct;
 import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -220,7 +219,6 @@ public class TxleCache implements ITxleCache {
     private void removeExpiredCache(ConcurrentSkipListSet<CacheEntity> cache) {
         Iterator<CacheEntity> iterator = cache.iterator();
         List<CacheEntity> removeKeys = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         while (iterator.hasNext()) {
             CacheEntity cacheEntity = iterator.next();
             if (cacheEntity.expired()) {
