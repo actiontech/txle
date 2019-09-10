@@ -26,7 +26,7 @@ public class ClientAccidentHandlingService {
             category = categoryJson.getAsString();
         }
 
-        // 差错平台上报支持配置降级功能，未降级场景才进行上报
+        // report exception to Accident Platform in case of enabling global transaction.
         if (sender.readConfigFromServer(ConfigCenterType.AccidentReport.toInteger(), category).getStatus()) {
             String serviceName = "", instanceId = "", globalTxId = "", localTxId = "", bizinfo = "", remark = "";
             int type = 1;

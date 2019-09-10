@@ -60,11 +60,12 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 
             // 4.take the original data out and put a lock on data.
             /**
-             * 此处逻辑修改：
-             * 1.补偿SQL追加所有字段最新值(含本次最新修改的)作为where条件，目的是检测后续执行补偿时，数据是否被修改。如被修改过则肯定执行失败，则报差错平台，如未被修改则正常执行补偿SQL(若执行失败也是要上报差错平台)。
-             * 2.获取本次修改后的值，因本次修改值中可能包含公式(如money = money - 10)，所以需通过修改条件先将修改后的值查询出，如：select money - 10 n_c_v_money from tableName where ... 。
-             * 3.考虑到查询原数据与上面SQL除查询字段其它都一致情况，故为了减少对数据库的访问，将元数据与本次更新后的值一同查出，查出后采用java代码进行处理，要比访问数据库性能层面节省很多
-             * 4.由于上面一次性将新老数据都查出，故后续代码分别使用新老数据之处要做一些新老数据的分离
+             * logic here.
+             * 1.For compensation SQL, append the latest value of all fields to the 'WHERE' conditions. The aim is to detect whether the data is modified when compensation SQL is executed later.
+             *      Report exception information to the Accident Platform in case of compensating abortively.
+             * 2.Read the latest value (after modifying) instead of using the 'WHERE' conditions directly, because conditions maybe contain some formulas, such as 'money = money - 10'.
+             * 3.Read old and new data.
+             * 4.Separate old and new data.
              */
             List<Map<String, Object>> newDataList = selectNewDataList(delegate, updateStatement, tableName, primaryKeyColumnName, whereSql);
             List<Map<String, Object>> originalDataList = selectOriginalData(newDataList);
