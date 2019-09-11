@@ -19,7 +19,8 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * 该类为系统静态配置类，主要加载*.yml,*.yaml和*.properties文件中的配置，并将其转换成键值对形式存储于静态属性中，供整个系统调用
+ * Static Configuration
+ * Load configurations from files *.yml, *.yaml and *.properties, and convert them to memory, it's convenient for calling in the entire system.
  *
  * @author Gannalyo
  * @since 2019/4/16

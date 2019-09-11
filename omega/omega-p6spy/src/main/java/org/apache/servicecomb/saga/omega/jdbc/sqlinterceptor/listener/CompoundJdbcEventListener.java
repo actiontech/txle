@@ -9,11 +9,13 @@ package org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.listener;
 import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.CallableStatementInformation;
 import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.PreparedStatementInformation;
 import org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.info.ResultSetInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.lang.invoke.MethodHandles;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 20190129
  */
 public class CompoundJdbcEventListener extends JdbcEventListener {
+    private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
     private final List<JdbcEventListener> eventListeners;
 
     public CompoundJdbcEventListener() {
@@ -33,10 +37,6 @@ public class CompoundJdbcEventListener extends JdbcEventListener {
 
     public void addListender(JdbcEventListener listener) {
         eventListeners.add(listener);
-    }
-
-    public List<JdbcEventListener> getEventListeners() {
-        return Collections.unmodifiableList(eventListeners);
     }
 
     @Override
@@ -194,11 +194,11 @@ public class CompoundJdbcEventListener extends JdbcEventListener {
 
     @Override
     public void onBeforeExecuteQuery(PreparedStatementInformation statementInformation) {
-        System.out.println("onBeforeExecuteQuery...........");
+        log.debug("Executing method 'onBeforeExecuteQuery' ....");
         for (JdbcEventListener eventListener : eventListeners) {
             eventListener.onBeforeExecuteQuery(statementInformation);
         }
-        System.out.println("onBeforeExecuteQuery---------------------------------");
+        log.debug("Executed method 'onBeforeExecuteQuery' ....");
     }
 
     @Override
