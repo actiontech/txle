@@ -22,7 +22,6 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.PostConstruct;
 import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -175,15 +174,7 @@ public class TxleCache implements ITxleCache {
 
     @Override
     public void putLocalTxAbortStatusCache(String key, Boolean value, int expire) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
         txAbortStatusCache.add(new CacheEntity(key, value, expire));
-
-        Iterator<CacheEntity> iterator = txAbortStatusCache.iterator();
-        while (iterator.hasNext()) {
-            CacheEntity entity = iterator.next();
-            System.err.println("Abort status cache: key [" + entity.getKey() + "], value [" + entity.getValue() + "], expire [" + sdf.format(new Date(entity.getExpire())) + "].");
-        }
     }
 
     public void removeLocalConfigCache(String key) {
@@ -228,11 +219,9 @@ public class TxleCache implements ITxleCache {
     private void removeExpiredCache(ConcurrentSkipListSet<CacheEntity> cache) {
         Iterator<CacheEntity> iterator = cache.iterator();
         List<CacheEntity> removeKeys = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         while (iterator.hasNext()) {
             CacheEntity cacheEntity = iterator.next();
             if (cacheEntity.expired()) {
-                System.err.println("Take the key [" + cacheEntity.getKey() + "], expire [" + sdf.format(new Date(cacheEntity.getExpire())) + "] out. " + sdf.format(new Date()));
                 removeKeys.add(cacheEntity);
             } else {
                 break;
