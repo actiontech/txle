@@ -40,12 +40,9 @@
 		</fileSet>
 	</fileSets>
 	<files>
-		<!-- 打包时把LICENSE和NOTICE文件放在根目录 -->
+		<!-- 打包时把LICENSE文件放在根目录 -->
 		<file>
 			<source>LICENSE</source>
-		</file>
-		<file>
-			<source>NOTICE</source>
 		</file>
 		<!-- omega基础jar包 -->
 		<file>
