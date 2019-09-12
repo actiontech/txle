@@ -19,6 +19,7 @@ cd ..
 DEPLOY_DIR=`pwd`
 
 SERVER_NAME=txle
+PROJECT_VERSION=2.19.10.0
 LIB_DIR=$DEPLOY_DIR/lib
 CONF_DIR=$DEPLOY_DIR/conf
 LOG_FILE="$DEPLOY_DIR/log/stdout.log"
@@ -237,6 +238,10 @@ case $1 in
 		echo "  --config-dir        Appoint a config file for server"
 		echo "  --log               Appoint a log file for server"
 		echo "  -ha                 Start server by ha"
+	;;
+
+	-v)
+		echo "txle version $PROJECT_VERSION"
 	;;
 
 	*)
