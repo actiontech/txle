@@ -1,10 +1,9 @@
 # txle | [English](README.md)
-[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
-
-[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
+[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 
 ## 什么是txle？
-txle是一款能够保证业务数据最终一致性的分布式事务解决方案。
+txle是一款能够保证业务数据最终一致性的分布式事务框架。
 
 ## 特征
 * 多种手段保证数据最终一致性。
@@ -15,9 +14,14 @@ txle是一款能够保证业务数据最终一致性的分布式事务解决方�
 * 支持异常快照处理。
 * 支持超时和重试机制。
 
+## 历史
+txle是基于[ServiceComb Pack](https://github.com/apache/servicecomb-pack)进行研发的。首先，我们要感谢ServiceComb Pack项目的所有贡献者。
+
+对于txle而言，我们更加专注于金融领域，可适应诸多的复杂业务场景。另外，在稳定性和高性能方面有显著改善，尤其在性能上，我们提升了几倍的QPS。
+
 ## 架构
 
-![txle业务集成架构](docs/txle-architecture.png)
+![txle业务集成架构](docs/txle-architecture-cn.png)
 
 ## 快速启动
 
@@ -62,11 +66,11 @@ Stop successfully!
 
 我们欢迎并十分感谢您的贡献。有关提交补丁和贡献流程请参阅[CONTRIBUTION.md](https://github.com/actiontech/txle/docs/CONTRIBUTION.md)。
 
-## 社区 TODO
+## 社区
 
-* [![Gitter](https://badges.gitter.im/actiontech-txle/community.svg)](https://gitter.im/actiontech-txle/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+* [![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 * QQ group: 696990638
-* 开源社区问下公众号
+* 开源社区微信公众号
   
   ![dble](./docs/QR_code.png)
 

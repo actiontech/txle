@@ -35,11 +35,6 @@
 			</includes>
 		</fileSet>
 	</fileSets>
-	<files>
-		<file>
-			<source>README.md</source>
-		</file>
-	</files>
 	<dependencySets>
 		<dependencySet>
 			<!-- 存放依赖位置，即压缩包下的根目录下的lib文件夹中 -->

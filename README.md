@@ -1,18 +1,23 @@
 # txle | [中文](README_ZH.md)
-[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
-
-[![Build Status](https://travis-ci.org/apache/incubator-servicecomb-saga.svg?branch=master)](https://travis-ci.org/apache/incubator-servicecomb-saga?branch=master) [![Coverage Status](https://coveralls.io/repos/github/apache/incubator-servicecomb-saga/badge.svg?branch=master)](https://coveralls.io/github/apache/incubator-servicecomb-saga?branch=master)[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.servicecomb.saga/saga/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.servicecomb.saga) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/badge/ServiceComb-Gitter-ff69b4.svg)](https://gitter.im/ServiceCombUsers/Saga)
+[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 
 ## What is txle?
-txle is a distributed transaction solution and can guarantee the final consistency of the business data.
+txle is a distributed transaction framework and can guarantee the final consistency of the business data.
+
 ## Feature
 * Multiple ways to guarantee the final consistency of the business data.
 * High performance. QPS is 5000 or so and TPS is 50000 or so.
 * Low invasion. It can work by setting 2 annotations.
 * Support quick start by Docker.
-* Support service degradation. No effect to main business in case of irresistible factors.
+* Support service downgrading. No effect to main business in case of irresistible factors.
 * Support for exception snapshot processing.
 * Support both timeout and retry.
+
+## History
+txle is based on [ServiceComb Pack](https://github.com/apache/servicecomb-pack). First of all, thanks to the contributors from ServiceComb Pack.
+
+For txle, more attention on financial field and it can work in a lot of complex business cases. Moreover, there were significant improvements on Stability and Performance, especially the QPS, it was increased for several times.
 
 ## Architecture
 
@@ -36,7 +41,7 @@ txle is a distributed transaction solution and can guarantee the final consisten
 
     Install Java 1.8 or later in your machine and make sure the JAVA_HOME configuration is correct.
 
-### Step 3: Start erver
+### Step 3: Start server
 ```bash
 # ./txle start
 Starting the txle server....
@@ -58,11 +63,10 @@ For more information, please visit the [Official website](https://opensource.act
 
 Contributions are welcomed and greatly appreciated. See [CONTRIBUTION.md](https://github.com/actiontech/txle/docs/CONTRIBUTION.md) for details on submitting patches and the contribution workflow.
 
-## Community TODO
+## Community
 
-* IRC: [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/txle.png)](https://kiwiirc.com/client/irc.freenode.net/?nick=user|?&theme=cli#txle)
+* [![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 * QQ group: 696990638
-* [If you're using txle, please let us know.](https://wj.qq.com/s/2291106/09f4)
 * wechat subscription QR code
   
   ![dble](./docs/QR_code.png)
