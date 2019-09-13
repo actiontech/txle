@@ -19,7 +19,7 @@
 
 	<groupId>com.actiontech.txle</groupId>
 	<artifactId>omega-p6spy</artifactId>
-	<version>0.3.0-SNAPSHOT</version>
+	<version>2.19.10.0</version>
 	
 	<modelVersion>4.0.0</modelVersion>
 
@@ -31,12 +31,12 @@
 		<dependency>
             <groupId>com.actiontech.txle</groupId>
 			<artifactId>pack-common</artifactId>
-			<version>0.3.0-SNAPSHOT</version>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.actiontech.txle</groupId>
 			<artifactId>omega-context</artifactId>
-			<version>0.3.0-SNAPSHOT</version>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.alibaba</groupId>
