@@ -68,7 +68,7 @@ Stop successfully!
 
 ## 社区
 
-* [![Gitter](https://badges.gitter.im/actiontech-txle/community.svg)](https://gitter.im/actiontech-txle/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+* [![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 * QQ group: 696990638
 * 开源社区微信公众号
   

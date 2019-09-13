@@ -65,7 +65,7 @@ Contributions are welcomed and greatly appreciated. See [CONTRIBUTION.md](https:
 
 ## Community
 
-* [![Gitter](https://badges.gitter.im/actiontech-txle/community.svg)](https://gitter.im/actiontech-txle/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+* [![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 * QQ group: 696990638
 * wechat subscription QR code
   
