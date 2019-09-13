@@ -44,6 +44,9 @@
 		<file>
 			<source>LICENSE</source>
 		</file>
+		<file>
+			<source>README.md</source>
+		</file>
 		<!-- omega基础jar包 -->
 		<file>
 			<source>omega/omega-spring-starter/target/omega-spring-starter-${version}.jar</source>

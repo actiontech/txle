@@ -34,11 +34,6 @@
 			</includes>
 		</fileSet>
 	</fileSets>
-	<files>
-		<file>
-			<source>README.md</source>
-		</file>
-	</files>
 	<dependencySets>
 		<dependencySet>
 			<!-- stores related jars. -->
