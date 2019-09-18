@@ -1,5 +1,4 @@
 ## 快速启动
-
 ### Step 1: 下载txle正式版本
 [下载](https://github.com/actiontech/txle/releases)最新版本并解压。  
 ```bash

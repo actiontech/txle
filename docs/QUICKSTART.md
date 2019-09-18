@@ -1,12 +1,12 @@
 ## Quick Start
 ### Step 1: Download txle Release
-[Download](https://github.com/actiontech/txle/releases) the release and un-tar it.
-
+[Download](https://github.com/actiontech/txle/releases) the release and un-tar it.  
 ```bash
 # tar -xzf actiontech-txle-$version.tar.gz
 # mv actiontech-txle-$version txle
 # cd txle
 ```
+
 ### Step 2: Preparation
 * MySQL Instance
 
@@ -22,8 +22,8 @@
 Starting the txle server....
 Start successfully!
 ```
-### Step 4: Stop server
 
+### Step 4: Stop server
 ```bash
 # ./txle stop
 Stopping the txle server....
