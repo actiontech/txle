@@ -7,7 +7,6 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import brave.Tracing;
-import com.ecwid.consul.v1.ConsulClient;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
@@ -15,7 +14,6 @@ import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspe
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.core.datatransfer.IDataTransferService;
-import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxListener;
 import org.apache.servicecomb.saga.alpha.core.listener.TxEventAfterPersistingListener;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingEntityRepository;
@@ -29,7 +27,6 @@ import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferReposit
 import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
@@ -65,18 +62,6 @@ class AlphaConfig {
 
   @Value("${txle.accident.platform.retry.interval:1}")
   private int interval;
-
-  @Autowired(required = false)
-  private ConsulClient consulClient;
-
-  @Value("${spring.application.name:\"\"}")
-  private String serverName;
-
-  @Value("${server.port:8090}")
-  private int serverPort;
-
-  @Value("${spring.cloud.consul.discovery.instanceId:\"\"}")
-  private String consulInstanceId;
 
   @Value("${alpha.event.pollingInterval:500}")
   private int eventPollingInterval;
@@ -137,13 +122,18 @@ class AlphaConfig {
   }
 
   @Bean
-  IDataTransferService dataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
-    return new DataTransferService(dataTransferRepository, txEventRepository);
+  ITxleCache txleCache() {
+    return new TxleCache();
   }
 
   @Bean
-  ITxleCache txleCache() {
-    return new TxleCache();
+  StartingTask startingTask() {
+    return new StartingTask();
+  }
+
+  @Bean
+  IDataTransferService dataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
+    return new DataTransferService(dataTransferRepository, txEventRepository);
   }
 
   @Bean
@@ -167,15 +157,13 @@ class AlphaConfig {
           TxTimeoutRepository timeoutRepository,
           OmegaCallback omegaCallback,
           Map<String, Map<String, OmegaCallback>> omegaCallbacks,
-          IKafkaMessageProducer kafkaMessageProducer,
           IConfigCenterService dbDegradationConfigService,
           Tracing tracing,
           IAccidentHandlingService accidentHandlingService,
-          ITxleCache txleCache) {
+          ITxleCache txleCache,
+          StartingTask startingTask) {
 
-    new EventScanner(scheduler,
-            eventRepository, commandRepository, timeoutRepository,
-            omegaCallback, kafkaMessageProducer, eventPollingInterval, consulClient, txleCache, serverName, serverPort, consulInstanceId).run();
+    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, startingTask).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 

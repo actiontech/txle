@@ -44,6 +44,8 @@ public class TxEventAfterPersistingListener implements Observer {
 
     private final Set<String> serverNameIdCategory = new HashSet<>();
 
+    private final Set<String> globalTxIdSet = new HashSet<>();
+
     @Override
     public void update(Observable arg0, Object arg1) {
         if (arg0 != null) {
@@ -59,14 +61,22 @@ public class TxEventAfterPersistingListener implements Observer {
                 } else if (TxStartedEvent.name().equals(type)) {
                     this.putServerNameIdCategory(event);
                 } else if (EventType.SagaEndedEvent.name().equals(event.type())) {
-                    // TODO batch calling
-                    // TODO New servers need synchronized cache from the leader server when they start.
-                    txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
-                    txleCache.removeDistributedTxAbortStatusCache(event.globalTxId());
+                    globalTxIdSet.add(event.globalTxId());
                     kafkaMessageProducer.send(event);
+
+                    if (globalTxIdSet.size() > 100) {
+                        removeDistributedTxStatusCache(globalTxIdSet);
+                    }
                 }
             }
         }
+    }
+
+    private void removeDistributedTxStatusCache(Set<String> globalTxIdSet) {
+        new Thread(() -> {
+            txleCache.removeDistributedTxStatusCache(globalTxIdSet);
+            globalTxIdSet.clear();
+        }).start();
     }
 
     private void putServerNameIdCategory(TxEvent event) {

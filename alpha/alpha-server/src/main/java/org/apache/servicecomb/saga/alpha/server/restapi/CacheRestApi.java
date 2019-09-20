@@ -8,6 +8,7 @@ package org.apache.servicecomb.saga.alpha.server.restapi;
 
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -60,6 +61,18 @@ public class CacheRestApi {
         if (cache != null) {
             txleCache.removeLocalTxAbortStatusCache(cache.split(",")[0]);
         }
+    }
+
+    @PostMapping("/removeTxStatusCache")
+    public void removeTxStatusCache(@RequestBody String cache) {
+        if (cache != null) {
+            txleCache.removeLocalTxStatusCache(cache.split(",")[0]);
+        }
+    }
+
+    @GetMapping("/refreshServiceListCache")
+    public void refreshServiceListCache() {
+        txleCache.refreshServiceListCache(false);
     }
 
 }

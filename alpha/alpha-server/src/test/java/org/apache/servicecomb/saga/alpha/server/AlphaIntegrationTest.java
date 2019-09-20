@@ -100,13 +100,10 @@ public class AlphaIntegrationTest {
   private Map<String, Map<String, OmegaCallback>> omegaCallbacks;
 
   @Autowired
-  private IKafkaMessageProducer kafkaMessageProducer;
-
-  @Autowired
   private TxConsistentService consistentService;
 
   @Autowired
-  private ConsulClient consulClient;
+  private StartingTask startingTask;
 
   @Autowired
   private ITxleCache txleCache;
@@ -585,8 +582,8 @@ public class AlphaIntegrationTest {
         commandRepository,
         timeoutRepository,
         omegaCallback,
-        kafkaMessageProducer,
         1,
-        consulClient, txleCache, "").run();
+        txleCache,
+        startingTask).run();
   }
 }

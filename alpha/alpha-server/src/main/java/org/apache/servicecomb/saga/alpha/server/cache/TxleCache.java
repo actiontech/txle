@@ -11,6 +11,7 @@ import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.Service;
 import org.apache.servicecomb.saga.alpha.core.cache.CacheEntity;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ public class TxleCache implements ITxleCache {
     // Store the identifies of global transaction when they have been suspended only. Do not use the 'configCache' variable so that free up memory for this variable in an even better fashion.
     private final ConcurrentSkipListSet<CacheEntity> txSuspendStatusCache = new ConcurrentSkipListSet<>(Comparator.comparingLong(s -> s.getExpire()));
     private final ConcurrentSkipListSet<CacheEntity> txAbortStatusCache = new ConcurrentSkipListSet<>(Comparator.comparingLong(s -> s.getExpire()));
+    private final Set<String> serviceList = new HashSet();
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -101,6 +103,14 @@ public class TxleCache implements ITxleCache {
         refreshDistributedCache(key, "", 0, "/removeConfigCache");
     }
 
+    public void removeDistributedTxStatusCache(Set<String> globalTxIdSet) {
+        if (globalTxIdSet != null && !globalTxIdSet.isEmpty()) {
+            StringBuilder keys = new StringBuilder(globalTxIdSet.size() * (36 + TxleConstants.STRING_SEPARATOR.length()));
+            globalTxIdSet.forEach(key -> keys.append(key + TxleConstants.STRING_SEPARATOR));
+            refreshDistributedCache(keys.toString(), "", 0, "/removeTxStatusCache");
+        }
+    }
+
     public void removeDistributedTxSuspendStatusCache(String key) {
         refreshDistributedCache(key, "", 0, "/removeTxSuspendStatusCache");
     }
@@ -111,33 +121,26 @@ public class TxleCache implements ITxleCache {
 
     public void refreshDistributedCache(String cacheKey, String cacheValue, int expire, String restApi) {
         try {
-            Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
-            if (agentServices != null) {
-                Map<String, Service> serviceMap = agentServices.getValue();
-                if (serviceMap != null && !serviceMap.isEmpty()) {
-                    String currentHostPort = InetAddress.getLocalHost().getHostName() + ":" + serverPort;
-                    Set<String> ipPortSet = new HashSet<>();
-                    serviceMap.keySet().forEach(key -> {
-                        String ipPort = "";
-                        try {
-                            Service service = serviceMap.get(key);
-                            ipPort = service.getAddress() + ":" + service.getPort();
-                            if (!ipPortSet.contains(ipPort)) {
-                                ipPortSet.add(ipPort);
+            if (serviceList != null && !serviceList.isEmpty()) {
+                String currentHostPort = InetAddress.getLocalHost().getHostName() + ":" + serverPort;
+                Set<String> ipPortSet = new HashSet<>();
+                serviceList.forEach(ipPort -> {
+                    try {
+                        if (!ipPortSet.contains(ipPort)) {
+                            ipPortSet.add(ipPort);
 
-                                if (currentHostPort.equals(ipPort)) {
-                                    callLocalFunction(restApi, cacheKey, cacheValue, expire);
-                                } else {
-                                    HttpEntity<String> entity = new HttpEntity<>(cacheKey + "," + cacheValue + "," + expire);
-                                    log.error("Calling http://" + ipPort + restApi);
-                                    restTemplate.exchange("http://" + ipPort + restApi, HttpMethod.POST, entity, Boolean.class);
-                                }
+                            if (currentHostPort.equals(ipPort)) {
+                                callLocalFunction(restApi, cacheKey, cacheValue, expire);
+                            } else {
+                                HttpEntity<String> entity = new HttpEntity<>(cacheKey + "," + cacheValue + "," + expire);
+                                log.info("Calling http://" + ipPort + restApi);
+                                restTemplate.exchange("http://" + ipPort + restApi, HttpMethod.POST, entity, Boolean.class);
                             }
-                        } catch (Exception e) {
-                            log.error("Failed to refresh distributed cache. remoteHostPort [{}], restApi [{}], key  [{}], value [{}], expire [{}].", ipPort, restApi, cacheKey, cacheValue, expire, e);
                         }
-                    });
-                }
+                    } catch (Exception e) {
+                        log.error("Failed to refresh distributed cache. remoteHostPort [{}], restApi [{}], key  [{}], value [{}], expire [{}].", ipPort, restApi, cacheKey, cacheValue, expire, e);
+                    }
+                });
             }
         } catch (Exception e) {
             log.error("Failed to execute method 'refreshDistributedCache', restApi [{}], key [{}], value [{}], expire [{}].", restApi, cacheKey, cacheValue, expire, e);
@@ -157,6 +160,8 @@ public class TxleCache implements ITxleCache {
             removeLocalTxSuspendStatusCache(cacheKey);
         } else if ("/removeTxAbortStatusCache".equals(function)) {
             removeLocalTxAbortStatusCache(cacheKey);
+        } else if ("/removeTxStatusCache".equals(function)) {
+            removeLocalTxStatusCache(cacheKey);
         }
     }
 
@@ -184,6 +189,11 @@ public class TxleCache implements ITxleCache {
         }
     }
 
+    public void removeLocalTxStatusCache(String key) {
+        removeTxStatusCache(txSuspendStatusCache, key);
+        removeTxStatusCache(txAbortStatusCache, key);
+    }
+
     public void removeLocalTxSuspendStatusCache(String key) {
         removeTxStatusCache(txSuspendStatusCache, key);
     }
@@ -193,18 +203,22 @@ public class TxleCache implements ITxleCache {
     }
 
     private void removeTxStatusCache(ConcurrentSkipListSet<CacheEntity> txStatusCache, String key) {
-        if (key != null) {
+        if (key != null && txStatusCache.size() > 0) {
+            Set<String> keySet = new HashSet<>();
+            for (String k : key.split(TxleConstants.STRING_SEPARATOR)) {
+                keySet.add(k);
+            }
             Iterator<CacheEntity> iterator = txStatusCache.iterator();
             while (iterator.hasNext()) {
                 CacheEntity cacheEntity = iterator.next();
-                if (key.equals(cacheEntity.getKey())) {
+                if (keySet.contains(cacheEntity.getKey())) {
                     txStatusCache.remove(cacheEntity);
-                    break;
                 }
             }
             if (txStatusCache.isEmpty()) {
                 txStatusCache.clear();
             }
+            keySet.clear();
         }
     }
 
@@ -235,4 +249,45 @@ public class TxleCache implements ITxleCache {
         }
     }
 
+    // todo ConsulServerList
+    // TODO New servers need synchronized cache from the leader server when they start.
+    // Notify all servers to reload the cache of service list from Consul.
+    @Override
+    public void refreshServiceListCache(boolean refreshRemoteServiceList) {
+        try {
+            Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
+            if (agentServices != null) {
+                Map<String, Service> serviceMap = agentServices.getValue();
+                if (serviceMap != null && !serviceMap.isEmpty()) {
+                    Set<String> ipPortSet = new HashSet<>();
+                    serviceList.clear();
+                    String currentHostPort = InetAddress.getLocalHost().getHostName() + ":" + serverPort;
+                    serviceMap.keySet().forEach(key -> {
+                        String ipPort = "";
+                        try {
+                            Service service = serviceMap.get(key);
+                            ipPort = service.getAddress() + ":" + service.getPort();
+                            serviceList.add(ipPort);
+
+                            if (refreshRemoteServiceList && !currentHostPort.equals(ipPort) && !ipPortSet.contains(ipPort)) {
+                                ipPortSet.add(ipPort);
+
+                                log.info("Calling http://" + ipPort + "/refreshServiceListCache refreshRemoteServiceList [{}].", refreshRemoteServiceList);
+                                restTemplate.getForObject("http://" + ipPort + "/refreshServiceListCache", Boolean.TYPE);
+                            }
+                        } catch (Exception e) {
+                            log.error("Failed to call remote method 'refreshServiceListCache', remoteHostPort [{}], refreshRemoteServiceList [{}].", ipPort, refreshRemoteServiceList, e);
+                        }
+                    });
+                }
+            }
+            serviceList.forEach(s -> log.info("List of surviving services on Consul: " + s));
+        } catch (Exception e) {
+            log.error("Failed to call remote method 'refreshServiceListCache', refreshRemoteServiceList [{}].", refreshRemoteServiceList, e);
+        }
+    }
+
+    @Override
+    public void synchronizeCacheFromLeader(String consulSessionId) {
+    }
 }

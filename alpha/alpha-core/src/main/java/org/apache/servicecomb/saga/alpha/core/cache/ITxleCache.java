@@ -6,6 +6,7 @@
 
 package org.apache.servicecomb.saga.alpha.core.cache;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -32,6 +33,8 @@ public interface ITxleCache {
 
     void removeDistributedConfigCache(String key);
 
+    void removeDistributedTxStatusCache(Set<String> globalTxIdSet);
+
     void removeDistributedTxSuspendStatusCache(String key);
 
     void removeDistributedTxAbortStatusCache(String key);
@@ -44,8 +47,14 @@ public interface ITxleCache {
 
     void removeLocalConfigCache(String key);
 
+    void removeLocalTxStatusCache(String key);
+
     void removeLocalTxSuspendStatusCache(String key);
 
     void removeLocalTxAbortStatusCache(String key);
+
+    void refreshServiceListCache(boolean refreshRemoteServiceList);
+
+    void synchronizeCacheFromLeader(String consulSessionId);
 
 }
