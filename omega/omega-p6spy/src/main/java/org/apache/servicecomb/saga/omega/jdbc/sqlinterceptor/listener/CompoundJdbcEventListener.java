@@ -194,11 +194,11 @@ public class CompoundJdbcEventListener extends JdbcEventListener {
 
     @Override
     public void onBeforeExecuteQuery(PreparedStatementInformation statementInformation) {
-        log.debug("Executing method 'onBeforeExecuteQuery' ....");
+        log.info("Executing method 'onBeforeExecuteQuery' ....");
         for (JdbcEventListener eventListener : eventListeners) {
             eventListener.onBeforeExecuteQuery(statementInformation);
         }
-        log.debug("Executed method 'onBeforeExecuteQuery' ....");
+        log.info("Executed method 'onBeforeExecuteQuery' ....");
     }
 
     @Override
