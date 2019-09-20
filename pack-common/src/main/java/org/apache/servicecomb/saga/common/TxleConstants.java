@@ -17,6 +17,7 @@ public final class TxleConstants {
     public static final String ACTION_SQL = " /**txle_sql**/";
     // Usage in org.apache.servicecomb.saga.alpha.server.GrpcTxEventEndpointImpl.onTxEvent
     public static final String SPECIAL_KEY = "txle-special-key";
+    public static final String STRING_SEPARATOR = "_@@_";
 
     public static final String OK = "ok";
     public static final String ERROR = "error";
