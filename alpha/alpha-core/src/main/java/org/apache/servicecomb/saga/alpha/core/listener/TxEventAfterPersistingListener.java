@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2018-2019 ActionTech.
  * based on code by ServiceComb Pack CopyrightHolder Copyright (C) 2018,
  * License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
@@ -44,29 +44,39 @@ public class TxEventAfterPersistingListener implements Observer {
 
     private final Set<String> serverNameIdCategory = new HashSet<>();
 
+    private final Set<String> globalTxIdSet = new HashSet<>();
+
     @Override
     public void update(Observable arg0, Object arg1) {
         if (arg0 != null) {
-            // TODO 监控也放在此处
+            // TODO move metrics here
             TxEvent event = ((GlobalTxListener) arg0).getEvent();
             if (event != null) {
                 log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
                 String type = event.type();
                 if (SagaStartedEvent.name().equals(type)) {
-                    // 当有新的全局事务时，设置最小id查询次数加1，即需要查询最小事件id
+                    // increase 1 for the minimum identify of undone event when some global transaction starts.
                     EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
                     this.putServerNameIdCategory(event);
                 } else if (TxStartedEvent.name().equals(type)) {
                     this.putServerNameIdCategory(event);
                 } else if (EventType.SagaEndedEvent.name().equals(event.type())) {
-                    // TODO batch calling
-                    // TODO 新起的server先从其他leader同步所有缓存
-                    txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
-                    txleCache.removeDistributedTxAbortStatusCache(event.globalTxId());
+                    globalTxIdSet.add(event.globalTxId());
                     kafkaMessageProducer.send(event);
+
+                    if (globalTxIdSet.size() > 100) {
+                        removeDistributedTxStatusCache(globalTxIdSet);
+                    }
                 }
             }
         }
+    }
+
+    private void removeDistributedTxStatusCache(Set<String> globalTxIdSet) {
+        new Thread(() -> {
+            txleCache.removeDistributedTxStatusCache(globalTxIdSet);
+            globalTxIdSet.clear();
+        }).start();
     }
 
     private void putServerNameIdCategory(TxEvent event) {

@@ -6,8 +6,7 @@
 
 package org.apache.servicecomb.saga.alpha.server.datatransfer;
 
-import com.ecwid.consul.v1.ConsulClient;
-import org.apache.servicecomb.saga.alpha.core.EventScanner;
+import org.apache.servicecomb.saga.alpha.core.StartingTask;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
@@ -25,9 +24,6 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY;
-import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
-
 /**
  * This tool class just likes a simple ETL. For transferring normal data to some history tables according to some rule.
  * @author Gannalyo
@@ -43,7 +39,7 @@ public class DataTransferService implements IDataTransferService {
     private IConfigCenterService configCenterService;
 
     @Autowired
-    private ConsulClient consulClient;
+    private StartingTask startingTask;
 
     public DataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
         this.dataTransferRepository = dataTransferRepository;
@@ -53,11 +49,11 @@ public class DataTransferService implements IDataTransferService {
     @Scheduled(cron = "0 0 0 * * ?")
     public void scheduledTask() {
         // To transfer data on master node only.
-        if (consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + EventScanner.getConsulSessionId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
+        if (startingTask.isMaster()) {
             LOG.info("Triggered data transfer task on current master node.");
             dataTransfer("TxEvent");
         } else {
-            LOG.info("Triggered data transfer task, but current node had been not master yet.");
+            LOG.info("Could not trigger data transfer task, because current node had been not master yet.");
         }
     }
 
