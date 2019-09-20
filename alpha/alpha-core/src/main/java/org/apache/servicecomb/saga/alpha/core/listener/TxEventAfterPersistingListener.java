@@ -64,7 +64,8 @@ public class TxEventAfterPersistingListener implements Observer {
                     globalTxIdSet.add(event.globalTxId());
                     kafkaMessageProducer.send(event);
 
-                    if (globalTxIdSet.size() > 100) {
+                    // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
+                    if (globalTxIdSet.size() > 20000) {
                         removeDistributedTxStatusCache(globalTxIdSet);
                     }
                 }
