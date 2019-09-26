@@ -10,18 +10,21 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>omega</artifactId>
-    <groupId>com.actiontech.txle</groupId>
+    <groupId>com.actionsky</groupId>
     <version>2.19.10.0</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>omega-context</artifactId>
-  <name>Saga::Omega::Context</name>
-  
+  <artifactId>txle-context</artifactId>
+
+  <properties>
+    <brave-version>5.6.3</brave-version>
+  </properties>
+
   <dependencies>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>pack-common</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -49,6 +52,66 @@
         <groupId>org.yaml</groupId>
         <artifactId>snakeyaml</artifactId>
         <version>1.17</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.zipkin.reporter2</groupId>
+      <artifactId>zipkin-sender-okhttp3</artifactId>
+      <version>2.8.3</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-okhttp3</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-http</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-httpclient</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-servlet</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-spring-web</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-spring-webmvc</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-grpc</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-instrumentation-mysql</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.zipkin.brave</groupId>
+      <artifactId>brave-context-slf4j</artifactId>
+      <version>${brave-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.6</version>
     </dependency>
 
   </dependencies>
