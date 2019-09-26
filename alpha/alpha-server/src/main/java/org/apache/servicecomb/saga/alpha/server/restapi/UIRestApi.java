@@ -232,55 +232,58 @@ public class UIRestApi {
 
             // To filter which have been over.
             List<TxEvent> txEventList = eventRepository.selectTxEventByGlobalTxIds(globalTxIdList);
-            if (txEventList != null && !txEventList.isEmpty()) {
-                AtomicReference<String> operationAdjective = new AtomicReference<>("pause".equals(operation) ? "suspended" : "recover".equals(operation) ? "normal" : "terminated");
-                txEventList.forEach(event -> {
-                    if (SagaEndedEvent.name().equals(event.type())) {
-                        globalTxIdList.remove(event.globalTxId());
-                    } else {
-                        List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
-                        if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
-                            if ("pause".equals(operation) && pauseContinueEventList.size() % 2 == 1) {
-                                globalTxIdList.remove(event.globalTxId());
-                            } else if ("recover".equals(operation) && pauseContinueEventList.size() % 2 == 0) {
-                                globalTxIdList.remove(event.globalTxId());
-                            }
-                        }
-                    }
-                });
-                if (globalTxIdList.isEmpty()) {
-                    rv.setMessage("All global transactions have been over or " + operationAdjective.get() + ".");
-                    return ResponseEntity.ok(rv);
-                }
-
-                txEventList.forEach(event -> {
-                    if (globalTxIdList.contains(event.globalTxId())) {
-                        globalTxIdList.remove(event.globalTxId());
-                        String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
-                        String typeName = AdditionalEventType.SagaPausedEvent.name();
-                        if ("recover".equals(operation)) {
-                            typeName = AdditionalEventType.SagaContinuedEvent.name();
-                        } else if ("terminate".equals(operation)) {
-                            typeName = EventType.TxAbortedEvent.name();
-                        }
-                        TxEvent txEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
-                        eventRepository.save(txEvent);
-                        if ("terminate".equals(operation)) {
-                            // Do not compensate after terminating.
-                            TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
-                            endedEvent.setSurrogateId(null);
-                            eventRepository.save(endedEvent);
-                        }
-                        // Set cache for global transaction status.
-                        if ("pause".equals(operation)) {
-                            txleCache.putDistributedTxSuspendStatusCache(event.globalTxId(), true, 60);
-                        } else {
-                            txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
-                        }
-                        txleMetrics.countTxNumber(event, false, false);
-                    }
-                });
+            if (txEventList == null || txEventList.isEmpty()) {
+                rv.setMessage("Selected an empty result by globalTxIds [" + globalTxIds + "].");
+                return ResponseEntity.ok(rv);
             }
+
+            AtomicReference<String> operationAdjective = new AtomicReference<>("pause".equals(operation) ? "suspended" : "recover".equals(operation) ? "normal" : "terminated");
+            txEventList.forEach(event -> {
+                if (SagaEndedEvent.name().equals(event.type())) {
+                    globalTxIdList.remove(event.globalTxId());
+                } else {
+                    List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
+                    if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
+                        if ("pause".equals(operation) && pauseContinueEventList.size() % 2 == 1) {
+                            globalTxIdList.remove(event.globalTxId());
+                        } else if ("recover".equals(operation) && pauseContinueEventList.size() % 2 == 0) {
+                            globalTxIdList.remove(event.globalTxId());
+                        }
+                    }
+                }
+            });
+            if (globalTxIdList.isEmpty()) {
+                rv.setMessage("All global transactions have been over or " + operationAdjective.get() + ".");
+                return ResponseEntity.ok(rv);
+            }
+
+            txEventList.forEach(event -> {
+                if (globalTxIdList.contains(event.globalTxId())) {
+                    globalTxIdList.remove(event.globalTxId());
+                    String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
+                    String typeName = AdditionalEventType.SagaPausedEvent.name();
+                    if ("recover".equals(operation)) {
+                        typeName = AdditionalEventType.SagaContinuedEvent.name();
+                    } else if ("terminate".equals(operation)) {
+                        typeName = EventType.TxAbortedEvent.name();
+                    }
+                    TxEvent txEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
+                    eventRepository.save(txEvent);
+                    if ("terminate".equals(operation)) {
+                        // Do not compensate after terminating.
+                        TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
+                        endedEvent.setSurrogateId(null);
+                        eventRepository.save(endedEvent);
+                    }
+                    // Set cache for global transaction status.
+                    if ("pause".equals(operation)) {
+                        txleCache.putDistributedTxSuspendStatusCache(event.globalTxId(), true, 60);
+                    } else {
+                        txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
+                    }
+                    txleMetrics.countTxNumber(event, false, false);
+                }
+            });
         } catch (Exception e) {
             rv.setMessage("Failed to " + operation + " global transactions, param [" + globalTxIds + "].");
             LOG.error(rv.getMessage(), e);
