@@ -12,15 +12,15 @@
   </formats>
   <fileSets>
     <fileSet>
-      <directory>${project.build.directory}/saga</directory>
-      <outputDirectory>saga</outputDirectory>
+      <directory>${project.build.directory}/txle</directory>
+      <outputDirectory>txle</outputDirectory>
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
     </fileSet>
     <!-- Added the project LICENSE file into docker image-->
     <fileSet>
       <directory>${root.basedir}</directory>
-      <outputDirectory>saga</outputDirectory>
+      <outputDirectory>txle</outputDirectory>
       <includes>
         <include>LICENSE</include>
       </includes>
