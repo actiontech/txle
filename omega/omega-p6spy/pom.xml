@@ -10,15 +10,14 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	
-	<!-- 版本控制 -->
 	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>1.5.13.RELEASE</version>
+		<artifactId>omega</artifactId>
+		<groupId>com.actionsky</groupId>
+		<version>2.19.10.0</version>
 	</parent>
 
-	<groupId>com.actiontech.txle</groupId>
-	<artifactId>omega-p6spy</artifactId>
+	<groupId>com.actionsky</groupId>
+	<artifactId>txle-p6spy</artifactId>
 	<version>2.19.10.0</version>
 	
 	<modelVersion>4.0.0</modelVersion>
@@ -27,15 +26,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
+			<version>${spring.boot.version}</version>
 		</dependency>
 		<dependency>
-            <groupId>com.actiontech.txle</groupId>
-			<artifactId>pack-common</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.actiontech.txle</groupId>
-			<artifactId>omega-context</artifactId>
+			<groupId>com.actionsky</groupId>
+			<artifactId>txle-context</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
