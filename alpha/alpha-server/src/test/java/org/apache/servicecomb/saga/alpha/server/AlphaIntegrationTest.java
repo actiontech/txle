@@ -6,14 +6,12 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
-import com.ecwid.consul.v1.ConsulClient;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
-import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
