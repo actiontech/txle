@@ -9,14 +9,14 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>omega-connector</artifactId>
-    <groupId>com.actiontech.txle</groupId>
+    <artifactId>txle-connector</artifactId>
+    <groupId>com.actionsky</groupId>
     <version>2.19.10.0</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>omega-connector-grpc</artifactId>
-  <name>Saga::Omega::Connector::GRPC</name>
+  <artifactId>txle-connector-grpc</artifactId>
+  <name>txle Connector GRPC</name>
 
   <dependencies>
     <dependency>
@@ -32,12 +32,12 @@
       <artifactId>netty-tcnative-boringssl-static</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>omega-transaction</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-transaction</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>pack-contract-grpc</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-contract-grpc</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

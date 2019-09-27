@@ -14,7 +14,7 @@
 		<version>18</version>
 	</parent>
 
-	<groupId>com.actiontech.txle</groupId>
+	<groupId>com.actionsky</groupId>
 	<artifactId>txle</artifactId>
 	<packaging>pom</packaging>
 	<version>2.19.10.0</version>
@@ -56,58 +56,48 @@
 		<netty.version>4.1.24.Final</netty.version>
 	</properties>
 
-	<name>ServiceComb Saga</name>
-	<description>Eventual consistency component for distributed systems</description>
-	<url>https://github.com/apache/incubator-servicecomb-saga</url>
+	<description>A distributed transaction solution and can guarantee the final consistency of the business data.</description>
+	<url>https://github.com/actiontech/txle</url>
 
 	<licenses>
 		<license>
 			<name>Apache License, Version 2.0</name>
-			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<url>https://www.apache.org/licenses/LICENSE-2.0.html</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
 
-	<mailingLists>
-		<mailingList>
-			<name>Development List</name>
-			<subscribe>dev-subscribe@servicecomb.apache.org</subscribe>
-			<unsubscribe>dev-unsubscribe@servicecomb.apache.org</unsubscribe>
-			<post>dev@servicecomb.apache.org</post>
-		</mailingList>
-		<mailingList>
-			<name>Commits List</name>
-			<subscribe>commits-subscribe@servicecomb.apache.org</subscribe>
-			<unsubscribe>commits-unsubscribe@servicecomb.apache.org</unsubscribe>
-			<post>commits@servicecomb.apache.org</post>
-		</mailingList>
-	</mailingLists>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/actiontech/txle/issues</url>
+	</issueManagement>
 
 	<developers>
 		<developer>
-			<name>The ServiceComb Developer Team</name>
-			<email>dev@servicecomb.apache.org</email>
+			<name>Gannalyo</name>
+			<email>javajob126email@126.com</email>
 		</developer>
 	</developers>
 
-	<issueManagement>
-		<system>jira</system>
-		<url>https://issues.apache.org/jira/browse/SCB</url>
-	</issueManagement>
-
-	<organization>
-		<name>The Apache Software Foundation</name>
-		<url>http://www.apache.org/</url>
-	</organization>
-
 	<scm>
-		<connection>scm:git:https://github.com/apache/incubator-servicecomb-saga.git</connection>
-		<developerConnection>scm:git:https://github.com/apache/incubator-servicecomb-saga.git</developerConnection>
-		<url>https://github.com/apache/incubator-servicecomb-saga</url>
+		<connection>scm:git:https://github.com/actiontech/txle.git</connection>
+		<developerConnection>scm:git:https://github.com/actiontech/txle.git</developerConnection>
+		<url>https://github.com/actiontech/txle</url>
 		<tag>${project.version}</tag>
 	</scm>
 
-	<inceptionYear>2017</inceptionYear>
+	<distributionManagement>
+		<snapshotRepository>
+			<id>txle</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>txle</id>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
+
+	<inceptionYear>2019</inceptionYear>
 
 	<dependencyManagement>
 		<dependencies>
@@ -222,23 +212,8 @@
 				<version>3.3.2.Final</version>
 			</dependency>
 			<dependency>
-				<groupId>com.actiontech.txle</groupId>
-				<artifactId>omega-transport-feign</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>saga-core</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>saga-format</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>saga-spring</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-transport-feign</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -262,73 +237,73 @@
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-context</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-context</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-transaction</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-transaction</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-spring-tx</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-spring-tx</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-transport-resttemplate</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-transport-resttemplate</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-transport-dubbo</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-transport-dubbo</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-transport-servicecomb</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-transport-servicecomb</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-connector-grpc</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-connector-grpc</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-spring-starter</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>omega</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>omega-format</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-format</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>alpha-core</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-core</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>alpha-server</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-server</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>pack-contract-grpc</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-contract-grpc</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>pack-common</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-common</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.servicecomb.saga</groupId>
-				<artifactId>saga-persistence-jpa</artifactId>
+				<groupId>com.actionsky</groupId>
+				<artifactId>txle-persistence-jpa</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -616,7 +591,7 @@
 					<configuration>
 						<mixins>
 							<mixin>
-								<groupId>org.apache.servicecomb.saga</groupId>
+								<groupId>com.actionsky</groupId>
 								<artifactId>docker-build-config</artifactId>
 								<version>${project.version}</version>
 							</mixin>
@@ -721,7 +696,7 @@
 									<resourceBundle>org.apache:apache-incubator-disclaimer-resource-bundle:1.1</resourceBundle>
 								</resourceBundles>
 								<properties>
-									<projectName>Apache ServiceComb</projectName>
+									<projectName>txle</projectName>
 								</properties>
 							</configuration>
 						</execution>
@@ -758,6 +733,47 @@
 		</pluginManagement>
 		<!-- enable the rat check by default -->
 		<plugins>
+			<!-- source and javadoc plugins are useful to deployment -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.1.1</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.rat</groupId>
 				<artifactId>apache-rat-plugin</artifactId>
@@ -785,10 +801,6 @@
 	<profiles>
 		<profile>
 			<id>release</id>
-			<modules>
-				<module>saga-demo</module>
-				<module>saga-distribution</module>
-			</modules>
 			<build>
 				<plugins>
 					<plugin>
@@ -808,7 +820,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-source-plugin</artifactId>
-						<version>2.2.1</version>
+						<version>3.1.0</version>
 						<executions>
 							<execution>
 								<id>attach-sources</id>
@@ -821,7 +833,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-javadoc-plugin</artifactId>
-						<version>2.9.1</version>
+						<version>3.1.1</version>
 						<executions>
 							<execution>
 								<id>attach-javadocs</id>
@@ -842,6 +854,30 @@
 							<goals>deploy</goals>
 						</configuration>
 					</plugin>
+                    <plugin>
+                        <groupId>com.google.code.maven-replacer-plugin</groupId>
+                        <artifactId>replacer</artifactId>
+                        <version>1.5.3</version>
+                        <executions>
+                            <execution>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>replace</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <includes>
+                                <include>${project.basedir}/Makefile</include>
+                            </includes>
+                            <replacements>
+                                <replacement>
+                                    <token>PROJECT_VERSION=(.*)</token>
+                                    <value>PROJECT_VERSION=${project.version}</value>
+                                </replacement>
+                            </replacements>
+                        </configuration>
+                    </plugin>
 				</plugins>
 			</build>
 		</profile>
@@ -908,7 +944,7 @@
 							<replacements>
 								<replacement>
 									<token>PROJECT_VERSION=(.*)</token>
-									<value>PROJECT_VERSION=${version}</value>
+									<value>PROJECT_VERSION=${project.version}</value>
 								</replacement>
 							</replacements>
 						</configuration>
@@ -918,7 +954,7 @@
 					<plugin>
 						<artifactId>maven-assembly-plugin</artifactId>
 						<configuration>
-							<finalName>txle_${version}</finalName>
+							<finalName>txle_${project.version}</finalName>
 							<!-- 不添加assembly的id到打包后的文件名称中 -->
 							<appendAssemblyId>false</appendAssemblyId>
 							<descriptors>

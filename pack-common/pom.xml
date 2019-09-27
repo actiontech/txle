@@ -10,18 +10,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>txle</artifactId>
-    <groupId>com.actiontech.txle</groupId>
+    <groupId>com.actionsky</groupId>
     <version>2.19.10.0</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>pack-common</artifactId>
-  <name>Saga::Pack Common</name>
-
-  <properties>
-    <brave-version>5.6.3</brave-version>
-    <prometheus-version>0.6.0</prometheus-version>
-  </properties>
+  <artifactId>txle-common</artifactId>
 
   <dependencies>
     <dependency>
@@ -33,102 +27,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
       <version>${spring.boot.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.25</version>
-    </dependency>
-    <dependency>
-      <groupId>io.prometheus</groupId>
-      <artifactId>simpleclient</artifactId>
-      <version>${prometheus-version}</version>
-    </dependency>
-    <!--<dependency>
-      <groupId>io.prometheus</groupId>
-      <artifactId>simpleclient_spring_boot</artifactId>
-      <version>0.1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>io.prometheus</groupId>
-      <artifactId>simpleclient_hotspot</artifactId>
-      <version>0.1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>io.prometheus</groupId>
-      <artifactId>simpleclient_httpserver</artifactId>
-      <version>0.1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>io.prometheus</groupId>
-      <artifactId>simpleclient_pushgateway</artifactId>
-      <version>0.1.0</version>
-    </dependency>-->
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.zipkin.reporter2</groupId>
-      <artifactId>zipkin-sender-okhttp3</artifactId>
-      <version>2.8.3</version>
-    </dependency>
-    <!--<dependency>
-      <groupId>io.zipkin.reporter2</groupId>
-      <artifactId>zipkin-sender-okhttp3</artifactId>
-      <version>2.8.1</version>
-    </dependency>-->
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-okhttp3</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-http</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-httpclient</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-servlet</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-spring-web</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-spring-webmvc</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-grpc</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-instrumentation-mysql</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <!-- Integrates so you can use log patterns like %X{traceId}/%X{spanId} -->
-    <dependency>
-      <groupId>io.zipkin.brave</groupId>
-      <artifactId>brave-context-slf4j</artifactId>
-      <version>${brave-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-      <version>4.5.6</version>
     </dependency>
   </dependencies>
 

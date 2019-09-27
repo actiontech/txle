@@ -21,7 +21,7 @@ public @interface AutoCompensable {
 
 	/**
 	 * unit seconds
-	 * @return
+	 * @return timeout
 	 */
 	int timeout() default 0;
 }

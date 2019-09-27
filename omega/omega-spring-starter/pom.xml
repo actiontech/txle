@@ -10,40 +10,59 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>omega</artifactId>
-    <groupId>com.actiontech.txle</groupId>
+    <groupId>com.actionsky</groupId>
     <version>2.19.10.0</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>omega-spring-starter</artifactId>
-  <name>Saga::Omega::Spring Starter</name>
+  <artifactId>txle-client</artifactId>
 
   <dependencies>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>omega-spring-tx</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-spring-tx</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>omega-transaction</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-transaction</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>omega-autocompensation</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-autocompensation</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>omega-p6spy</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-p6spy</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>omega-format</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-format</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.actiontech.txle</groupId>
-      <artifactId>omega-connector-grpc</artifactId>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-connector-grpc</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-transport-resttemplate</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-transport-feign</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-transport-dubbo</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.actionsky</groupId>
+      <artifactId>txle-transport-servicecomb</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

@@ -20,9 +20,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ForwardRecovery is used to execute business logic with the given retries times.
- * If retries == 0, use the default recovery to execute only once.
- * If retries > 0, it will use the forward recovery and retry the given times at most.
- * If retries < 0, it will use the forward recovery and retry forever until interrupted.
+ * If the value of the variable 'retries' equals 0, use the default recovery to execute only once.
+ * If the value of the variable 'retries' is more than 0, it will use the forward recovery and retry the given times at most.
+ * If the value of the variable 'retries' is less than 0, it will use the forward recovery and retry forever until interrupted.
  */
 public class ForwardRecovery extends DefaultRecovery {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());

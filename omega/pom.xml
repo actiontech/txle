@@ -10,13 +10,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>txle</artifactId>
-    <groupId>com.actiontech.txle</groupId>
+    <groupId>com.actionsky</groupId>
     <version>2.19.10.0</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>omega</artifactId>
-  <name>Saga::Omega</name>
 
   <packaging>pom</packaging>
   <modules>
@@ -53,23 +52,23 @@
         <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>com.actiontech.txle</groupId>
-        <artifactId>omega-context</artifactId>
+        <groupId>com.actionsky</groupId>
+        <artifactId>txle-context</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.actiontech.txle</groupId>
-        <artifactId>omega-transaction</artifactId>
+        <groupId>com.actionsky</groupId>
+        <artifactId>txle-transaction</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.actiontech.txle</groupId>
-        <artifactId>omega-autocompensation</artifactId>
+        <groupId>com.actionsky</groupId>
+        <artifactId>txle-autocompensation</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.actiontech.txle</groupId>
-        <artifactId>omega-p6spy</artifactId>
+        <groupId>com.actionsky</groupId>
+        <artifactId>txle-p6spy</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>

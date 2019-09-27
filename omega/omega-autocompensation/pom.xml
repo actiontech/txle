@@ -10,13 +10,12 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<parent>
 		<artifactId>omega</artifactId>
-		<groupId>com.actiontech.txle</groupId>
+		<groupId>com.actionsky</groupId>
 		<version>2.19.10.0</version>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 
-	<artifactId>omega-autocompensation</artifactId>
-	<name>Saga::Omega::AutoCompensate</name>
+	<artifactId>txle-autocompensation</artifactId>
 
 	<dependencies>
 		<dependency>
@@ -24,16 +23,16 @@
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.actiontech.txle</groupId>
-			<artifactId>omega-context</artifactId>
+			<groupId>com.actionsky</groupId>
+			<artifactId>txle-context</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.actiontech.txle</groupId>
-			<artifactId>omega-transaction</artifactId>
+			<groupId>com.actionsky</groupId>
+			<artifactId>txle-transaction</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.actiontech.txle</groupId>
-			<artifactId>omega-p6spy</artifactId>
+			<groupId>com.actionsky</groupId>
+			<artifactId>txle-p6spy</artifactId>
 		</dependency>
 
 		<dependency>
@@ -65,6 +64,10 @@
 			<groupId>io.prometheus</groupId>
 			<artifactId>simpleclient_pushgateway</artifactId>
 			<version>0.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.interceptor</groupId>
+			<artifactId>javax.interceptor-api</artifactId>
 		</dependency>
 	</dependencies>
 
