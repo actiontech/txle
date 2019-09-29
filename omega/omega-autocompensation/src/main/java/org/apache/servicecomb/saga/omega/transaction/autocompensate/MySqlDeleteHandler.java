@@ -64,7 +64,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
             String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
 
             // 4.take the original data out and put the lock on data.
-            List<Map<String, Object>> originalData = selectOriginalData(delegate, deleteStatement, tableName, primaryKeyColumnName, whereSql);
+            List<Map<String, Object>> originalData = selectOriginalData(delegate, tableName, whereSql);
             if (originalData == null || originalData.isEmpty()) {
                 LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Txle_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
                 return true;
@@ -130,7 +130,7 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
         return compensateSqls.toString();
     }
 
-    private List<Map<String, Object>> selectOriginalData(PreparedStatement delegate, MySqlDeleteStatement deleteStatement, String tableName, String primaryKeyColumnName, String whereSql) throws SQLException {
+    private List<Map<String, Object>> selectOriginalData(PreparedStatement delegate, String tableName, String whereSql) throws SQLException {
         PreparedStatement preparedStatement = null;
         try {
             // 'FOR UPDATE' is needed to lock data.
@@ -141,14 +141,14 @@ public class MySqlDeleteHandler extends AutoCompensateDeleteHandler {
             ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(originalDataSql, false);
 
             preparedStatement = delegate.getConnection().prepareStatement(originalDataSql);
-            List<Map<String, Object>> originalDataList = new ArrayList<Map<String, Object>>();
+            List<Map<String, Object>> originalDataList = new ArrayList<>();
             ResultSet dataResultSet = preparedStatement.executeQuery();
 
             // end mark duration for maintaining sql By Gannalyo.
             ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
 
             while (dataResultSet.next()) {
-                Map<String, Object> dataMap = new HashMap<String, Object>();
+                Map<String, Object> dataMap = new HashMap<>();
                 ResultSetMetaData metaData = dataResultSet.getMetaData();
                 for (int i = 1; i <= metaData.getColumnCount(); i++) {
                     String column = metaData.getColumnName(i);
