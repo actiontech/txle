@@ -1,0 +1,1 @@
+TRUNCATE `txle_sample_transfer`;
