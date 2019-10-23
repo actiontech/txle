@@ -3,7 +3,7 @@
 txle is a distributed transaction solution and can guarantee the final consistency of the business data.
 ## Feature
 * Multiple ways to guarantee the final consistency of the business data.
-* High performance. QPS is 5000 or so and TPS is 50000 or so.
+* High performance. The impact of a single branch transaction on business performance is around 2ms.
 * Low invasion. It can work by setting 2 annotations.
 * Support quick start by Docker.
 * Support service downgrading. No effect to main business in case of irresistible factors.
