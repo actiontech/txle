@@ -1,3 +1,5 @@
+![txle logo](docs/txle-logo.png)
+
 # txle | [English](README.md)  [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)  [![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 
 txle是一款能够保证业务数据最终一致性的分布式事务框架。
