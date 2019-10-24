@@ -1,0 +1,41 @@
+server:
+  port: 8003
+
+spring:
+  application:
+    name: sample-txle-springboot-merchant
+  datasource:
+    platform: mysql
+    schema: classpath:schema-mysql.sql
+    data: classpath:data-mysql.sql
+    url: jdbc:mysql://localhost:3308/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
+    username: root
+    password: 123456
+    driver-class-name: org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.Driver
+#    separator: $$
+#    tomcat:
+#      max-active: 100
+#      max-wait: 1000
+  jpa:
+    database: mysql
+    show-sql: true
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  zipkin:
+    base-url: http://localhost:9411/api/v2/spans
+
+alpha:
+  cluster:
+    address: localhost:8080
+    httpaddress: localhost:8090
+#    address: localhost:8080, localhost:8081
+
+txle:
+  prometheus:
+    metrics:
+      port: 9003
+  transaction:
+    pause-check-interval: 60
+    auto-compensation:
+      check-special-sql: false

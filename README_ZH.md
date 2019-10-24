@@ -1,10 +1,12 @@
+![txle logo](docs/txle-logo.png)
+
 # txle | [English](README.md)  [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)  [![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 
 txle是一款能够保证业务数据最终一致性的分布式事务框架。
 
 ## 特征
 * 多种手段保证数据最终一致性。
-* 高性能。QPS为5000/s左右，TPS为50000/s左右。
+* 高性能。单个事务分支对业务的性能影响在2ms左右。
 * 低侵入。最少2个注解即可。
 * 支持Docker快速部署。
 * 支持服务降级。发生不可抗拒因素时，也能保证主业务正常运行。

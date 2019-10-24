@@ -1,9 +1,11 @@
+![txle logo](docs/txle-logo.png)
+
 # txle | [中文](README_ZH.md) [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html) [![Gitter](https://img.shields.io/static/v1?label=chat&message=on&nbsp;gitter&color=brightgreen)](https://gitter.im/actiontech-txle/Lobby)
 
 txle is a distributed transaction solution and can guarantee the final consistency of the business data.
 ## Feature
 * Multiple ways to guarantee the final consistency of the business data.
-* High performance. QPS is 5000 or so and TPS is 50000 or so.
+* High performance. The impact of a single branch transaction on business performance is around 2ms.
 * Low invasion. It can work by setting 2 annotations.
 * Support quick start by Docker.
 * Support service downgrading. No effect to main business in case of irresistible factors.
