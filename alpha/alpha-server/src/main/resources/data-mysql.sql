@@ -6,6 +6,7 @@
 -- *** All words should be lower case. ***
 -- Initialize configurations
 INSERT INTO Config VALUES (1, null, null, null, 12, 0,	1, '1',	'历史表间隔规则。值：0-日，1-月，2-季，3-年。注：不转储10天内的数据。', now());
+INSERT INTO Config VALUES (2, null, null, null, 4, 0,	1, 'disabled',	'默认关闭，避免因为未及时配置Kafka服务地址，导致每次请求时需花费60秒尝试发送Kafka消息。', now());
 
 -- TxEvent - Table Fields Detail
 INSERT INTO TableField VALUES (5, 'txevent', 'surrogateid', '主键', 'bigint', 20, 0, 'true', '', 5, '', now());
