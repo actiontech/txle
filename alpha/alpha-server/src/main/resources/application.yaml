@@ -1,7 +1,20 @@
 #
-# Copyright (c) 2018-2019 ActionTech.
-# based on code by ServiceComb Pack CopyrightHolder Copyright (C) 2018,
-# License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#
+#  Copyright (c) 2018-2019 ActionTech.
+#  License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
 #
 
 server:
@@ -46,7 +59,7 @@ spring:
   datasource:
     username: root
     password: 123456
-    url: jdbc:mysql://127.0.0.1:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
+    url: jdbc:mysql://10.186.62.75:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
     platform: mysql
     continue-on-error: true
     separator: $$
@@ -60,12 +73,12 @@ spring:
       enabled: false
 
   zipkin:
-    base-url: http://127.0.0.1:9411/api/v2/spans
+    base-url: http://10.186.62.75:9411/api/v2/spans
 
   cloud:
     consul:
       enabled: true # Consul must be enabled in a production environment.
-      host: 127.0.0.1
+      host: 10.186.62.75
       port: 8500
       discovery:
         enabled: true
@@ -84,7 +97,7 @@ txle:
   accident:
     platform:
       address:
-        api: http://127.0.0.1:8000/receiveFailedGlobalTxInfo
+        api: http://10.186.62.75:8000/receiveFailedGlobalTxInfo
       retry:
         retries: 3
         interval: 1

@@ -8,7 +8,7 @@ spring:
     platform: mysql
     schema: classpath:schema-mysql.sql
     data: classpath:data-mysql.sql
-    url: jdbc:mysql://localhost:3308/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
+    url: jdbc:mysql://10.186.62.75:3308/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
     username: root
     password: 123456
     driver-class-name: org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.Driver

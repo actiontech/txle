@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Copyright (c) 2018-2019 ActionTech.
-  ~ based on code by ServiceComb Pack CopyrightHolder Copyright (C) 2018,
   ~ License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
   -->
 
@@ -42,73 +41,6 @@
 		</file>
 		<file>
 			<source>README.md</source>
-		</file>
-		<!-- omega基础jar包 -->
-		<file>
-			<source>omega/omega-spring-starter/target/txle-client-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-spring-tx/target/txle-spring-tx-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-transaction/target/txle-transaction-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-connector/omega-connector-grpc/target/txle-connector-grpc-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-context/target/txle-context-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-format/target/txle-format-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-
-		<!-- omega common和grpc jar包 -->
-		<file>
-			<source>pack-common/target/txle-common-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>pack-contracts/pack-contract-grpc/target/txle-contract-grpc-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>saga-persistence/saga-persistence-jpa/target/txle-persistence-jpa-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-
-		<!-- omega 自动补偿、sql拦截、对外api jar包 -->
-		<file>
-			<source>omega/omega-autocompensation/target/txle-autocompensation-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-p6spy/target/txle-p6spy-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-
-		<!-- omega 四种通信 jar包 -->
-		<file>
-			<source>omega/omega-transport/omega-transport-dubbo/target/txle-transport-dubbo-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-transport/omega-transport-feign/target/txle-transport-feign-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-transport/omega-transport-resttemplate/target/txle-transport-resttemplate-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
-		</file>
-		<file>
-			<source>omega/omega-transport/omega-transport-servicecomb/target/txle-transport-servicecomb-${version}.jar</source>
-			<outputDirectory>/client</outputDirectory>
 		</file>
 	</files>
 </assembly>

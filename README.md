@@ -17,7 +17,7 @@ txle is a distributed transaction solution and can guarantee the final consisten
 
 ## Quick Start
 Follow instructions in [QuickStart.md](./docs/QUICKSTART.md).  
-Please refer to the Chinese [documentation](https://actiontech.github.io/txle-docs-cn/1.QuickStart/1.0_deployment.html) for more details.
+Please refer to the Chinese [documentation](https://actiontech.github.io/txle-docs-cn/1.QuickStart/1.1_deployment.html) for more details.
 
 ## History
 txle is based on [ServiceComb Pack](https://github.com/apache/servicecomb-pack). First of all, thanks to the contributors from ServiceComb Pack.
