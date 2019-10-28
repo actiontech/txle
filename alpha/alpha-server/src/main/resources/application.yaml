@@ -59,7 +59,7 @@ spring:
   datasource:
     username: root
     password: 123456
-    url: jdbc:mysql://10.186.62.75:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
+    url: jdbc:mysql://127.0.0.1:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
     platform: mysql
     continue-on-error: true
     separator: $$
@@ -73,12 +73,12 @@ spring:
       enabled: false
 
   zipkin:
-    base-url: http://10.186.62.75:9411/api/v2/spans
+    base-url: http://127.0.0.1:9411/api/v2/spans
 
   cloud:
     consul:
       enabled: true # Consul must be enabled in a production environment.
-      host: 10.186.62.75
+      host: 127.0.0.1
       port: 8500
       discovery:
         enabled: true
@@ -97,7 +97,7 @@ txle:
   accident:
     platform:
       address:
-        api: http://10.186.62.75:8000/receiveFailedGlobalTxInfo
+        api: http://127.0.0.1:8000/receiveFailedGlobalTxInfo
       retry:
         retries: 3
         interval: 1
