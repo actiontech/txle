@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS Message (
   status int(1) NOT NULL DEFAULT 0 COMMENT '0-init, 1-sending, 2-success, 3-fail',
   version int(2) NOT NULL DEFAULT 1,
   dbdrivername varchar(100),
-  dburl varchar(100),
+  dburl varchar(150),
   dbusername varchar(20),
   tablename varchar(255),
   operation varchar(20) DEFAULT 'update',
