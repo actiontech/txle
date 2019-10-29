@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2018-2019 ActionTech.
- * based on code by ServiceComb Pack CopyrightHolder Copyright (C) 2018,
  * License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
  */
 
@@ -9,6 +8,7 @@ package org.apache.servicecomb.saga.alpha.server.cache;
 import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.Service;
+import com.ecwid.consul.v1.session.model.Session;
 import org.apache.servicecomb.saga.alpha.core.cache.CacheEntity;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.common.TxleConstants;
@@ -25,6 +25,9 @@ import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.*;
+
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY;
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
 
 /**
  * @author Gannalyo
@@ -232,7 +235,8 @@ public class TxleCache implements ITxleCache {
 
     private void removeExpiredCache(ConcurrentSkipListSet<CacheEntity> cache) {
         Iterator<CacheEntity> iterator = cache.iterator();
-        List<CacheEntity> removeKeys = new ArrayList<>();
+        // Use LinkedList due to remove frequently later.
+        List<CacheEntity> removeKeys = new LinkedList<>();
         while (iterator.hasNext()) {
             CacheEntity cacheEntity = iterator.next();
             if (cacheEntity.expired()) {
@@ -289,5 +293,28 @@ public class TxleCache implements ITxleCache {
 
     @Override
     public void synchronizeCacheFromLeader(String consulSessionId) {
+        Response<List<Session>> sessionList = consulClient.getSessionList(null);
+        if (sessionList != null) {
+            List<Session> sessions = sessionList.getValue();
+            if (sessions != null && sessions.size() > 1) {
+                sessions.forEach(session -> {
+                    Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
+                    if (agentServices != null) {
+                        Map<String, Service> serviceMap = agentServices.getValue();
+                        if (serviceMap != null && !serviceMap.isEmpty()) {
+                            serviceMap.keySet().forEach(key -> {
+                                Service service = serviceMap.get(key);
+                                String ipPort = service.getAddress() + ":" + service.getPort();
+                            });
+                        }
+                    }
+                    if (!consulSessionId.equals(session.getId()) && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
+                        // the leader node
+//                        session.get
+//                        restTemplate.getForObject("http://" + ipPort + "/refreshServiceListCache", Boolean.TYPE);
+                    }
+                });
+            }
+        }
     }
 }

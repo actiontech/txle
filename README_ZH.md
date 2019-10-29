@@ -18,7 +18,7 @@ txle是一款能够保证业务数据最终一致性的分布式事务框架。
 
 ## 快速启动
 参考快速启动文件[QuickStart.md](./docs/QUICKSTART.md)。  
-更多信息请查阅[中文文档](https://actiontech.github.io/txle-docs-cn/1.QuickStart/1.0_deployment.html)。
+更多信息请查阅[中文文档](https://actiontech.github.io/txle-docs-cn/1.QuickStart/1.1_deployment.html)。
 
 ## 历史
 txle是基于[ServiceComb Pack](https://github.com/apache/servicecomb-pack)进行研发的。首先，我们要感谢ServiceComb Pack项目的所有贡献者。

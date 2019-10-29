@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2018-2019 ActionTech.
+ * License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
+ */
+
 package com.actionsky.txle.service;
 
 import com.actionsky.txle.entity.MerchantEntity;

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS Message (
   status int(1) NOT NULL DEFAULT 0 COMMENT '0-init, 1-sending, 2-success, 3-fail',
   version int(2) NOT NULL DEFAULT 1,
   dbdrivername varchar(100),
-  dburl varchar(100),
+  dburl varchar(150),
   dbusername varchar(20),
   tablename varchar(255),
   operation varchar(20) DEFAULT 'update',
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS DataDictionaryItem (
   PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4 $$
 
--- 创建函数，主要用于检索数据列表时兼容一些状态或类型值
+-- Function TXLE_DECODE is used for supporting some status-codes/type-codes when search rows data.
 DROP FUNCTION IF EXISTS TXLE_DECODE;$$
 CREATE FUNCTION TXLE_DECODE(P_KEY VARCHAR(50), P VARCHAR(10))
 RETURNS VARCHAR(50)

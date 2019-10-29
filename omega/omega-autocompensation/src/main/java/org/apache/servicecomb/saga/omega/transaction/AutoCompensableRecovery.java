@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2018-2019 ActionTech.
- * based on code by ServiceComb Pack CopyrightHolder Copyright (C) 2018,
  * License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
  */
 
@@ -104,6 +103,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 			Set<String> localTxIdSet = DataSourceMappingCache.getCacheLocalTxIdSet();
 			if (localTxIdSet != null && localTxIdSet.size() > 0) {
 				// Open a new thread for saving time of the main thread.
+				// TODO batch to clear
 				ExecutorService executorService = Executors.newSingleThreadExecutor();
 				executorService.execute(() -> DataSourceMappingCache.clear(interceptor.fetchLocalTxIdOfEndedGlobalTx(localTxIdSet)));
 				executorService.shutdown();

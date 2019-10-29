@@ -1,0 +1,38 @@
+server:
+  port: 8003
+
+spring:
+  application:
+    name: sample-txle-dubbo-provider-merchant
+  datasource:
+    platform: mysql
+    schema: classpath:schema-mysql.sql
+    data: classpath:data-mysql.sql
+    url: jdbc:mysql://10.186.62.75:3308/txle?useSSL=false
+    username: root
+    password: 123456
+    driver-class-name: org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.Driver
+  zipkin:
+    base-url: http://10.186.62.75:9411/api/v2/spans
+
+alpha:
+  cluster:
+    address: 10.186.62.70:8080
+    httpaddress: 10.186.62.70:8090
+txle:
+  prometheus:
+    metrics:
+      port: 9003
+
+dubbo:
+  application:
+    name: dubbo-provider-merchant
+  protocol:
+    name: dubbo
+    port: 20883
+  registry:
+    address: zookeeper://10.186.62.75:2181
+  provider:
+    timeout: 10000
+  consumer:
+    timeout: 10000

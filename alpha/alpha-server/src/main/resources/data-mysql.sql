@@ -1,8 +1,14 @@
--- *** 所有英文数据值无特殊说明均小写，便于调用处操作 ***
--- 初始化部分配置
-INSERT INTO Config VALUES (1, null, null, null, 12, 0,	1, '1',	'历史表间隔规则。值：0-日，1-月，2-季，3-年。注：不转储10天内的数据。', now());
+/**
+ * Copyright (c) 2018-2019 ActionTech.
+ * License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
+ */
 
--- TxEvent数据表字段配置信息
+-- *** All words should be lower case. ***
+-- Initialize configurations
+INSERT INTO Config VALUES (1, null, null, null, 12, 0,	1, '1',	'历史表间隔规则。值：0-日，1-月，2-季，3-年。注：不转储10天内的数据。', now());
+INSERT INTO Config VALUES (2, null, null, null, 4, 0,	1, 'disabled',	'默认关闭，避免因为未及时配置Kafka服务地址，导致每次请求时需花费60秒尝试发送Kafka消息。', now());
+
+-- TxEvent - Table Fields Detail
 INSERT INTO TableField VALUES (5, 'txevent', 'surrogateid', '主键', 'bigint', 20, 0, 'true', '', 5, '', now());
 INSERT INTO TableField VALUES (10, 'txevent', 'globaltxid', '全局事务标识', 'varchar', 36, 0, 'true', 'true', 10, '', now());
 INSERT INTO TableField VALUES (15, 'txevent', 'localtxid', '子事务标识', 'varchar', 36, 0, 'true', '', 15, '', now());
@@ -20,7 +26,7 @@ INSERT INTO TableField VALUES (65, 'txevent', 'payloads', '参数', 'blob', 0, 0
 INSERT INTO TableField VALUES (70, 'txevent', 'creationtime', '开始时间', 'datetime', 0, 0, 'true', 'true', 70, '', now());
 INSERT INTO TableField VALUES (75, 'txevent', 'endtime', '结束时间', 'datetime', 0, 0, 'true', 'true', 75, '', now());
 
--- Config数据表字段配置信息
+-- Config - Table Fields Detail
 INSERT INTO TableField VALUES (80, 'config', 'id', '主键', 'bigint', 20, 0, 'true', '', 5, '', now());
 INSERT INTO TableField VALUES (85, 'config', 'servicename', '服务名称', 'varchar', 100, 0, '', 'true', 10, '', now());
 INSERT INTO TableField VALUES (90, 'config', 'instanceid', '服务代号', 'varchar', 100, 0, '', 'true', 15, '', now());
@@ -32,7 +38,7 @@ INSERT INTO TableField VALUES (115, 'config', 'value', '值', 'varchar', 100, 0,
 INSERT INTO TableField VALUES (120, 'config', 'remark', '备注', 'varchar', 500, 0, '', 'true', 145, '', now());
 INSERT INTO TableField VALUES (125, 'config', 'updatetime', '更新时间', 'datetime', 0, 0, 'true', 'true', 50, '', now());
 
--- Accident数据表字段配置信息
+-- Accident - Table Fields Detail
 INSERT INTO TableField VALUES (130, 'accident', 'id', '主键', 'bigint', 20, 0, 'true', '', 5, '', now());
 INSERT INTO TableField VALUES (135, 'accident', 'globaltxid', '全局事务标识', 'varchar', 36, 0, 'true', 'true', 10, '', now());
 INSERT INTO TableField VALUES (140, 'accident', 'localtxid', '子事务标识', 'varchar', 36, 0, 'true', 'true', 15, '', now());
@@ -46,7 +52,7 @@ INSERT INTO TableField VALUES (175, 'accident', 'remark', '备注', 'varchar', 5
 INSERT INTO TableField VALUES (180, 'accident', 'createtime', '上报时间', 'datetime', 0, 0, 'true', 'true', 55, '', now());
 INSERT INTO TableField VALUES (185, 'accident', 'completetime', '完成时间', 'datetime', 0, 0, 'true', 'true', 60, '', now());
 
--- DataDictionary数据表内容初始化信息
+-- DataDictionary - Initialize Configurations
 INSERT INTO DataDictionary VALUES (1, '全局事务状态', 'global-tx-status', '', now());
 INSERT INTO DataDictionary VALUES (2, '配置中心类型', 'config-center-type', '', now());
 INSERT INTO DataDictionary VALUES (3, '配置中心状态', 'config-center-status', '', now());
@@ -56,7 +62,7 @@ INSERT INTO DataDictionary VALUES (6, '差错处理类型', 'accident-handle-typ
 INSERT INTO DataDictionary VALUES (7, '差错处理状态', 'accident-handle-status', '', now());
 INSERT INTO DataDictionary VALUES (8, '全局事务服务信息', 'global-tx-server-info', '', now());
 
--- DataDictionaryItem数据表内容初始化信息
+-- DataDictionaryItem - Initialize Configurations
 INSERT INTO DataDictionaryItem VALUES (10, 'global-tx-status', '运行中', 'gts-running', '0', 5, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (20, 'global-tx-status', '运行异常', 'gts-aborted', '1', 10, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (30, 'global-tx-status', '暂停', 'gts-suspended', '2', 15, 1, '', now());
@@ -88,8 +94,8 @@ INSERT INTO DataDictionaryItem VALUES (230, 'config-center-ability', '无', 'cca
 INSERT INTO DataDictionaryItem VALUES (240, 'config-center-value', '启用', 'ccv-enabled', 'enabled', 5, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (250, 'config-center-value', '禁用', 'ccv-disabled', 'disabled', 10, 1, '', now());
 
-INSERT INTO DataDictionaryItem VALUES (260, 'accident-handle-type', '回滚失败', 'aht-rollback-error', '1', 5, 1, '', now());
-INSERT INTO DataDictionaryItem VALUES (270, 'accident-handle-type', '上报信息至Kafka失败', 'aht-send-message-error', '2', 10, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (260, 'accident-handle-type', 'ROLLBACK_ERROR', 'aht-rollback-error', '1', 5, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (270, 'accident-handle-type', 'SEND_MESSAGE_ERROR', 'aht-send-message-error', '2', 10, 1, '', now());
 
 INSERT INTO DataDictionaryItem VALUES (280, 'accident-handle-status', '发送中', 'ahs-sending', '0', 5, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (290, 'accident-handle-status', '发送成功', 'ahs-sending', '1', 10, 1, '', now());
