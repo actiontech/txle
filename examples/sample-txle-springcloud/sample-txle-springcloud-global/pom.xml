@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2018-2019 ActionTech.
+  ~ License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.actionsky</groupId>
+	<artifactId>sample-txle-springcloud-global</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+    <!-- 版本控制 -->
+	<parent>
+		<groupId>com.actionsky</groupId>
+		<artifactId>sample-txle-springcloud</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.actionsky</groupId>
+			<artifactId>sample-txle-springcloud-api</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+			<scope>compile</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- 使用SpringBoot自带插件打可运行jar包 -->
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<mainClass>com.actionsky.txle.SpringCloudGlobalApplication</mainClass>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2018-2019 ActionTech.
+  ~ License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.actionsky</groupId>
+	<artifactId>sample-txle-springcloud</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.5.15.RELEASE</version>
+	</parent>
+
+	<modules>
+		<module>sample-txle-springcloud-api</module>
+		<module>sample-txle-springcloud-eureka</module>
+		<module>sample-txle-springcloud-eureka2</module>
+		<module>sample-txle-springcloud-global</module>
+		<module>sample-txle-springcloud-transfer</module>
+		<module>sample-txle-springcloud-user</module>
+		<module>sample-txle-springcloud-merchant</module>
+	</modules>
+
+	<properties>
+		<txle.version>2.19.10.0</txle.version>
+	</properties>
+
+	<dependencies>
+		<!-- spring boot starter -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<!-- spring cloud -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka</artifactId>
+		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>org.springframework.cloud</groupId>-->
+			<!--<artifactId>spring-cloud-starter-ribbon</artifactId>-->
+		<!--</dependency>-->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-feign</artifactId>
+		</dependency>
+
+		<!-- database: jpa, mysql -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+
+		<!-- txle -->
+		<dependency>
+			<groupId>com.actionsky</groupId>
+			<artifactId>txle-client</artifactId>
+			<version>${txle.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.zipkin.zipkin2</groupId>
+			<artifactId>zipkin</artifactId>
+			<version>2.12.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>20.0</version>
+		</dependency>
+	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Edgware.SR6</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
