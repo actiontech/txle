@@ -7,6 +7,7 @@ package org.apache.servicecomb.saga.alpha.core.accidenthandling;
 
 /**
  * An enum for the status of accident handling.
+ * 发送中、发送成功、发送失败、处理成功、处理失败
  *
  * @author Gannalyo
  * @since 2019/06/14
@@ -15,6 +16,7 @@ public enum AccidentHandleStatus {
     SENDING,
     SEND_OK,
     SEND_FAIL,
+    //    PROCESSING,
     HANDLE_OK,
     HANDLE_FAIL;
 
@@ -32,6 +34,23 @@ public enum AccidentHandleStatus {
                 return 4;
             default:
                 return 0;
+        }
+    }
+
+    public String toDescription() {
+        switch (this) {
+            case SENDING:
+                return "发送中";
+            case SEND_OK:
+                return "发送成功";
+            case SEND_FAIL:
+                return "发送失败";
+            case HANDLE_OK:
+                return "处理成功";
+            case HANDLE_FAIL:
+                return "处理失败";
+            default:
+                return "发送中";
         }
     }
 

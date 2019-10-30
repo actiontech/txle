@@ -108,6 +108,7 @@ class SpringTxEventRepository implements TxEventRepository {
 
   @Override
   public List<Map<String, Object>> findTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
+    // 确定本次分页查询的全局事务
     List<TxEvent> txStartedEventList = this.searchTxList(pageIndex, pageSize, orderName, direction, searchText);
     if (txStartedEventList != null && !txStartedEventList.isEmpty()) {
       List<Map<String, Object>> resultTxEventList = new LinkedList<>();
@@ -120,7 +121,7 @@ class SpringTxEventRepository implements TxEventRepository {
 
       List<TxEvent> txEventList = eventRepo.selectTxEventByGlobalTxIds(globalTxIdList);
       if (txEventList != null && !txEventList.isEmpty()) {
-        // Figure out the status of global transaction.
+        // 计算全局事务的状态
         computeGlobalTxStatus(txEventList, resultTxEventList);
       }
 
@@ -130,7 +131,8 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   private List<TxEvent> searchTxList(int pageIndex, int pageSize, String orderName, String direction, String searchText) {
-    // TODO Filter numeric fields if the variable 'searchText' has character value.
+    // TODO 检测是否有非数字，如果有非数字则过滤掉数字类型字段
+    // TODO 检测如果是字符“-”，则视为无searchText处理，因为每一行的日期都含有“-”，或者是当已完成的查询
     try {
       pageIndex = pageIndex < 1 ? 0 : pageIndex;
       pageSize = pageSize < 1 ? 100 : pageSize;
@@ -144,8 +146,7 @@ class SpringTxEventRepository implements TxEventRepository {
       }
 
       PageRequest pageRequest = new PageRequest(pageIndex, pageSize, sd, orderName);
-      // Search without 'searchText' when its value is only "-", due to every row data contains the character "-" in the "creationTime" field.
-      if (searchText == null || searchText.length() == 0 || "-".equals((searchText + "").trim())) {
+      if (searchText == null || searchText.length() == 0) {
         return eventRepo.findTxList(pageRequest);
       }
       return eventRepo.findTxList(pageRequest, searchText);
@@ -221,7 +222,7 @@ class SpringTxEventRepository implements TxEventRepository {
     return eventRepo.selectSubTxCount(globalTxId);
   }
 
-  // Figure out the global transaction status
+  // 计算全局事务的状态
   private void computeGlobalTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
     Map<String, String> statusValueName = new HashMap<>();
     List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("global-tx-status");
@@ -229,7 +230,7 @@ class SpringTxEventRepository implements TxEventRepository {
       dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));
     }
 
-    // 0-running，1-running with exception，2-paused，3-over，4-over with exception
+    // 0-运行中，1-运行异常，2-暂停，3-正常结束，4-异常结束
     resultTxEventList.forEach(txMap -> {
       txMap.put("status_db", 0);
       txMap.put("status", statusValueName.get("0"));
@@ -239,6 +240,7 @@ class SpringTxEventRepository implements TxEventRepository {
       if (TxAbortedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
+            // 异常状态
             txMap.put("status_db", 1);
             txMap.put("status", statusValueName.get("1"));
             break;
@@ -252,12 +254,14 @@ class SpringTxEventRepository implements TxEventRepository {
       if (SagaEndedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.globalTxId().equals(txMap.get("globalTxId").toString())) {
-            // **** Set ending time ****
+            // ****设置结束时间****
             txMap.put("endTime", sdf.format(event.creationTime()));
             if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
+              // 正常结束
               txMap.put("status_db", 3);
               txMap.put("status", statusValueName.get("3"));
             } else {
+              // 异常结束
               txMap.put("status_db", 4);
               txMap.put("status", statusValueName.get("4"));
             }
@@ -268,13 +272,15 @@ class SpringTxEventRepository implements TxEventRepository {
     });
 
     resultTxEventList.forEach(txMap -> {
-      // If status is normal, then check the paused status.
+      // 正常状态场景才去验证是否暂停
       if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
         txEventList.forEach(event -> {
           if (event.globalTxId().equals(txMap.get("globalTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
             List<TxEvent> pauseContinueEventList = eventRepo.selectPausedAndContinueEvent(event.globalTxId());
             if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
+              // 暂停状态
               if (pauseContinueEventList.size() % 2 == 1) {
+                // 暂停
                 txMap.put("status_db", 2);
                 txMap.put("status", statusValueName.get("2"));
               }
@@ -285,7 +291,7 @@ class SpringTxEventRepository implements TxEventRepository {
     });
   }
 
-  // Figure out the sub-transaction status
+  // 计算子事务的状态
   private void computeSubTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
     Map<String, String> statusValueName = new HashMap<>();
     List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("global-tx-status");
@@ -293,7 +299,7 @@ class SpringTxEventRepository implements TxEventRepository {
       dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));
     }
 
-    // 0-running，1-running with exception，2-paused，3-over，4-over with exception
+    // 0-运行中，1-运行异常，2-暂停，3-正常结束，4-异常结束
     resultTxEventList.forEach(txMap -> {
       txMap.put("status_db", 0);
       txMap.put("status", statusValueName.get("0"));
@@ -303,6 +309,7 @@ class SpringTxEventRepository implements TxEventRepository {
       if (TxAbortedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.localTxId().equals(txMap.get("localTxId").toString())) {
+            // 异常状态
             txMap.put("status_db", 1);
             txMap.put("status", statusValueName.get("1"));
             break;
@@ -316,11 +323,14 @@ class SpringTxEventRepository implements TxEventRepository {
       if (TxEndedEvent.name().equals(event.type())) {
         for (Map<String, Object> txMap : resultTxEventList) {
           if (event.localTxId().equals(txMap.get("localTxId").toString())) {
+            // ****设置结束时间****
             txMap.put("endTime", sdf.format(event.creationTime()));
             if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
+              // 正常结束
               txMap.put("status_db", 3);
               txMap.put("status", statusValueName.get("3"));
             } else {
+              // 异常结束
               txMap.put("status_db", 4);
               txMap.put("status", statusValueName.get("4"));
             }
@@ -331,12 +341,15 @@ class SpringTxEventRepository implements TxEventRepository {
     });
 
     resultTxEventList.forEach(txMap -> {
+      // 正常状态场景才去验证是否暂停
       if (Integer.parseInt(txMap.get("status_db").toString()) == 0) {
         txEventList.forEach(event -> {
           if (event.localTxId().equals(txMap.get("localTxId").toString()) && (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type()))) {
             List<TxEvent> pauseContinueEventList = eventRepo.selectPausedAndContinueEvent(event.globalTxId());
             if (pauseContinueEventList != null && !pauseContinueEventList.isEmpty()) {
+              // 暂停状态
               if (pauseContinueEventList.size() % 2 == 1) {
+                // 暂停
                 txMap.put("status_db", 2);
                 txMap.put("status", statusValueName.get("2"));
               }

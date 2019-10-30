@@ -21,6 +21,7 @@ import org.springframework.context.annotation.PropertySource;
  * @since 2018/12/3
  */
 @Configuration
+//@ConfigurationProperties(prefix="spring.kafka")
 @PropertySource({"classpath:kafka.properties"})
 public class KafkaProducerConfig {
 

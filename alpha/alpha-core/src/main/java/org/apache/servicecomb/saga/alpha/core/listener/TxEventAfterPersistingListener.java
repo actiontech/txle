@@ -27,7 +27,7 @@ import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
 
 /**
  * @author Gannalyo
- * @since 2019-08-31
+ * @since 2019-08-30
  */
 public class TxEventAfterPersistingListener implements Observer {
     private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());

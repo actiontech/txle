@@ -62,6 +62,9 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
     platform: mysql
     continue-on-error: true
+#    自动执行schema和data可参考org.springframework.boot.autoconfigure.jdbc.DataSourceInitializer文件
+#    schema: classpath:schema-mysql.sql
+#    data: classpath:data-mysql.sql
     separator: $$
   jpa:
     properties:

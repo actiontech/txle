@@ -36,7 +36,7 @@ public class ConfigCenter {
     private String category;
     // 0-normal, 1-historical, 2-dumped
     private int status;
-    // 0-do not provide ability, 1-provide ability
+    // 0-do not provide ability, 1-provide ability  全局配置参数，非全局同步且只读：即全局配置是否提供当前配置对应功能，以“是否可手动补偿为例”，如果不提供则全局和非全局均不支持手动补偿功能，如果提供，则优先客户端再全局默认值
     private int ability;
     // 1-globaltx, 2-compensation, 3-autocompensation, 4-bizinfotokafka, 5-txmonitor, 6-alert, 7-schedule, 8-globaltxfaulttolerant, 9-compensationfaulttolerant, 10-autocompensationfaulttolerant, 11-pauseglobaltx,
     // 50-accidentreport, 51-sqlmonitor  if values are less than 50, then configs for server, otherwise configs for client.

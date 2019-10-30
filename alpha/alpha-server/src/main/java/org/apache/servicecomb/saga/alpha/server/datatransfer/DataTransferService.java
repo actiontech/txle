@@ -25,7 +25,6 @@ import java.util.List;
 
 /**
  * This tool class just likes a simple ETL. For transferring normal data to some history tables according to some rule.
- *
  * @author Gannalyo
  * @since 2019/7/23
  */
@@ -60,14 +59,13 @@ public class DataTransferService implements IDataTransferService {
     @Override
     public void dataTransfer(String srcTable) {
         /**
-         * logic for data transfer
-         * 0.support to configure the transfer rule, the value includes Day, Month, Season and Year, default Month.
-         * 1.find the minimum date.
-         * 2.read data refers SQL 【SELECT T.surrogateId FROM TxEvent T WHERE T.creationTime BETWEEN ?1 AND ?2 AND EXISTS (SELECT 1 FROM TxEvent T1
-         *      WHERE T1.type = 'SagaEndedEvent' AND FUNCTION('TO_DAYS', CURRENT_TIMESTAMP) - FUNCTION('TO_DAYS', T1.creationTime) > 10 AND T.globalTxId = T1.globalTxId)】.
-         * 3.create corresponding table if it is not exists.
-         * 4.copy data
-         * 5.delete data
+         * 数据转储逻辑
+         * 0.支持按日/月/季/年生成历史数据存储表的规则，默认按月
+         * 1.查询最小日期
+         * 2.依据配置规则从最小日期到当前日期，每次取10000条已完成的全局事务唯一标识，排除最近10天内的
+         * 3.创建(如果不存在)最小日期到当前日期间的历史数据表
+         * 4.拷贝指定日期内已完成的全局事务数据
+         * 5.删除指定日期内已完成的全局事务数据
          */
         int historyTableInternalRule = 1;
         List<ConfigCenter> dataTransferFrequencyList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.HistoryTableIntervalRule.toInteger());
@@ -105,7 +103,7 @@ public class DataTransferService implements IDataTransferService {
             int minYMD = Integer.parseInt(sdf.format(minDate));
             int curYMD = Integer.parseInt(sdf.format(new Date()));
             LOG.info("Transferring data, min date [{}], current date [{}].", minYMD, curYMD);
-            for (int i = minYMD; i <= curYMD; ) {
+            for (int i = minYMD; i <= curYMD;) {
                 try {
                     Date startTime = sdf.parse(i + "");
                     Date endTime = sdf.parse((i + 1) + "");
@@ -133,7 +131,7 @@ public class DataTransferService implements IDataTransferService {
         return date;
     }
 
-    // Season：1-3、4-6、7-9、10-12
+    // 季度：1-3、4-6、7-9、10-12
     private void transferDataBySeason(String srcTable) {
         Date minDate = txEventRepository.selectMinDateInTxEvent();
         if (minDate != null) {
@@ -196,9 +194,8 @@ public class DataTransferService implements IDataTransferService {
     private void moveDataToHistory(String srcTable, String suffix, Date startTime, Date endTime) {
         int pageIndex = 0, pageSize = 10000;
         while (true) {
-            // read 1000 rows data every time to avoid that too much data eat up memory.
-            // The data of following variable will be removed from database. So, the variable 'pageIndex' will be always 0, has no need increase.
-            List<Long> eventIdList = txEventRepository.selectEndedEventIdsWithinSomePeriod(pageIndex, pageSize, startTime, endTime);
+            // 每次最多取10000条id，以免数据过多对内存造成过多影响
+            List<Long> eventIdList = txEventRepository.selectEndedEventIdsWithinSomePeriod(pageIndex/*++ 不++是因为moveData时将上次查询出的清除了，所以再次查询还是从0起*/, pageSize, startTime, endTime);
             LOG.info("Transferring data, get data from method 'selectEndedEventIdsWithinSomePeriod', data size [{}].", eventIdList == null ? 0 : eventIdList.size());
             if (eventIdList == null || eventIdList.isEmpty()) {
                 break;

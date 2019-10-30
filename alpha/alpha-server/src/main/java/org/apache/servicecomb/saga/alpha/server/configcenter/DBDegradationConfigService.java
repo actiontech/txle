@@ -84,7 +84,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
              */
             String value = "";
             boolean isExistsConfigs = false;
-            // 1.Read a global value for current type
+            // 1.获取当前类型配置的全局值
             for (ConfigCenter config : configCenterList) {
                 if (config.getInstanceid() == null || config.getInstanceid().trim().length() == 0) {
                     if (config.getAbility() == TxleConstants.NO) {
@@ -95,10 +95,10 @@ public class DBDegradationConfigService implements IConfigCenterService {
                     break;
                 }
             }
-            // 2.The global config is necessary for all kinds of config.
+            // 强制每个配置必须有全局配置才生效
             if (isExistsConfigs) {
                 isExistsConfigs = false;
-                // 3.Read the config value
+                // 2.获取当前配置的具体值(instanceId和category都为有效值的情况)
                 for (ConfigCenter config : configCenterList) {
                     if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0 && config.getCategory() != null && config.getCategory().trim().length() > 0) {
                         isExistsConfigs = true;
@@ -111,7 +111,7 @@ public class DBDegradationConfigService implements IConfigCenterService {
                         break;
                     }
                 }
-                // 4.Read the default value(instanceId is not null & category is null)
+                // 3.如果未获取到当前配置的具体值，则获取当前配置的默认值(instanceId为有效值、category为无效值的情况)
                 if (!isExistsConfigs) {
                     for (ConfigCenter config : configCenterList) {
                         if (config.getInstanceid() != null && config.getInstanceid().trim().length() > 0 && (config.getCategory() == null || config.getCategory().trim().length() == 0)) {
