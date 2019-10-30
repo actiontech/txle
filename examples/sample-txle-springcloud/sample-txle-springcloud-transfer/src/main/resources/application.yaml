@@ -1,0 +1,47 @@
+server:
+  port: 8001
+#  context-path: /transfer
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/ #,http://localhost:8762/eureka/
+  instance:
+    prefer-ip-address: true
+  healthcheck:
+      enabled: true
+
+spring:
+  application:
+    name: sample-txle-springcloud-transfer
+  datasource:
+    platform: mysql
+    schema: classpath:schema-mysql.sql
+    data: classpath:data-mysql.sql
+    url: jdbc:mysql://10.186.62.75:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
+    username: root
+    password: 123456
+    driver-class-name: org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.Driver
+  jpa:
+    database: mysql
+    show-sql: true
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  zipkin:
+    base-url: http://10.186.62.75:9411/api/v2/spans
+
+alpha:
+  cluster:
+    address: localhost:8080
+    httpaddress: localhost:8091
+txle:
+  prometheus:
+    metrics:
+      port: 9001
+  accident:
+    platform:
+      address:
+        api: http://localhost:8000/receiveFailedGlobalTxInfo
+      retry:
+        retries: 3
+        interval: 1

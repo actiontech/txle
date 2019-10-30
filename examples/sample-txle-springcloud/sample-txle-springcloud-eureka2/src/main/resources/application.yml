@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: sample-txle-springcloud-eureka2
+
+server:
+  port: 8762
+
+eureka:
+  server:
+    enableSelfPreservation: false # 本地调试环境下关闭自我保护机制
+  instance:
+    hostname: localhost
+    #prefer-ip-address: true
+  client:
+    register-with-eureka: false
+    fetch-registry: false

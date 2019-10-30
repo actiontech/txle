@@ -1,0 +1,1 @@
+INSERT INTO `txle_sample_merchant` VALUES (1, 'FIFA', 0.00000, 1, now());
