@@ -1,0 +1,93 @@
+#
+# Copyright (c) 2018-2019 ActionTech.
+# based on code by ServiceComb Pack CopyrightHolder Copyright (C) 2018,
+# License: http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0 or higher.
+#
+
+server:
+  port: 8090
+
+alpha:
+  server:
+    host: 127.0.0.1
+    port: 8080
+
+spring:
+  profiles:
+    active: mysql
+  application:
+    name: txle
+
+---
+spring:
+  profiles: ssl
+alpha:
+  server:
+    ssl:
+      enable: true
+      cert: server.crt
+      key: server.pem
+      mutualAuth: true
+      clientCert: client.crt
+
+---
+spring:
+  profiles: postgresql
+  datasource:
+    username: postgres
+    password: 123456
+    url: jdbc:postgresql://localhost:5432/saga?useSSL=false
+    platform: postgresql
+#    continue-on-error: true
+
+---
+spring:
+  profiles: mysql
+  datasource:
+    username: root
+    password: 123456
+    url: jdbc:mysql://172.20.0.11:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
+    platform: mysql
+    continue-on-error: true
+#    自动执行schema和data可参考org.springframework.boot.autoconfigure.jdbc.DataSourceInitializer文件
+#    schema: classpath:schema-mysql.sql
+#    data: classpath:data-mysql.sql
+    separator: $$
+  jpa:
+    properties:
+      eclipselink:
+        ddl-generation: none
+    show-sql: false
+  metrics:
+    export:
+      enabled: false
+
+  zipkin:
+    base-url: http://172.20.0.53:9411/api/v2/spans
+
+  cloud:
+    consul:
+      enabled: true # Consul must be enabled in a production environment.
+      host: 172.20.0.1
+      port: 8500
+      discovery:
+        enabled: true
+        register: true
+        serviceName: {spring.application.name}
+        healthCheckPath: /health
+        healthCheckInterval: 10s
+        instanceId: ${spring.application.name}-${alpha.server.host}-${random.value}
+        tags: txle-server-host=${alpha.server.host},txle-server-port=${alpha.server.port}
+
+# configurations for txle server. By Gannalyo
+txle:
+  prometheus:
+    metrics:
+      port: 8099
+  accident:
+    platform:
+      address:
+        api: http://172.20.0.31:8000/receiveFailedGlobalTxInfo
+      retry:
+        retries: 3
+        interval: 1

@@ -1,0 +1,344 @@
+version: '2.1'
+networks:
+  txle_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.253
+
+volumes:
+  consul_data_1: {}
+#  consul_data_2: {}
+#  consul_data_3: {}
+  db_data: {}
+#  prometheus_data: {}
+
+services:
+  consul_1:
+    image: consul
+    container_name: consul_1
+    hostname: consul_1
+    ports:
+      - "8500:8500"
+    volumes:
+      - consul_data_1:/consul/data
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.1
+    restart: always
+    command: "agent -server -ui -node=1 -client=0.0.0.0 -bootstrap"
+
+#  consul_2:
+#    image: consul
+#    container_name: consul_2
+#    hostname: consul_2
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.2
+#    volumes:
+#      - consul_data_2:/consul/data
+#    depends_on:
+#      - consul_1
+#    restart: always
+#    command: "agent -server -node=2 -client=0.0.0.0 -join=172.20.0.1"
+#
+#  consul_3:
+#    image: consul
+#    container_name: consul_3
+#    hostname: consul_3
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.3
+#    volumes:
+#      - consul_data_3:/consul/data
+#    depends_on:
+#      - consul_1
+#    restart: always
+#    command: "agent -server -node=3 -client=0.0.0.0 -join=172.20.0.1"
+
+  backend-mysql:
+    image: mysql:5.7
+    container_name: backend-mysql
+    hostname: backend-mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.11
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: '123456'
+      MYSQL_DATABASE: txle
+    command: "--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci"
+
+  zookeeper_1:
+    image: zookeeper
+    container_name: zookeeper_1
+    hostname: zookeeper_1
+    ports:
+      - "2181:2181"
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.41
+    restart: always
+    environment:
+      ZK_MY_ID: 1
+      ZK_SERVERS: server.1=zookeeper_1:2888:3888 server.2=zookeeper_2:2888:3888 server.3=zookeeper_3:2888:3888
+
+#  zookeeper_2:
+#    image: zookeeper
+#    container_name: zookeeper_2
+#    hostname: zookeeper_2
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.42
+#    restart: always
+#    environment:
+#      ZK_MY_ID: 2
+#      ZK_SERVERS: server.1=zookeeper_1:2888:3888 server.2=zookeeper_2:2888:3888 server.3=zookeeper_3:2888:3888
+#
+#  zookeeper_3:
+#    image: zookeeper
+#    container_name: zookeeper_3
+#    hostname: zookeeper_3
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.43
+#    restart: always
+#    environment:
+#      ZK_MY_ID: 3
+#      ZK_SERVERS: server.1=zookeeper_1:2888:3888 server.2=zookeeper_2:2888:3888 server.3=zookeeper_3:2888:3888
+
+  kafka_1:
+    image: wurstmeister/kafka
+    container_name: kafka_1
+    hostname: kafka_1
+    ports:
+      - "9191:9092"
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.44
+    depends_on:
+      - zookeeper_1
+#      - zookeeper_2
+#      - zookeeper_3
+    restart: always
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: kafka_1
+      KAFKA_ADVERTISED_PORT: 9092
+      KAFKA_HOST_NAME: kafka_1
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper_1:2181
+      KAFKA_LISTENERS: PLAINTEXT://kafka_1:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST_IP:-127.0.0.1}:9191
+
+#  kafka_2:
+#    image: wurstmeister/kafka
+#    container_name: kafka_2
+#    hostname: kafka_2
+#    ports:
+#      - "9192:9092"
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.45
+#    depends_on:
+#      - zookeeper_1
+#      - zookeeper_2
+#      - zookeeper_3
+#    restart: always
+#    environment:
+#      KAFKA_BROKER_ID: 2
+#      KAFKA_ADVERTISED_HOST_NAME: kafka_2
+#      KAFKA_ADVERTISED_PORT: 9092
+#      KAFKA_HOST_NAME: kafka_2
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181
+#      KAFKA_LISTENERS: PLAINTEXT://kafka_2:9092
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST_IP:-127.0.0.1}:9192
+#
+#  kafka_3:
+#    image: wurstmeister/kafka
+#    container_name: kafka_3
+#    hostname: kafka_3
+#    ports:
+#      - "9193:9092"
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.46
+#    depends_on:
+#      - zookeeper_1
+#      - zookeeper_2
+#      - zookeeper_3
+#    restart: always
+#    environment:
+#      KAFKA_BROKER_ID: 3
+#      KAFKA_ADVERTISED_HOST_NAME: kafka_3
+#      KAFKA_ADVERTISED_PORT: 9092
+#      KAFKA_HOST_NAME: kafka_3
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper_1:2181,zookeeper_2:2181,zookeeper_3:2181
+#      KAFKA_LISTENERS: PLAINTEXT://kafka_3:9092
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST_IP:-127.0.0.1}:9193
+
+  txle-server-1:
+    image: actiontech/txle-server
+    container_name: txle-server-1
+    hostname: txle-server-1
+    privileged: true
+    stdin_open: true
+    tty: true
+    ports:
+      - "8090:8090"
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.21
+    depends_on:
+      - consul_1
+      - backend-mysql
+      - kafka_1
+    restart: always
+
+#  txle-server-2:
+#    image: actiontech/txle-server
+#    container_name: txle-server-2
+#    hostname: txle-server-2
+#    privileged: true
+#    stdin_open: true
+#    tty: true
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.22
+#    depends_on:
+#      - consul_1
+#      - backend-mysql
+#      - kafka_1
+#      - txle-server-1
+#    restart: always
+#
+#  txle-server-3:
+#    image: actiontech/txle-server
+#    container_name: txle-server-3
+#    hostname: txle-server-3
+#    privileged: true
+#    stdin_open: true
+#    tty: true
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.23
+#    depends_on:
+#      - consul_1
+#      - backend-mysql
+#      - kafka_1
+#      - txle-server-1
+#    restart: always
+
+  global:
+    image: actiontech/txle-global
+    container_name: global
+    hostname: global
+    privileged: true
+    stdin_open: true
+    tty: true
+    ports:
+      - 8000:8000
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.31
+    depends_on:
+      - txle-server-1
+#      - txle-server-2
+#      - txle-server-3
+
+  transfer:
+    image: actiontech/txle-transfer
+    container_name: transfer
+    hostname: transfer
+    privileged: true
+    stdin_open: true
+    tty: true
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.32
+    depends_on:
+      - txle-server-1
+#      - txle-server-2
+#      - txle-server-3
+
+  user:
+    image: actiontech/txle-user
+    container_name: user
+    hostname: user
+    privileged: true
+    stdin_open: true
+    tty: true
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.33
+    depends_on:
+      - txle-server-1
+#      - txle-server-2
+#      - txle-server-3
+
+  merchant:
+    image: actiontech/txle-merchant
+    container_name: merchant
+    hostname: merchant
+    privileged: true
+    stdin_open: true
+    tty: true
+    networks:
+      txle_net:
+        ipv4_address: 172.20.0.34
+    depends_on:
+      - txle-server-1
+#      - txle-server-2
+#      - txle-server-3
+
+#  prometheus_txle:
+#    image: prom/prometheus
+#    container_name: prometheus_txle
+#    hostname: prometheus_txle
+#    ports:
+#      - "9090:9090"
+#    volumes:
+#      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+#      - ./prometheus/alert.rules:/etc/prometheus/alert.rules
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.51
+#    restart: always
+#    depends_on:
+#      - txle-server-1
+#      - global
+#      - transfer
+#      - user
+#      - merchant
+#
+#  alertmanager_txle:
+#    image: prom/alertmanager
+#    container_name: alertmanager_txle
+#    hostname: alertmanager_txle
+#    ports:
+#      - "9093:9093"
+#    volumes:
+#      - ./alertmanager/config.yml:/etc/alertmanager/config.yml
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.52
+#    restart: always
+#    depends_on:
+#      - prometheus_txle
+#    command: "--config.file=/etc/alertmanager/config.yml"
+#
+#  zipkin:
+#    image: openzipkin/zipkin
+#    container_name: zipkin
+#    hostname: zipkin
+#    ports:
+#      - "9411:9411"
+#    networks:
+#      txle_net:
+#        ipv4_address: 172.20.0.53

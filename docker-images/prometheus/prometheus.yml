@@ -1,0 +1,71 @@
+# my global config
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+ 
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: ['172.20.0.52:9093']
+ 
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "alert.rules"
+ 
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+ 
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+ 
+    static_configs:
+    - targets: ['localhost:9090']
+
+# - job_name: 'node-exporter'
+#   scrape_interval: 15s
+#   static_configs:
+#     - targets: ['172.20.2.1:9101']
+#       labels:
+#         instance: node1
+#     - targets: ['172.20.2.2:9102']
+#       labels:
+#         instance: node2
+#     - targets: ['172.20.2.3:9103']
+#       labels:
+#         instance: node3
+
+  - job_name: 'txle'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['172.20.0.21:8099']
+        labels:
+          instance: ALPHA-SERVER-1
+#      - targets: ['172.20.0.22:8099']
+#        labels:
+#          instance: ALPHA-SERVER-2
+#      - targets: ['172.20.0.23:8099']
+#        labels:
+#          instance: ALPHA-SERVER-3
+
+  - job_name: 'business'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['172.20.0.31:9000']
+        labels:
+          instance: global
+      - targets: ['172.20.0.32:9001']
+        labels:
+          instance: transfer
+      - targets: ['172.20.0.33:9002']
+        labels:
+          instance: user
+      - targets: ['172.20.0.34:9003']
+        labels:
+          instance: merchant
