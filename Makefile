@@ -7,4 +7,4 @@ docker_mvn_txle:
 	$(DOCKER) run -v $(shell pwd)/:/opt/code --rm -w /opt/code $(DOCKER_IMAGE) /bin/bash -c "mvn clean package -DskipTests; mvn install -DskipTests -Pdev"
 
 upload_txle:
-	curl -T $(shell pwd)/target/txle_${PROJECT_VERSION}.tar.gz -u admin:ftpadmin ftp://release-ftpd/actiontech-${PROJECT_NAME}/qa/${PROJECT_VERSION}/txle_${PROJECT_VERSION}.tar.gz
+	curl -T $(shell pwd)/target/actiontech-txle-${PROJECT_VERSION}.tar.gz -u admin:ftpadmin ftp://release-ftpd/actiontech-${PROJECT_NAME}/qa/${PROJECT_VERSION}/actiontech-txle-${PROJECT_VERSION}.tar.gz
