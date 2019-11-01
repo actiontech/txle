@@ -22,7 +22,6 @@
 	<modules>
 		<module>sample-txle-springcloud-api</module>
 		<module>sample-txle-springcloud-eureka</module>
-		<module>sample-txle-springcloud-eureka2</module>
 		<module>sample-txle-springcloud-global</module>
 		<module>sample-txle-springcloud-transfer</module>
 		<module>sample-txle-springcloud-user</module>

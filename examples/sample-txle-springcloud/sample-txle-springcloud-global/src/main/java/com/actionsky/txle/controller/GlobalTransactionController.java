@@ -49,7 +49,7 @@ public class GlobalTransactionController {
             // 1.记录交易
             // 强制去除毫秒，因为mysql5.6版本后会针对毫秒数进行四舍五入，而java全舍，导致毫秒数大于500时的时间相差1秒
             SimpleDateFormat sdfWithoutSecond = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//            transferFeignClient.createTransfer(userId, merchantid, amount, 1);
+            transferFeignClient.createTransfer(userId, merchantid, amount, 1);
 
             // 2.扣款
             userFeignClient.deductMoneyFromUser(userId, amount);
@@ -75,7 +75,7 @@ public class GlobalTransactionController {
             // 1.记录交易
             // 强制去除毫秒，因为mysql5.6版本后会针对毫秒数进行四舍五入，而java全舍，导致毫秒数大于500时的时间相差1秒
             SimpleDateFormat sdfWithoutSecond = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//            transferFeignClient.createTransferAuto(userId, merchantid, amount, 1);
+            transferFeignClient.createTransferAuto(userId, merchantid, amount, 1);
 
             // 2.扣款
             userFeignClient.deductMoneyFromUserAuto(userId, amount);
