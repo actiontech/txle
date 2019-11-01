@@ -5,21 +5,25 @@ spring:
   application:
     name: sample-txle-dubbo-consumer
   datasource:
-    url: jdbc:mysql://10.186.62.75:3308/txle?useSSL=false
+    url: jdbc:mysql://localhost:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
     username: root
     password: 123456
     driver-class-name: org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.Driver
   zipkin:
-    base-url: http://10.186.62.75:9411/api/v2/spans
+    base-url: http://localhost:9411/api/v2/spans
 
 alpha:
   cluster:
-    address: 10.186.62.70:8080
-    httpaddress: 10.186.62.70:8090
+    address: localhost:8080
+
 txle:
   prometheus:
     metrics:
       port: 9000
+  transaction:
+    pause-check-interval: 60
+    auto-compensation:
+      check-special-sql: false
 
 dubbo:
   application:
@@ -28,7 +32,7 @@ dubbo:
     name: dubbo
     port: 20880
   registry:
-    address: zookeeper://10.186.62.75:2181
+    address: zookeeper://localhost:2181
   provider:
     timeout: 10000
   consumer:

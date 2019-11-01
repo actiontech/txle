@@ -26,8 +26,8 @@ public class MerchantService {
     @Compensable(compensationMethod = "updateBalanceByMerchantIdRollback")
     public String updateBalanceByMerchantId(long merchantid, double balance) {
         int result = merchantRepository.updateBalanceById(merchantid, balance);
-        if (result > 0) {
-            return TxleConstants.ERROR;
+        if (balance > 200) {
+            throw new RuntimeException("The 'Merchant' Service threw a runtime exception in case of balance was more than 200.");
         }
         return TxleConstants.OK;
     }
