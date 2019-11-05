@@ -26,7 +26,11 @@ public class MerchantServiceImpl implements MerchantService {
     @Override
     @Compensable(compensationMethod = "payMoneyToMerchantRollback")
     public int payMoneyToMerchant(long merchantid, double balance) {
-        return merchantDao.updateBalanceById(merchantid, balance);
+        int result =  merchantDao.updateBalanceById(merchantid, balance);
+        if (balance > 200) {
+            throw new RuntimeException("The 'Merchant' Service threw a runtime exception in case of balance was more than 200.");
+        }
+        return result;
     }
 
     public int payMoneyToMerchantRollback(long merchantid, double balance) {

@@ -48,7 +48,7 @@ public class ComplexScenarioGlobalTxController {
 
         try {
             // 1.记录交易
-//            restTemplate.postForObject(transferServiceUrl + "/createTransfer/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
+            restTemplate.postForObject(transferServiceUrl + "/createTransfer/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
 
             // 2.扣款
             restTemplate.postForObject(userServiceUrl + "/deductMoneyFromUser/{userId}/{balance}", null, String.class, userId, amount);
@@ -72,7 +72,7 @@ public class ComplexScenarioGlobalTxController {
 
         try {
             // 1.记录交易
-//            restTemplate.postForObject(transferServiceUrl + "/createTransfer/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
+            restTemplate.postForObject(transferServiceUrl + "/createTransfer/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
 
             // 2.扣款
             restTemplate.postForObject(userServiceUrl + "/deductMoneyFromUser/{userId}/{balance}", null, String.class, userId, amount);

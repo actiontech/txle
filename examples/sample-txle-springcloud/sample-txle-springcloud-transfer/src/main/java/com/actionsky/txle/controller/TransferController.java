@@ -27,16 +27,16 @@ public class TransferController {
     @Autowired
     private TransferService transferService;
 
-    @GetMapping("/createTransfer/{userId}/{merchantid}/{amount}/{payway}/{createtime}")
-    public String createTransfer(@PathVariable("userId") long userId, @PathVariable("merchantid") long merchantid, @PathVariable("amount") double amount, @PathVariable("payway") int payway, @PathVariable("createtime") Date createtime) {
+    @GetMapping("/createTransfer/{userId}/{merchantid}/{amount}/{payway}")
+    public String createTransfer(@PathVariable("userId") long userId, @PathVariable("merchantid") long merchantid, @PathVariable("amount") double amount, @PathVariable("payway") int payway) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
-            System.err.println("[" + sdf.format(new Date()) + "] Executing method '" + this.getClass() + ".createTransfer'. \t\tParameters[userId = " + userId + ", merchantid = " + merchantid + ", amount = " + amount + ", payway = " + payway + ", createtime = " + createtime + "]");
+            System.err.println("[" + sdf.format(new Date()) + "] Executing method '" + this.getClass() + ".createTransfer'. \t\tParameters[userId = " + userId + ", merchantid = " + merchantid + ", amount = " + amount + ", payway = " + payway + "]");
 
-            return transferService.createTransfer(new TransferEntity(userId, merchantid, amount, PayWayEnum.convertTypeFromValue(payway), TransferStatusEnum.Paid, createtime));
+            return transferService.createTransfer(new TransferEntity(userId, merchantid, amount, PayWayEnum.convertTypeFromValue(payway), TransferStatusEnum.Paid));
         } catch (Exception e) {
             e.printStackTrace();
-            return transferService.createTransfer(new TransferEntity(userId, merchantid, amount, PayWayEnum.convertTypeFromValue(payway), TransferStatusEnum.Failed, createtime));
+            return transferService.createTransfer(new TransferEntity(userId, merchantid, amount, PayWayEnum.convertTypeFromValue(payway), TransferStatusEnum.Failed));
         }
     }
 
