@@ -1,9 +1,12 @@
 server:
   port: 8002
+
 eureka:
   client:
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/ #,http://localhost:8762/eureka/
+      #http://localhost:8761/eureka/,http://localhost:8762/eureka/  逗号后不要有空格
+      defaultZone: http://localhost:8761/eureka/
+    fetchRegistry: true
   instance:
     prefer-ip-address: true
   healthcheck:
@@ -16,7 +19,7 @@ spring:
     platform: mysql
     schema: classpath:schema-mysql.sql
     data: classpath:data-mysql.sql
-    url: jdbc:mysql://10.186.62.75:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
+    url: jdbc:mysql://localhost:3306/db2?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
     username: root
     password: 123456
     driver-class-name: org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.Driver
@@ -27,20 +30,17 @@ spring:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
   zipkin:
-    base-url: http://10.186.62.75:9411/api/v2/spans
+    base-url: http://localhost:9411/api/v2/spans
 
 alpha:
   cluster:
     address: localhost:8080
-    httpaddress: localhost:8091
+
 txle:
   prometheus:
     metrics:
       port: 9002
-  accident:
-    platform:
-      address:
-        api: http://localhost:8000/receiveFailedGlobalTxInfo
-      retry:
-        retries: 3
-        interval: 1
+  transaction:
+    pause-check-interval: 60
+    auto-compensation:
+      check-special-sql: false

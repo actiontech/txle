@@ -5,7 +5,7 @@ spring:
   application:
     name: sample-txle-springboot-global
   datasource:
-    url: jdbc:mysql://10.186.62.75:3308/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
+    url: jdbc:mysql://localhost:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false
     username: root
     password: 123456
     driver-class-name: org.apache.servicecomb.saga.omega.jdbc.sqlinterceptor.wrapper.Driver
@@ -15,8 +15,6 @@ spring:
 alpha:
   cluster:
     address: localhost:8080
-    httpaddress: localhost:8090
-#    address: localhost:8080, localhost:8081
 
 txle:
   prometheus:
