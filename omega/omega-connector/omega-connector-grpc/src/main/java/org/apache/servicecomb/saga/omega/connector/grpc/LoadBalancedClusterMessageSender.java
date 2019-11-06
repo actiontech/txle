@@ -160,55 +160,64 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
 
   @Override
   public AlphaResponse send(TxEvent event) {
-    return send(event, new FastestSender());
+    return (AlphaResponse) send("sendEvent", event);
   }
 
   @Override
   public Set<String> send(Set<String> localTxIdSet) {
-    return senders.keySet().iterator().next().send(localTxIdSet);
+    return (Set<String>) send("sendLocalTxIdSet", localTxIdSet);
   }
 
   @Override
   public String reportMessageToServer(KafkaMessage message) {
-    return senders.keySet().iterator().next().reportMessageToServer(message);
+    return (String) send("reportMessageToServer", message);
   }
 
   @Override
   public String reportAccidentToServer(AccidentHandling accidentHandling) {
-    return senders.keySet().iterator().next().reportAccidentToServer(accidentHandling);
+    return (String) send("reportAccidentToServer", accidentHandling);
   }
 
   @Override
   public GrpcConfigAck readConfigFromServer(int type, String category) {
-    return senders.keySet().iterator().next().readConfigFromServer(type, category);
+    return (GrpcConfigAck) send("readConfigFromServer", type, category);
   }
 
-  AlphaResponse send(TxEvent event, MessageSenderPicker messageSenderPicker) {
+  private Object send(String method, Object... args) {
+    FastestSender messageSenderPicker = new FastestSender();
+    String errMsg = "send TxEvent" + args[0];
     do {
       MessageSender messageSender = messageSenderPicker.pick(senders, defaultMessageSender);
-
+      Object returnObject = null;
       try {
         long startTime = System.nanoTime();
-        AlphaResponse response = messageSender.send(event);
+        if ("sendEvent".equals(method)) {
+          returnObject = messageSender.send((TxEvent) args[0]);
+        } else if ("readConfigFromServer".equals(method)) {
+          errMsg = "read config, type = " + args[0] + ", category = " + args[1];
+          returnObject = messageSender.readConfigFromServer(Integer.parseInt(args[0].toString()), args[1].toString());
+        } else if ("sendLocalTxIdSet".equals(method)) {
+          errMsg = "send localTxIdSet " + args[0];
+          returnObject = messageSender.send((Set<String>) args[0]);
+        } else if ("reportMessageToServer".equals(method)) {
+          errMsg = "report message " + args[0];
+          returnObject = messageSender.reportMessageToServer((KafkaMessage) args[0]);
+        } else if ("reportAccidentToServer".equals(method)) {
+          errMsg = "report accident " + args[0];
+          returnObject = messageSender.reportAccidentToServer((AccidentHandling) args[0]);
+        }
         senders.put(messageSender, System.nanoTime() - startTime);
-
-        return response;
+        return returnObject;
       } catch (OmegaException e) {
+        LOG.error("Failed to " + errMsg + ", messageSender = " + messageSender, e);
         throw e;
       } catch (Exception e) {
-        LOG.error("Retry sending event {} due to failure, messageSender = {}", event, messageSender, e);
-
-        // TODO running persistently in case of exception
-        // very large latency on exception
+        LOG.error("Try to " + errMsg + " again due to failure", e);
         senders.put(messageSender, Long.MAX_VALUE);
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e1) {
-        }
       }
     } while (!Thread.currentThread().isInterrupted());
 
-    throw new OmegaException("Failed to send event " + event + " due to interruption.");
+    throw new OmegaException("Failed to " + errMsg + " due to interruption.");
   }
 
   private void scheduleReconnectTask(int reconnectDelay) {
@@ -224,6 +233,13 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
     }, 0, reconnectDelay, MILLISECONDS);
   }
 
+  /**
+   * 当发生网络异常时
+   * 1.尝试重连
+   * 2.添加尝试重连的任务到队列中
+   * 3.定时器定时检测是否重连成功，如果重连成功则添加至availableMessageSender中，可供后续send方法内再次使用
+   * 4.如果重连失败，则再添加回到任务队列中，后续继续尝试重连
+   */
   class ErrorHandlerFactory {
     Runnable getHandler(MessageSender messageSender) {
       final Runnable runnable = new PushBackReconnectRunnable(messageSender, senders, pendingTasks,
