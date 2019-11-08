@@ -1,5 +1,5 @@
 PROJECT_NAME  = txle
-PROJECT_VERSION=2.19.10.0
+PROJECT_VERSION=2.19.11.0
 DOCKER        := $(shell which docker)
 DOCKER_IMAGE  := docker-registry:5000/maven:3.6.0-jdk-8
 
