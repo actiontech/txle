@@ -10,7 +10,7 @@ upload_txle:
 	curl -T $(shell pwd)/target/actiontech-txle-${PROJECT_VERSION}.tar.gz -u admin:ftpadmin ftp://release-ftpd/actiontech-${PROJECT_NAME}/qa/${PROJECT_VERSION}/actiontech-txle-${PROJECT_VERSION}.tar.gz
 
 upload_jar_to_nexus:
-	$(DOCKER) run -v $(shell pwd)/settings.xml:/usr/share/maven/conf/settings.xml --rm $(DOCKER_IMAGE) /bin/bash -c "mvn deploy -DskipTests -Pdev"
+	$(DOCKER) run -v $(shell pwd)/:/opt/code --rm -w /opt/code $(DOCKER_IMAGE) /bin/bash -c "mv -f settings.xml /usr/share/maven/conf/; mvn clean package -DskipTests; mvn install -DskipTests -Pdev"
 
 upload_jar_to_internet:
-	$(DOCKER) run -v $(shell pwd)/settings-release.xml:/usr/share/maven/conf/settings.xml --rm $(DOCKER_IMAGE) /bin/bash -c "mvn deploy -DskipTests -Prelease"
+	$(DOCKER) run -v $(shell pwd)/:/opt/code --rm -w /opt/code $(DOCKER_IMAGE) /bin/bash -c "mv -f settings.xml /usr/share/maven/conf/; mvn clean package -DskipTests; mvn install -DskipTests -Prelease"
