@@ -271,7 +271,7 @@
           <replacements>
             <replacement>
               <token>PROJECT_VERSION=(.*)</token>
-              <value>PROJECT_VERSION=${version}</value>
+              <value>PROJECT_VERSION=${project.version}</value>
             </replacement>
           </replacements>
         </configuration>
@@ -280,7 +280,7 @@
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
-          <finalName>alpha-server-${version}</finalName>
+          <finalName>alpha-server-${project.version}</finalName>
           <!-- 不添加assembly的id到打包后的文件名称中 -->
           <appendAssemblyId>false</appendAssemblyId>
           <descriptors>
