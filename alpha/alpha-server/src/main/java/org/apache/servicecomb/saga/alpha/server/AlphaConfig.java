@@ -36,11 +36,14 @@ import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferReposit
 import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestTemplate;
 
@@ -74,6 +77,17 @@ class AlphaConfig {
 
   @Value("${alpha.event.pollingInterval:500}")
   private int eventPollingInterval;
+
+  @Bean
+  public RestTemplate restTemplate(@Qualifier("simpleClientHttpRequestFactory") ClientHttpRequestFactory clientHttpRequestFactory) {
+    return new RestTemplate(clientHttpRequestFactory);
+  }
+
+  @Bean
+  public ClientHttpRequestFactory simpleClientHttpRequestFactory() {
+    // setReadTimeout(5000); setConnectTimeout(15000);
+    return new SimpleClientHttpRequestFactory();
+  }
 
   @Bean
   Map<String, Map<String, OmegaCallback>> omegaCallbacks() {
