@@ -15,7 +15,6 @@
 
 package org.apache.servicecomb.saga.omega.spring;
 
-import org.apache.servicecomb.saga.common.CommonConfig;
 import org.apache.servicecomb.saga.omega.context.TracingConfiguration;
 import org.apache.servicecomb.saga.omega.transaction.AutoCompensableAspectConfig;
 import org.apache.servicecomb.saga.omega.transaction.spring.TransactionAspectConfig;
@@ -28,14 +27,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Import({OmegaSpringConfig.class, TransactionAspectConfig.class, AutoCompensableAspectConfig.class, CommonConfig.class, TracingConfiguration.class})
-
-//@EntityScan(basePackages = {"com.gannalyo.saga.user.entity"})
-//@EnableJpaRepositories(basePackages = {"com.gannalyo.saga.user.repository"})
-//@EntityScan(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository.entity"})
-//@EnableJpaRepositories(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository"})
-//@EntityScan(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository.entity", "com.gannalyo.saga.user.entity"})
-//@EnableJpaRepositories(basePackages = {"org.apache.servicecomb.saga.omega.transaction.repository", "com.gannalyo.saga.user.repository"})
+@Import({OmegaSpringConfig.class, TransactionAspectConfig.class, AutoCompensableAspectConfig.class, TracingConfiguration.class})
 /**
  * Indicates create the OmegaContext and inject it into the interceptors
  * to pass the transactions id across the application.
