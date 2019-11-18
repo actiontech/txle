@@ -36,6 +36,7 @@ import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferReposit
 import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
+import org.apache.servicecomb.saga.common.CommonConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -53,7 +54,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 @EntityScan(basePackages = "org.apache.servicecomb.saga.alpha")
-@Import({KafkaProducerConfig.class, TracingConfiguration.class})
+@Import({KafkaProducerConfig.class, TracingConfiguration.class, CommonConfig.class})
 @EnableScheduling
 @Configuration
 class AlphaConfig {

@@ -15,6 +15,7 @@
 
 package org.apache.servicecomb.saga.omega.spring;
 
+import org.apache.servicecomb.saga.common.CommonConfig;
 import org.apache.servicecomb.saga.omega.context.TracingConfiguration;
 import org.apache.servicecomb.saga.omega.transaction.AutoCompensableAspectConfig;
 import org.apache.servicecomb.saga.omega.transaction.spring.TransactionAspectConfig;
@@ -27,7 +28,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Import({OmegaSpringConfig.class, TransactionAspectConfig.class, AutoCompensableAspectConfig.class, TracingConfiguration.class})
+@Import({OmegaSpringConfig.class, TransactionAspectConfig.class, AutoCompensableAspectConfig.class, CommonConfig.class, TracingConfiguration.class})
 /**
  * Indicates create the OmegaContext and inject it into the interceptors
  * to pass the transactions id across the application.
