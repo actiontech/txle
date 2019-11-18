@@ -195,7 +195,7 @@ public class LoadBalancedClusterMessageSender implements MessageSender {
           returnObject = messageSender.send((TxEvent) args[0]);
         } else if ("readConfigFromServer".equals(method)) {
           errMsg = "read config, type = " + args[0] + ", category = " + args[1];
-          returnObject = messageSender.readConfigFromServer(Integer.parseInt(args[0].toString()), args[1].toString());
+          returnObject = messageSender.readConfigFromServer(Integer.parseInt(args[0].toString()), args[1] == null ? null : args[1].toString());
         } else if ("sendLocalTxIdSet".equals(method)) {
           errMsg = "send localTxIdSet " + args[0];
           returnObject = messageSender.send((Set<String>) args[0]);
