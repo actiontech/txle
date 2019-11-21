@@ -22,7 +22,7 @@
 			<excludes>
 				<exclude>/bin/txle</exclude>
 			</excludes>
-			<outputDirectory></outputDirectory>
+			<outputDirectory/>
 		</fileSet>
 		<fileSet>
 			<!-- alpha打包文件信息，为txle文件赋值可执行权限 -->
