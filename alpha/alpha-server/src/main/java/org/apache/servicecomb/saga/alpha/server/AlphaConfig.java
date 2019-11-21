@@ -151,11 +151,6 @@ class AlphaConfig {
   }
 
   @Bean
-  StartingTask startingTask() {
-    return new StartingTask();
-  }
-
-  @Bean
   IDataTransferService dataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
     return new DataTransferService(dataTransferRepository, txEventRepository);
   }
@@ -185,9 +180,9 @@ class AlphaConfig {
           Tracing tracing,
           IAccidentHandlingService accidentHandlingService,
           ITxleCache txleCache,
-          StartingTask startingTask) {
+          TxleConsulClient txleConsulClient) {
 
-    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, startingTask).run();
+    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, txleConsulClient).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
@@ -211,6 +206,11 @@ class AlphaConfig {
   @Bean
   public DegradationConfigAspect degradationConfigAspect() {
     return new DegradationConfigAspect();
+  }
+
+  @Bean
+  public TxleConsulClient txleConsulClient() {
+    return new TxleConsulClient();
   }
 
   @PostConstruct
