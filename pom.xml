@@ -913,6 +913,7 @@
 								<!-- assembly.xml主要包含内容：打包后的文件格式、都包含哪些文件、不同文件的目录(如bin、lib、conf、README.md)、权限等 -->
 								<descriptor>src/main/assembly/assembly.xml</descriptor>
 							</descriptors>
+							<attach>true</attach>
 						</configuration>
 						<executions>
 							<execution>
