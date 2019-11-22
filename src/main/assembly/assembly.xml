@@ -11,6 +11,7 @@
 	<id>package</id>
 	<formats>
 		<!--压缩文件类型：zip、tar、tar.gz/tgz、tar.bz2/tbz2、jar、dir、war -->
+		<format>dir</format>
 		<format>tar.gz</format>
 	</formats>
 	<includeBaseDirectory>true</includeBaseDirectory>
@@ -18,17 +19,19 @@
 		<!-- 需要包含的文件与输出的路径 -->
 		<fileSet>
 			<!-- alpha打包文件信息 -->
-			<directory>alpha/alpha-server/target/alpha-server-${version}/conf/**</directory>
-			<outputDirectory>/conf</outputDirectory>
-		</fileSet>
-		<fileSet>
-			<directory>alpha/alpha-server/target/alpha-server-${version}/lib/**</directory>
-			<outputDirectory>/lib</outputDirectory>
+			<directory>alpha/alpha-server/target/alpha-server-${version}</directory>
+			<excludes>
+				<exclude>/bin/txle</exclude>
+			</excludes>
+			<outputDirectory>/</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<!-- alpha打包文件信息，为txle文件赋值可执行权限 -->
-			<directory>alpha/alpha-server/target/alpha-server-${version}/bin/txle</directory>
+			<directory>alpha/alpha-server/target/alpha-server-${version}/bin</directory>
 			<outputDirectory>/bin</outputDirectory>
+			<includes>
+				<include>txle</include>
+			</includes>
 			<fileMode>0755</fileMode>
 		</fileSet>
 	</fileSets>
