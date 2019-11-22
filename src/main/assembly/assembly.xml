@@ -11,7 +11,6 @@
 	<id>package</id>
 	<formats>
 		<!--压缩文件类型：zip、tar、tar.gz/tgz、tar.bz2/tbz2、jar、dir、war -->
-		<format>dir</format>
 		<format>tar.gz</format>
 	</formats>
 	<includeBaseDirectory>true</includeBaseDirectory>
@@ -23,7 +22,7 @@
 			<excludes>
 				<exclude>/bin/txle</exclude>
 			</excludes>
-			<outputDirectory>/</outputDirectory>
+			<outputDirectory></outputDirectory>
 		</fileSet>
 		<fileSet>
 			<!-- alpha打包文件信息，为txle文件赋值可执行权限 -->
