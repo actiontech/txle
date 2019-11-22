@@ -18,14 +18,18 @@
 		<!-- 需要包含的文件与输出的路径 -->
 		<fileSet>
 			<!-- alpha打包文件信息 -->
-			<directory>alpha/alpha-server/target/alpha-server-${version}</directory>
+			<directory>alpha/alpha-server/target/alpha-server-${version}/conf</directory>
+			<outputDirectory>/conf</outputDirectory>
 			<includes>
 				<include>**</include>
 			</includes>
-			<excludes>
-				<exclude>/bin/txle</exclude>
-			</excludes>
-			<outputDirectory>/</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>alpha/alpha-server/target/alpha-server-${version}/lib</directory>
+			<outputDirectory>/lib</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
 		</fileSet>
 		<fileSet>
 			<!-- alpha打包文件信息，为txle文件赋值可执行权限 -->
