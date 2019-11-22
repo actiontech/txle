@@ -902,6 +902,31 @@
 			</distributionManagement>
 			<build>
 				<plugins>
+					<plugin>
+						<groupId>com.google.code.maven-replacer-plugin</groupId>
+						<artifactId>replacer</artifactId>
+						<version>1.5.3</version>
+						<executions>
+							<execution>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>replace</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<includes>
+								<include>${project.basedir}/Makefile</include>
+							</includes>
+							<replacements>
+								<replacement>
+									<token>PROJECT_VERSION=(.*)</token>
+									<value>PROJECT_VERSION=${project.version}</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</plugin>
+
 					<!-- 使用assembly插件打可运行jar和tar.gz包 -->
 					<plugin>
 						<artifactId>maven-assembly-plugin</artifactId>
