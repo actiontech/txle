@@ -22,7 +22,7 @@ Please refer to the Chinese [documentation](https://actiontech.github.io/txle-do
 ## History
 txle is based on [ServiceComb Pack](https://github.com/apache/servicecomb-pack). First of all, thanks to the contributors from ServiceComb Pack.
 
-For us, focusing on MySQL is a better choice. So we cancelled the support for other databases, deeply improved/optimized its behavior on compatibility, complex query and distributed transaction. And of course, fixed lots of bugs.
+For txle, more attention on financial field and it can work in a lot of complex business cases. Moreover, there were significant improvements on Stability and Performance, especially the QPS, it was increased for several times.
 
 ## Community
 * QQ group: 696990638
