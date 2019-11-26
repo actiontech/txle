@@ -83,7 +83,7 @@ spring:
       enabled: true # Consul must be enabled in a production environment.
 #      host: 127.0.0.1
 #      port: 8500
-      hostPortCluster: 10.186.62.75:8500,10.186.62.75:2500,10.186.62.75:3500
+      servers: 10.186.62.75:8500,10.186.62.75:2500,10.186.62.75:3500
       discovery:
         enabled: true
         register: true

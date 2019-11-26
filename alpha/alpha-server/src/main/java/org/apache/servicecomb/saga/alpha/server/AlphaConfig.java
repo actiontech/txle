@@ -79,9 +79,6 @@ class AlphaConfig {
   @Value("${alpha.event.pollingInterval:500}")
   private int eventPollingInterval;
 
-  @Value("${spring.cloud.consul.hostPortCluster:}")
-  private String hostPortCluster;
-
   @Bean
   public RestTemplate restTemplate(@Qualifier("simpleClientHttpRequestFactory") ClientHttpRequestFactory clientHttpRequestFactory) {
     return new RestTemplate(clientHttpRequestFactory);
@@ -154,11 +151,6 @@ class AlphaConfig {
   }
 
   @Bean
-  StartingTask startingTask() {
-    return new StartingTask();
-  }
-
-  @Bean
   IDataTransferService dataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
     return new DataTransferService(dataTransferRepository, txEventRepository);
   }
@@ -218,7 +210,7 @@ class AlphaConfig {
 
   @Bean
   public TxleConsulClient txleConsulClient() {
-    return new TxleConsulClient(hostPortCluster);
+    return new TxleConsulClient();
   }
 
   @PostConstruct

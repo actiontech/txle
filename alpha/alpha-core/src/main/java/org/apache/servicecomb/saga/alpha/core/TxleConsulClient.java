@@ -8,7 +8,6 @@ package org.apache.servicecomb.saga.alpha.core;
 import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.health.model.Check;
 import com.ecwid.consul.v1.session.model.NewSession;
-import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +16,8 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.cloud.consul.ConditionalOnConsulEnabled;
 import org.springframework.cloud.consul.ConsulProperties;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
@@ -41,14 +42,14 @@ public class TxleConsulClient {
     private ConsulProperties consulProperties;
     private ConsulClient consulClient;
 
-    @Autowired
-    private ITxleCache txleCache;
-
     @Value("${spring.application.name:\"\"}")
     private String serverName;
 
     @Value("${server.port:8090}")
     private int serverPort;
+
+    @Value("${spring.cloud.consul.servers:}")
+    private String consulServers;
 
     @Value("${spring.cloud.consul.discovery.instanceId:\"\"}")
     private String consulInstanceId;
@@ -62,18 +63,23 @@ public class TxleConsulClient {
         return consulClient;
     }
 
-    public TxleConsulClient(String hostPortCluster) {
+    @PostConstruct
+    private void init() {
+        this.initConsulCluster();
+        this.registerConsulSession();
+    }
+
+    private void initConsulCluster() {
         try {
-            if (hostPortCluster != null && hostPortCluster.length() > 0) {
-                for (String hostPorts : hostPortCluster.split(",")) {
+            if (consulServers != null && consulServers.length() > 0) {
+                for (String hostPorts : consulServers.split(",")) {
                     String[] hostPort = hostPorts.trim().split(":");
                     consulClientMap.put(hostPorts, new ConsulClient(hostPort[0], Integer.parseInt(hostPort[1])));
                 }
-                setAvailableConsulClient();
             }
         } catch (Exception e) {
             // It's not a strong dependency to Consul.
-            log.error("Could not connect to Consul, hostPortCluster = [{}].", hostPortCluster, e);
+            log.error("Could not connect to Consul, servers = [{}].", consulServers, e);
         }
     }
 
@@ -88,6 +94,7 @@ public class TxleConsulClient {
                     break;
                 }
             } catch (Exception e) {
+                log.error("Occur an error when executing method 'setAvailableConsulClient'.", e);
                 continue;
             }
         }
@@ -117,6 +124,7 @@ public class TxleConsulClient {
     public String registerConsulSession() {
         String serverHost = "127.0.0.1";
         try {
+            // Firstly, to set an available ConsulClient before registering session.
             this.setAvailableConsulClient();
             if (consulClient != null) {
                 destroyConsulCriticalServices();
@@ -162,19 +170,9 @@ public class TxleConsulClient {
         }
     }
 
-    public void synchronizeCacheFromLeader() {
-        // Notify all servers to do something, like reloading cache, updating service list and the like.
-        // Synchronize cache from the leader server.
-        txleCache.synchronizeCacheFromLeader(consulSessionId);
-    }
-
-    public void refreshServiceListCache() {
-        try {
-            // Notify all servers to reload the cache of service list from Consul.
-            txleCache.refreshServiceListCache(true);
-        } catch (Exception e) {
-            log.error("Failed to add ShutdownHook for destroying/deregistering Consul Session, Checks and Services, serverName [{}], serverPort [{}].", serverName, serverPort, e);
-        }
+    @PreDestroy
+    void shutdown() {
+        this.destroyConsulCriticalServices();
     }
 
 }

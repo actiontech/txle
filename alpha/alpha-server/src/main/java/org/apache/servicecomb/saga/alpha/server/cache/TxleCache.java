@@ -7,7 +7,6 @@ package org.apache.servicecomb.saga.alpha.server.cache;
 
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.Service;
-import com.ecwid.consul.v1.session.model.Session;
 import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.alpha.core.cache.CacheEntity;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
@@ -21,13 +20,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.*;
-
-import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY;
-import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
 
 /**
  * @author Gannalyo
@@ -227,10 +224,17 @@ public class TxleCache implements ITxleCache {
 
     @PostConstruct
     void init() {
+        this.refreshServiceListCache(true);
+//        this.synchronizeCacheFromLeader();
         scheduler.scheduleWithFixedDelay(() -> {
 //            removeExpiredCache(txSuspendStatusCache);
 //            removeExpiredCache(txAbortStatusCache);
         }, 1, 1, TimeUnit.MINUTES);
+    }
+
+    @PreDestroy
+    void shutdown() {
+        this.refreshServiceListCache(true);
     }
 
     private void removeExpiredCache(ConcurrentSkipListSet<CacheEntity> cache) {
@@ -253,8 +257,6 @@ public class TxleCache implements ITxleCache {
         }
     }
 
-    // todo ConsulServerList
-    // TODO New servers need synchronized cache from the leader server when they start.
     // Notify all servers to reload the cache of service list from Consul.
     @Override
     public void refreshServiceListCache(boolean refreshRemoteServiceList) {
@@ -293,28 +295,30 @@ public class TxleCache implements ITxleCache {
 
     @Override
     public void synchronizeCacheFromLeader(String consulSessionId) {
-        Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(null);
-        if (sessionList != null) {
-            List<Session> sessions = sessionList.getValue();
-            if (sessions != null && sessions.size() > 1) {
-                sessions.forEach(session -> {
-                    Response<Map<String, Service>> agentServices = txleConsulClient.getConsulClient().getAgentServices();
-                    if (agentServices != null) {
-                        Map<String, Service> serviceMap = agentServices.getValue();
-                        if (serviceMap != null && !serviceMap.isEmpty()) {
-                            serviceMap.keySet().forEach(key -> {
-                                Service service = serviceMap.get(key);
-                                String ipPort = service.getAddress() + ":" + service.getPort();
-                            });
-                        }
-                    }
-                    if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
-                        // the leader node
+        // TODO New servers need synchronized cache from the leader server when they start.
+//        Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(null);
+//        if (sessionList != null) {
+//            List<Session> sessions = sessionList.getValue();
+//            if (sessions != null && sessions.size() > 1) {
+//                sessions.forEach(session -> {
+//                    Response<Map<String, Service>> agentServices = txleConsulClient.getConsulClient().getAgentServices();
+//                    if (agentServices != null) {
+//                        Map<String, Service> serviceMap = agentServices.getValue();
+//                        if (serviceMap != null && !serviceMap.isEmpty()) {
+//                            serviceMap.keySet().forEach(key -> {
+//                                Service service = serviceMap.get(key);
+//                                String ipPort = service.getAddress() + ":" + service.getPort();
+//                            });
+//                        }
+//                    }
+//                    if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
+//                         the leader node
 //                        session.get
 //                        restTemplate.getForObject("http://" + ipPort + "/refreshServiceListCache", Boolean.TYPE);
-                    }
-                });
-            }
-        }
+//                    }
+//                });
+//            }
+//        }
     }
+
 }
