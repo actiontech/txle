@@ -5,10 +5,10 @@
 
 package org.apache.servicecomb.saga.alpha.server.cache;
 
-import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.Service;
 import com.ecwid.consul.v1.session.model.Session;
+import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.alpha.core.cache.CacheEntity;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.common.TxleConstants;
@@ -45,7 +45,7 @@ public class TxleCache implements ITxleCache {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Autowired
-    private ConsulClient consulClient;
+    private TxleConsulClient txleConsulClient;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -259,7 +259,7 @@ public class TxleCache implements ITxleCache {
     @Override
     public void refreshServiceListCache(boolean refreshRemoteServiceList) {
         try {
-            Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
+            Response<Map<String, Service>> agentServices = txleConsulClient.getConsulClient().getAgentServices();
             if (agentServices != null) {
                 Map<String, Service> serviceMap = agentServices.getValue();
                 if (serviceMap != null && !serviceMap.isEmpty()) {
@@ -293,12 +293,12 @@ public class TxleCache implements ITxleCache {
 
     @Override
     public void synchronizeCacheFromLeader(String consulSessionId) {
-        Response<List<Session>> sessionList = consulClient.getSessionList(null);
+        Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(null);
         if (sessionList != null) {
             List<Session> sessions = sessionList.getValue();
             if (sessions != null && sessions.size() > 1) {
                 sessions.forEach(session -> {
-                    Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
+                    Response<Map<String, Service>> agentServices = txleConsulClient.getConsulClient().getAgentServices();
                     if (agentServices != null) {
                         Map<String, Service> serviceMap = agentServices.getValue();
                         if (serviceMap != null && !serviceMap.isEmpty()) {
@@ -308,7 +308,7 @@ public class TxleCache implements ITxleCache {
                             });
                         }
                     }
-                    if (!consulSessionId.equals(session.getId()) && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
+                    if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
                         // the leader node
 //                        session.get
 //                        restTemplate.getForObject("http://" + ipPort + "/refreshServiceListCache", Boolean.TYPE);

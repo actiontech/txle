@@ -59,7 +59,7 @@ spring:
   datasource:
     username: root
     password: 123456
-    url: jdbc:mysql://127.0.0.1:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
+    url: jdbc:mysql://10.186.62.75:3306/txle?statementInterceptors=brave.mysql.TracingStatementInterceptor&useSSL=false&useUnicode=true&characterEncoding=utf-8
     platform: mysql
     continue-on-error: true
 #    自动执行schema和data可参考org.springframework.boot.autoconfigure.jdbc.DataSourceInitializer文件
@@ -81,8 +81,9 @@ spring:
   cloud:
     consul:
       enabled: true # Consul must be enabled in a production environment.
-      host: 127.0.0.1
-      port: 8500
+#      host: 127.0.0.1
+#      port: 8500
+      hostPortCluster: 10.186.62.75:8500,10.186.62.75:2500,10.186.62.75:3500
       discovery:
         enabled: true
         register: true

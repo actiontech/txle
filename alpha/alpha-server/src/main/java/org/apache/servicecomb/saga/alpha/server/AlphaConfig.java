@@ -79,6 +79,9 @@ class AlphaConfig {
   @Value("${alpha.event.pollingInterval:500}")
   private int eventPollingInterval;
 
+  @Value("${spring.cloud.consul.hostPortCluster:}")
+  private String hostPortCluster;
+
   @Bean
   public RestTemplate restTemplate(@Qualifier("simpleClientHttpRequestFactory") ClientHttpRequestFactory clientHttpRequestFactory) {
     return new RestTemplate(clientHttpRequestFactory);
@@ -185,9 +188,9 @@ class AlphaConfig {
           Tracing tracing,
           IAccidentHandlingService accidentHandlingService,
           ITxleCache txleCache,
-          StartingTask startingTask) {
+          TxleConsulClient txleConsulClient) {
 
-    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, startingTask).run();
+    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, txleConsulClient).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
@@ -211,6 +214,11 @@ class AlphaConfig {
   @Bean
   public DegradationConfigAspect degradationConfigAspect() {
     return new DegradationConfigAspect();
+  }
+
+  @Bean
+  public TxleConsulClient txleConsulClient() {
+    return new TxleConsulClient(hostPortCluster);
   }
 
   @PostConstruct
