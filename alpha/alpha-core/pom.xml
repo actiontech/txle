@@ -131,8 +131,7 @@
     <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-consul-core</artifactId>
-      <version>RELEASE</version>
-      <scope>compile</scope>
+      <version>2.1.4.RELEASE</version>
     </dependency>
   </dependencies>
 
