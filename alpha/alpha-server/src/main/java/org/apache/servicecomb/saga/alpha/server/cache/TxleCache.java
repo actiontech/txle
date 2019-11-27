@@ -5,6 +5,7 @@
 
 package org.apache.servicecomb.saga.alpha.server.cache;
 
+import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.Service;
 import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
@@ -261,7 +262,11 @@ public class TxleCache implements ITxleCache {
     @Override
     public void refreshServiceListCache(boolean refreshRemoteServiceList) {
         try {
-            Response<Map<String, Service>> agentServices = txleConsulClient.getConsulClient().getAgentServices();
+            ConsulClient consulClient = txleConsulClient.getConsulClient();
+            if (consulClient == null) {
+                return;
+            }
+            Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
             if (agentServices != null) {
                 Map<String, Service> serviceMap = agentServices.getValue();
                 if (serviceMap != null && !serviceMap.isEmpty()) {

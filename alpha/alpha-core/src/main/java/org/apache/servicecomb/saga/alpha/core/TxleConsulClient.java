@@ -38,7 +38,7 @@ import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY
 public class TxleConsulClient {
     private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-    @Autowired
+    @Autowired(required = false)
     private ConsulProperties consulProperties;
     private ConsulClient consulClient;
 
@@ -47,6 +47,9 @@ public class TxleConsulClient {
 
     @Value("${server.port:8090}")
     private int serverPort;
+
+    @Value("${spring.cloud.consul.enabled:false}")
+    private boolean enabled;
 
     @Value("${spring.cloud.consul.servers:}")
     private String consulServers;
@@ -65,6 +68,9 @@ public class TxleConsulClient {
 
     @PostConstruct
     private void init() {
+        if (!enabled) {
+            return;
+        }
         this.initConsulCluster();
         this.registerConsulSession();
     }
@@ -104,6 +110,7 @@ public class TxleConsulClient {
     public boolean isMaster() {
         if (!isMaster) {
             try {
+                // Default is not leader if Consul server is not enabled, because too many leaders in a cluster will affect data's accuracy.
                 isMaster = consulClient != null && consulClient.setKVValue(CONSUL_LEADER_KEY + "?acquire=" + consulSessionId, CONSUL_LEADER_KEY_VALUE).getValue();
                 if (isMaster) {
                     log.info("Server " + serverName + "-" + serverPort + " is leader.");
@@ -172,6 +179,9 @@ public class TxleConsulClient {
 
     @PreDestroy
     void shutdown() {
+        if (!enabled) {
+            return;
+        }
         this.destroyConsulCriticalServices();
     }
 
