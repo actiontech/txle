@@ -8,10 +8,13 @@ package org.apache.servicecomb.saga.alpha.core;
 import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.health.model.Check;
 import com.ecwid.consul.v1.session.model.NewSession;
+import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.cloud.consul.ConditionalOnConsulEnabled;
 import org.springframework.cloud.consul.ConsulProperties;
@@ -35,12 +38,15 @@ import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY
  */
 @ConditionalOnConsulEnabled
 @AutoConfigureAfter(ConsulProperties.class)
-public class TxleConsulClient {
+public class TxleConsulClient implements ApplicationRunner {
     private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     @Autowired(required = false)
     private ConsulProperties consulProperties;
     private ConsulClient consulClient;
+
+    @Autowired
+    private ITxleCache txleCache;
 
     @Value("${spring.application.name:\"\"}")
     private String serverName;
@@ -66,15 +72,6 @@ public class TxleConsulClient {
         return consulClient;
     }
 
-    @PostConstruct
-    private void init() {
-        if (!enabled) {
-            return;
-        }
-        this.initConsulCluster();
-        this.registerConsulSession();
-    }
-
     private void initConsulCluster() {
         try {
             if (consulServers != null && consulServers.length() > 0) {
@@ -90,6 +87,9 @@ public class TxleConsulClient {
     }
 
     public void setAvailableConsulClient() {
+        if (consulClient != null) {
+            return;
+        }
         for (Map.Entry<String, ConsulClient> entry : consulClientMap.entrySet()) {
             try {
                 if (entry.getValue().getStatusLeader().getValue() != null) {
@@ -177,12 +177,32 @@ public class TxleConsulClient {
         }
     }
 
+    @PostConstruct
+    void init() {
+        if (enabled) {
+            this.initConsulCluster();
+            this.registerConsulSession();
+        }
+    }
+
+    @Override
+    public void run(ApplicationArguments applicationArguments) throws Exception {
+        if (enabled) {
+            // To execute refresh method after starting server rather than after initializing.
+            txleCache.refreshServiceListCache(true);
+//        txleCache.synchronizeCacheFromLeader();
+//        scheduler.scheduleWithFixedDelay(() -> {
+//            removeExpiredCache(txSuspendStatusCache);
+//            removeExpiredCache(txAbortStatusCache);
+//        }, 1, 1, TimeUnit.MINUTES);
+        }
+    }
+
     @PreDestroy
     void shutdown() {
-        if (!enabled) {
-            return;
+        if (enabled) {
+            this.destroyConsulCriticalServices();
         }
-        this.destroyConsulCriticalServices();
     }
 
 }

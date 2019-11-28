@@ -20,12 +20,13 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestTemplate;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * @author Gannalyo
@@ -221,21 +222,6 @@ public class TxleCache implements ITxleCache {
             }
             keySet.clear();
         }
-    }
-
-    @PostConstruct
-    void init() {
-        this.refreshServiceListCache(true);
-//        this.synchronizeCacheFromLeader();
-        scheduler.scheduleWithFixedDelay(() -> {
-//            removeExpiredCache(txSuspendStatusCache);
-//            removeExpiredCache(txAbortStatusCache);
-        }, 1, 1, TimeUnit.MINUTES);
-    }
-
-    @PreDestroy
-    void shutdown() {
-        this.refreshServiceListCache(true);
     }
 
     private void removeExpiredCache(ConcurrentSkipListSet<CacheEntity> cache) {
