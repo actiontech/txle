@@ -52,7 +52,7 @@ public class AutoCompensateService implements IAutoCompensateService {
         }
         final List<Map<String, Object>> txleUndoLogList;
         try {
-            txleUndoLogList = autoCompensateDao.execute("SELECT * FROM txle_undo_log T WHERE T.globalTxId = ? AND T.localTxId = ?", globalTxId, localTxId);
+            txleUndoLogList = autoCompensateDao.execute("SELECT * FROM txle_undo_log T WHERE T.globalTxId = ? AND T.localTxId = ? ORDER BY T.lastModifyTime DESC, T.id DESC", globalTxId, localTxId);
         } catch (Exception e) {
             reportMsgToAccidentPlatform(globalTxId, localTxId, "", "Failed to select undo_log info, " + e.getMessage());
             return false;
