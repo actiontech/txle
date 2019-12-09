@@ -110,7 +110,7 @@ public class AlphaIntegrationTest {
   private TxConsistentService consistentService;
 
   @Autowired
-  private StartingTask startingTask;
+  private TxleConsulClient txleConsulClient;
 
   @Autowired
   private ITxleCache txleCache;
@@ -591,6 +591,6 @@ public class AlphaIntegrationTest {
         omegaCallback,
         1,
         txleCache,
-        startingTask).run();
+        txleConsulClient).run();
   }
 }

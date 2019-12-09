@@ -5,6 +5,7 @@
 
 package org.apache.servicecomb.saga.omega.transaction;
 
+import com.github.rholder.retry.Retryer;
 import com.google.gson.JsonObject;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandleType;
@@ -37,7 +38,7 @@ public class AutoCompensateService implements IAutoCompensateService {
     private ClientAccidentHandlingService clientAccidentHandlingService;
 
     @Autowired
-    private MessageSender sender;
+    private Retryer retryer;
 
     // @Transactional(propagation = Propagation.NOT_SUPPORTED) // Propagation.NOT_SUPPORTED/REQUIRED_NEW indeed is okay, if data are not same among transactions.
     @Override
@@ -72,12 +73,14 @@ public class AutoCompensateService implements IAutoCompensateService {
             for (String compensateSql : compensateSqlArr) {
                 // TODO compare old and new data after encoding by probuf, if equal, then execute compensation SQL, otherwise, report exception to the Accident Platform.
                 try {
-                    if (autoCompensateDao.executeAutoCompensateSql(compensateSql)) {
-                        result.incrementAndGet();
-                        LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Successfully to execute AutoCompensable SQL [[{}]]", compensateSql);
-                    } else {
-                        reportMsgToAccidentPlatform(globalTxId, localTxId, compensateSql, "Got false value after executing AutoCompensable SQL [" + compensateSql + "].");
-                    }
+                    retryer.call(() -> {
+                        if (autoCompensateDao.executeAutoCompensateSql(compensateSql)) {
+                            result.incrementAndGet();
+                            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Successfully to execute AutoCompensable SQL [[{}]]", compensateSql);
+                            return true;
+                        }
+                        return false;
+                    });
                 } catch (Exception e) {
                     reportMsgToAccidentPlatform(globalTxId, localTxId, compensateSql, "Failed to execute AutoCompensable SQL [" + compensateSql + "], " + e.getMessage());
                 }

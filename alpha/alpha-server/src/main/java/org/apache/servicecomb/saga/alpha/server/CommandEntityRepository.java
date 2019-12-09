@@ -76,7 +76,7 @@ public interface CommandEntityRepository extends CrudRepository<Command, Long> {
   // 查询某全局事务没有PENDING状态且为NEW状态的Command
   List<Command> findFirstGroupByGlobalTxIdWithoutPendingOrderByIdDesc();
 
-  @Query(value = "SELECT * FROM Command T WHERE T.status = ?1" + EventScanner.SCANNER_SQL, nativeQuery = true)
+  @Query(value = "SELECT * FROM Command T WHERE T.status = ?1 ORDER BY T.surrogateId DESC" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<Command> findCommandByStatus(String status);
 
   @Query(value = "SELECT T.eventId FROM Command T WHERE T.eventId IN ?1")

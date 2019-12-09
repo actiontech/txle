@@ -36,11 +36,15 @@ import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferReposit
 import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferService;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaProducerConfig;
 import org.apache.servicecomb.saga.alpha.server.tracing.TracingConfiguration;
+import org.apache.servicecomb.saga.common.CommonConfig;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestTemplate;
 
@@ -50,7 +54,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 @EntityScan(basePackages = "org.apache.servicecomb.saga.alpha")
-@Import({KafkaProducerConfig.class, TracingConfiguration.class})
+@Import({KafkaProducerConfig.class, TracingConfiguration.class, CommonConfig.class})
 @EnableScheduling
 @Configuration
 class AlphaConfig {
@@ -74,6 +78,17 @@ class AlphaConfig {
 
   @Value("${alpha.event.pollingInterval:500}")
   private int eventPollingInterval;
+
+  @Bean
+  public RestTemplate restTemplate(@Qualifier("simpleClientHttpRequestFactory") ClientHttpRequestFactory clientHttpRequestFactory) {
+    return new RestTemplate(clientHttpRequestFactory);
+  }
+
+  @Bean
+  public ClientHttpRequestFactory simpleClientHttpRequestFactory() {
+    // setReadTimeout(5000); setConnectTimeout(15000);
+    return new SimpleClientHttpRequestFactory();
+  }
 
   @Bean
   Map<String, Map<String, OmegaCallback>> omegaCallbacks() {
@@ -136,11 +151,6 @@ class AlphaConfig {
   }
 
   @Bean
-  StartingTask startingTask() {
-    return new StartingTask();
-  }
-
-  @Bean
   IDataTransferService dataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
     return new DataTransferService(dataTransferRepository, txEventRepository);
   }
@@ -170,9 +180,9 @@ class AlphaConfig {
           Tracing tracing,
           IAccidentHandlingService accidentHandlingService,
           ITxleCache txleCache,
-          StartingTask startingTask) {
+          TxleConsulClient txleConsulClient) {
 
-    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, startingTask).run();
+    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, txleConsulClient).run();
 
     TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
 
@@ -196,6 +206,11 @@ class AlphaConfig {
   @Bean
   public DegradationConfigAspect degradationConfigAspect() {
     return new DegradationConfigAspect();
+  }
+
+  @Bean
+  public TxleConsulClient txleConsulClient() {
+    return new TxleConsulClient();
   }
 
   @PostConstruct

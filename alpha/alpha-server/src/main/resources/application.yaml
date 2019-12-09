@@ -80,13 +80,14 @@ spring:
 
   cloud:
     consul:
-      enabled: true # Consul must be enabled in a production environment.
-      host: 127.0.0.1
-      port: 8500
+      enabled: true # That's not necessary to enable Consul, but we suggest to enable very strongly so that guarantee data's accuracy.
+#      host: 127.0.0.1
+#      port: 8500
+      servers: 127.0.0.1:8500,127.0.0.1:8501,127.0.0.1:8502
       discovery:
         enabled: true
         register: true
-        serviceName: {spring.application.name}
+        serviceName: ${spring.application.name}
         healthCheckPath: /health
         healthCheckInterval: 10s
         instanceId: ${spring.application.name}-${alpha.server.host}-${random.value}

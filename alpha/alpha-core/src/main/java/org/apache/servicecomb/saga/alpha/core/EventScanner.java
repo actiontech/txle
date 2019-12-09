@@ -54,7 +54,7 @@ public class EventScanner implements Runnable {
   public static final String SCANNER_SQL = " /**scanner_sql**/";
 
   private ITxleCache txleCache;
-  private StartingTask startingTask;
+  private TxleConsulClient txleConsulClient;
 
   public EventScanner(ScheduledExecutorService scheduler,
                       TxEventRepository eventRepository,
@@ -63,7 +63,7 @@ public class EventScanner implements Runnable {
                       OmegaCallback omegaCallback,
                       int eventPollingInterval,
                       ITxleCache txleCache,
-                      StartingTask startingTask) {
+                      TxleConsulClient txleConsulClient) {
     this.scheduler = scheduler;
     this.eventRepository = eventRepository;
     this.commandRepository = commandRepository;
@@ -71,7 +71,7 @@ public class EventScanner implements Runnable {
     this.omegaCallback = omegaCallback;
     this.eventPollingInterval = eventPollingInterval;
     this.txleCache = txleCache;
-    this.startingTask = startingTask;
+    this.txleConsulClient = txleConsulClient;
   }
 
   @Override
@@ -90,7 +90,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
             () -> {
               try {
-                if (startingTask.isMaster()) {
+                if (txleConsulClient.isMaster()) {
                   // Use a new scheduler for lessening the latency of checking timeout.
                   updateTimeoutStatus();
                   findTimeoutEvents();
@@ -108,7 +108,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
             () -> {
               try {
-                if (startingTask.isMaster()) {
+                if (txleConsulClient.isMaster()) {
                   compensate();
                   updateCompensatedCommands();
                   getMinUnendedEventId();

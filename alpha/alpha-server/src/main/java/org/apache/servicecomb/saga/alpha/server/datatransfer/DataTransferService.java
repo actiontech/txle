@@ -5,8 +5,8 @@
 
 package org.apache.servicecomb.saga.alpha.server.datatransfer;
 
-import org.apache.servicecomb.saga.alpha.core.StartingTask;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
+import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
@@ -38,7 +38,7 @@ public class DataTransferService implements IDataTransferService {
     private IConfigCenterService configCenterService;
 
     @Autowired
-    private StartingTask startingTask;
+    private TxleConsulClient txleConsulClient;
 
     public DataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
         this.dataTransferRepository = dataTransferRepository;
@@ -48,7 +48,7 @@ public class DataTransferService implements IDataTransferService {
     @Scheduled(cron = "0 0 0 * * ?")
     public void scheduledTask() {
         // To transfer data on master node only.
-        if (startingTask.isMaster()) {
+        if (txleConsulClient.isMaster()) {
             LOG.info("Triggered data transfer task on current master node.");
             dataTransfer("TxEvent");
         } else {
