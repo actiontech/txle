@@ -20,9 +20,6 @@
 package org.apache.servicecomb.saga.alpha.core;
 
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
-import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
-import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
-import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
@@ -32,7 +29,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.servicecomb.saga.alpha.core.TaskStatus.NEW;
@@ -54,7 +54,7 @@ public class TxConsistentService {
 	@Autowired
 	private ITxleCache txleCache;
 
-  private final List<String> types = Arrays.asList(TxEndedEvent.name(), TxAbortedEvent.name(), SagaEndedEvent.name());
+  private final List<String> types = Arrays.asList(TxEndedEvent.name(), TxAbortedEvent.name());
 
   public TxConsistentService(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository) {
     this.eventRepository = eventRepository;
@@ -96,6 +96,10 @@ public class TxConsistentService {
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
 		if (!types.contains(type) && isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
+			// Should return wrong result in case of aborted transaction, even though all of businesses were completed.
+			if (SagaEndedEvent.name().equals(type)) {
+				eventRepository.save(event);
+			}
 			txleMetrics.countTxNumber(event, false, event.retries() > 0);
 			// end duration.
 			txleMetrics.endMarkTxDuration(event);
