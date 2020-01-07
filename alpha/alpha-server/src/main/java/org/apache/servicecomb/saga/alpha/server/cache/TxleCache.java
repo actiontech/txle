@@ -6,8 +6,10 @@
 package org.apache.servicecomb.saga.alpha.server.cache;
 
 import com.ecwid.consul.v1.ConsulClient;
+import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.Service;
+import com.ecwid.consul.v1.session.model.Session;
 import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.alpha.core.cache.CacheEntity;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
@@ -25,8 +27,9 @@ import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY;
+import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
 
 /**
  * @author Gannalyo
@@ -40,8 +43,6 @@ public class TxleCache implements ITxleCache {
     private final ConcurrentSkipListSet<CacheEntity> txSuspendStatusCache = new ConcurrentSkipListSet<>(Comparator.comparingLong(s -> s.getExpire()));
     private final ConcurrentSkipListSet<CacheEntity> txAbortStatusCache = new ConcurrentSkipListSet<>(Comparator.comparingLong(s -> s.getExpire()));
     private final Set<String> serviceList = new HashSet();
-
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Autowired
     private TxleConsulClient txleConsulClient;
@@ -286,30 +287,49 @@ public class TxleCache implements ITxleCache {
 
     @Override
     public void synchronizeCacheFromLeader(String consulSessionId) {
-        // TODO New servers need synchronized cache from the leader server when they start.
-//        Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(null);
-//        if (sessionList != null) {
-//            List<Session> sessions = sessionList.getValue();
-//            if (sessions != null && sessions.size() > 1) {
-//                sessions.forEach(session -> {
-//                    Response<Map<String, Service>> agentServices = txleConsulClient.getConsulClient().getAgentServices();
-//                    if (agentServices != null) {
-//                        Map<String, Service> serviceMap = agentServices.getValue();
-//                        if (serviceMap != null && !serviceMap.isEmpty()) {
-//                            serviceMap.keySet().forEach(key -> {
-//                                Service service = serviceMap.get(key);
-//                                String ipPort = service.getAddress() + ":" + service.getPort();
-//                            });
-//                        }
-//                    }
-//                    if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
-//                         the leader node
-//                        session.get
-//                        restTemplate.getForObject("http://" + ipPort + "/refreshServiceListCache", Boolean.TYPE);
-//                    }
-//                });
-//            }
-//        }
+        try {
+            Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(QueryParams.DEFAULT);
+            if (sessionList != null) {
+                List<Session> sessions = sessionList.getValue();
+                if (sessions != null && sessions.size() > 1) {
+                    for (Session session : sessions) {
+                        if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
+                            String[] sessionName = session.getName().split("-");
+                            setSynchronizedCache(sessionName[2] + ":" + sessionName[3]);
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to synchronize cache.", e);
+        }
     }
 
+    private void setSynchronizedCache(String ipPort) {
+        Map<String, Object> synCache = restTemplate.getForObject("http://" + ipPort + "/fetchSynchronizedCache", Map.class);
+        if (synCache != null) {
+            LinkedHashMap<String, Boolean> synConfigCache = (LinkedHashMap<String, Boolean>) synCache.get("configCache");
+            if (synConfigCache != null) {
+                configCache.putAll(synConfigCache);
+            }
+            ArrayList<CacheEntity> suspendedCache = (ArrayList<CacheEntity>) synCache.get("txSuspendStatusCache");
+            if (suspendedCache != null) {
+                txSuspendStatusCache.addAll(suspendedCache);
+            }
+            ArrayList<CacheEntity> abortedCache = (ArrayList<CacheEntity>) synCache.get("txAbortStatusCache");
+            if (abortedCache != null) {
+                txAbortStatusCache.addAll(abortedCache);
+            }
+        }
+    }
+
+    @Override
+    public Map<String, Object> fetchSynchronizedCache() {
+        Map<String, Object> cacheMap = new HashMap<>();
+        cacheMap.put("configCache", configCache);
+        cacheMap.put("txSuspendStatusCache", txSuspendStatusCache);
+        cacheMap.put("txAbortStatusCache", txAbortStatusCache);
+        return cacheMap;
+    }
 }

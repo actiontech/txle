@@ -138,7 +138,7 @@ public class TxleConsulClient implements ApplicationRunner {
                 // To create a key for leader election no matter if it is exists.
                 consulClient.setKVValue(CONSUL_LEADER_KEY, CONSUL_LEADER_KEY_VALUE);
                 NewSession session = new NewSession();
-                serverHost = InetAddress.getLocalHost().getHostAddress();
+                serverHost = InetAddress.getLocalHost().getHostName();
                 session.setName("session-" + serverName + "-" + serverHost + "-" + serverPort + "-" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
                 consulSessionId = consulClient.sessionCreate(session, null).getValue();
                 return consulSessionId;
@@ -190,7 +190,7 @@ public class TxleConsulClient implements ApplicationRunner {
         if (enabled) {
             // To execute refresh method after starting server rather than after initializing.
             txleCache.refreshServiceListCache(true);
-//        txleCache.synchronizeCacheFromLeader();
+            txleCache.synchronizeCacheFromLeader(this.consulInstanceId);
 //        scheduler.scheduleWithFixedDelay(() -> {
 //            removeExpiredCache(txSuspendStatusCache);
 //            removeExpiredCache(txAbortStatusCache);
