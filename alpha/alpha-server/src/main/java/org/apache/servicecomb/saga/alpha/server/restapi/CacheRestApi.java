@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 public class CacheRestApi {
     @Autowired
@@ -72,6 +74,11 @@ public class CacheRestApi {
     @GetMapping("/refreshServiceListCache")
     public void refreshServiceListCache() {
         txleCache.refreshServiceListCache(false);
+    }
+
+    @GetMapping("/fetchSynchronizedCache")
+    public Map<String, Object> fetchSynchronizedCache() {
+        return txleCache.fetchSynchronizedCache();
     }
 
 }

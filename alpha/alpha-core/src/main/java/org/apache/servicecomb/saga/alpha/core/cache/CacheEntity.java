@@ -5,9 +5,10 @@
 
 package org.apache.servicecomb.saga.alpha.core.cache;
 
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
-public class CacheEntity {
+public class CacheEntity implements Serializable {
     private String key;
     private Object value;
     private long expire;

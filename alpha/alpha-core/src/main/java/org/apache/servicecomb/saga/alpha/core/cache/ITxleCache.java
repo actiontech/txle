@@ -5,6 +5,7 @@
 
 package org.apache.servicecomb.saga.alpha.core.cache;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -55,5 +56,7 @@ public interface ITxleCache {
     void refreshServiceListCache(boolean refreshRemoteServiceList);
 
     void synchronizeCacheFromLeader(String consulSessionId);
+
+    Map<String, Object> fetchSynchronizedCache();
 
 }
