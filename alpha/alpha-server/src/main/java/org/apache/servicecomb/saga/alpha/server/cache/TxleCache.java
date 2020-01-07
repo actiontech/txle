@@ -8,7 +8,6 @@ package org.apache.servicecomb.saga.alpha.server.cache;
 import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
-import com.ecwid.consul.v1.agent.model.Check;
 import com.ecwid.consul.v1.agent.model.Service;
 import com.ecwid.consul.v1.session.model.Session;
 import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
@@ -289,8 +288,6 @@ public class TxleCache implements ITxleCache {
     @Override
     public void synchronizeCacheFromLeader(String consulSessionId) {
         try {
-            Response<Map<String, Check>> checks = txleConsulClient.getConsulClient().getAgentChecks();
-            checks.getValue().get("");
             // Current server needs to synchronize cache from the leader server after starting.
             Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(QueryParams.DEFAULT);
             if (sessionList != null) {
@@ -300,6 +297,7 @@ public class TxleCache implements ITxleCache {
                         if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
                             String[] sessionName = session.getName().split("-");
                             setSynchronizedCache(sessionName[2] + ":" + sessionName[3]);
+                            break;
                         }
                     }
                 }
