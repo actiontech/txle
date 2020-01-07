@@ -292,44 +292,21 @@ public class TxleCache implements ITxleCache {
             Response<Map<String, Check>> checks = txleConsulClient.getConsulClient().getAgentChecks();
             checks.getValue().get("");
             // Current server needs to synchronize cache from the leader server after starting.
-            Session session = getLeaderSession(consulSessionId);
-//            if (session != null) {
-//                Response<Map<String, Service>> agentServices = txleConsulClient.getConsulClient().getAgentServices();
-//                if (agentServices != null) {
-//                    Map<String, Service> serviceMap = agentServices.getValue();
-//                    if (serviceMap != null && !serviceMap.isEmpty()) {
-//                        String currentHostPort = InetAddress.getLocalHost().getHostName() + ":" + serverPort;
-//                        serviceMap.keySet().forEach(key -> {
-//                            Service service = serviceMap.get(key);
-//                            String ipPort = service.getAddress() + ":" + service.getPort();
-//                            if (!currentHostPort.equals(ipPort)) {
-//                                setSynchronizedCache(ipPort);
-//                                return;
-//                            }
-//                        });
-//                    }
-//                }
-//            }
-        } catch (Exception e) {
-            log.error("Failed to synchronize cache.", e);
-        }
-    }
-
-    private Session getLeaderSession(String consulSessionId) {
-        Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(QueryParams.DEFAULT);
-        if (sessionList != null) {
-            List<Session> sessions = sessionList.getValue();
-            if (sessions != null && sessions.size() > 1) {
-                for (Session session : sessions) {
-                    if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
-                        String[] sessionName = session.getName().split("-");
-                        setSynchronizedCache(sessionName[2] + ":" + sessionName[3]);
-                        return session;
+            Response<List<Session>> sessionList = txleConsulClient.getConsulClient().getSessionList(QueryParams.DEFAULT);
+            if (sessionList != null) {
+                List<Session> sessions = sessionList.getValue();
+                if (sessions != null && sessions.size() > 1) {
+                    for (Session session : sessions) {
+                        if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
+                            String[] sessionName = session.getName().split("-");
+                            setSynchronizedCache(sessionName[2] + ":" + sessionName[3]);
+                        }
                     }
                 }
             }
+        } catch (Exception e) {
+            log.error("Failed to synchronize cache.", e);
         }
-        return null;
     }
 
     private void setSynchronizedCache(String ipPort) {
