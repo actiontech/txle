@@ -10,7 +10,7 @@
   <parent>
     <artifactId>txle</artifactId>
     <groupId>com.actionsky</groupId>
-    <version>2.19.11.0</version>
+    <version>9.9.9.9</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 

@@ -26,7 +26,7 @@
 	<groupId>com.actionsky</groupId>
 	<artifactId>txle</artifactId>
 	<packaging>pom</packaging>
-	<version>2.19.11.0</version>
+	<version>9.9.9.9</version>
 
 	<modules>
 		<module>omega</module>

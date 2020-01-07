@@ -1,5 +1,5 @@
 PROJECT_NAME  = txle
-PROJECT_VERSION=2.19.11.0
+PROJECT_VERSION=9.9.9.9
 LATEST_COMMIT_ID=$(shell git rev-parse HEAD)
 DOCKER        := $(shell which docker)
 DOCKER_IMAGE  := docker-registry:5000/actiontech/txle/maven:3.6.0
