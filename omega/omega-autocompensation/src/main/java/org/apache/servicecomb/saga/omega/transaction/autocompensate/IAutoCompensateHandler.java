@@ -11,6 +11,8 @@ import java.util.Map;
 
 public interface IAutoCompensateHandler {
 
-    void saveAutoCompensationInfo(PreparedStatement delegate, String executeSql, boolean isBeforeNotice, Map<String, Object> standbyParams) throws SQLException;
+    void prepareCompensationBeforeExecuting(PreparedStatement delegate, String executeSql, Map<String, Object> standbyParams) throws SQLException;
+
+    void prepareCompensationAfterExecuting(PreparedStatement delegate, String executeSql, Map<String, Object> standbyParams) throws SQLException;
 
 }

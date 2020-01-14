@@ -91,7 +91,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
             if (CurrentThreadOmegaContext.isAutoCompensate()) {
                 // before advise for executing SQL By Gannalyo.
                 if (CurrentThreadOmegaContext.isEnabledAutoCompensateTx()) {
-                    AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), true, null);
+                    AutoCompensateHandler.newInstance().prepareCompensationBeforeExecuting(preparedStatement, preparedStatementInformation.getSqlWithValues(), null);
                 }
 
                 // start to mark duration for business sql By Gannalyo.
@@ -109,7 +109,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
                 // before advise for executing SQL By Gannalyo.
                 Map<String, Object> standbyParams = new HashMap<>();
                 if (CurrentThreadOmegaContext.isEnabledAutoCompensateTx()) {
-                    AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), true, standbyParams);
+                    AutoCompensateHandler.newInstance().prepareCompensationBeforeExecuting(preparedStatement, preparedStatementInformation.getSqlWithValues(), standbyParams);
                 }
 
                 // start to mark duration for business sql By Gannalyo.
@@ -154,7 +154,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
                         standbyParams = new HashMap<>();
                     }
 
-                    AutoCompensateHandler.newInstance().saveAutoCompensationInfo(preparedStatement, preparedStatementInformation.getSqlWithValues(), false, standbyParams);
+                    AutoCompensateHandler.newInstance().prepareCompensationAfterExecuting(preparedStatement, preparedStatementInformation.getSqlWithValues(), standbyParams);
 
                     // To construct business information, and then report to the txle Server.
                     constructBusinessInfoToServer(standbyParams);

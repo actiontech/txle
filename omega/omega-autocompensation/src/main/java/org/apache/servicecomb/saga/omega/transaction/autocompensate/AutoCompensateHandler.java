@@ -43,7 +43,11 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
     }
 
     @Override
-    public void saveAutoCompensationInfo(PreparedStatement delegate, String executeSql, boolean isBeforeNotice, Map<String, Object> standbyParams) throws SQLException {
+    public void prepareCompensationBeforeExecuting(PreparedStatement delegate, String executeSql, Map<String, Object> standbyParams) throws SQLException {
+        String globalTxId = CurrentThreadOmegaContext.getGlobalTxIdFromCurThread();
+        if (globalTxId == null || globalTxId.length() == 0) {
+            return;
+        }
         String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
         if (localTxId == null || localTxId.length() == 0) {
             return;
@@ -71,13 +75,12 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         standbyParams.put("dburl", dburl);
         standbyParams.put("dbusername", dbusername);
 
-        if (isBeforeNotice && sqlStatement instanceof MySqlUpdateStatement) {
-            AutoCompensateUpdateHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
-        } else if (!isBeforeNotice && sqlStatement instanceof MySqlInsertStatement) {
-            AutoCompensateInsertHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
-        } else if (isBeforeNotice && sqlStatement instanceof MySqlDeleteStatement) {
-            AutoCompensateDeleteHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
-        } else if (isBeforeNotice) {
+        if (sqlStatement instanceof MySqlUpdateStatement) {
+            AutoCompensateUpdateHandler.newInstance().prepareCompensationBeforeUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
+        } else if (sqlStatement instanceof MySqlDeleteStatement) {
+            AutoCompensateDeleteHandler.newInstance().prepareCompensationBeforeDeleting(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
+            CurrentThreadOmegaContext.clearCache();
+        } else {
             standbyParams.clear();
             // Default is closed, means that just does record, if it's open, then program will throw an exception about current special SQL, just for auto-compensation.
             boolean checkSpecialSql = TxleStaticConfig.getBooleanConfig("txle.transaction.auto-compensation.check-special-sql", false);
@@ -89,8 +92,50 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         }
     }
 
-    public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
-        return false;
+    @Override
+    public void prepareCompensationAfterExecuting(PreparedStatement delegate, String executeSql, Map<String, Object> standbyParams) throws SQLException {
+        String globalTxId = CurrentThreadOmegaContext.getGlobalTxIdFromCurThread();
+        if (globalTxId == null || globalTxId.length() == 0) {
+            return;
+        }
+        String localTxId = CurrentThreadOmegaContext.getLocalTxIdFromCurThread();
+        if (localTxId == null || localTxId.length() == 0) {
+            return;
+        }
+
+        // To parse SQL by SQLParser tools from Druid.
+        MySqlStatementParser parser = new MySqlStatementParser(executeSql);
+        SQLStatement sqlStatement = parser.parseStatement();
+        if (sqlStatement instanceof MySqlSelectIntoStatement) {
+            return;
+        }
+
+        if (standbyParams == null) {
+            standbyParams = new HashMap<>();
+        }
+
+        String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();
+
+        // To set a relationship between localTxId and datSourceInfo, in order to determine to use the relative dataSource for localTxId when it need be compensated.
+        DatabaseMetaData databaseMetaData = delegate.getConnection().getMetaData();
+        String dburl = databaseMetaData.getURL(), dbusername = databaseMetaData.getUserName(), dbdrivername = databaseMetaData.getDriverName();
+        DataSourceMappingCache.putLocalTxIdAndDataSourceInfo(localTxId, dburl, dbusername, dbdrivername);
+        // To construct kafka message.
+        standbyParams.put("dbdrivername", dbdrivername);
+        standbyParams.put("dburl", dburl);
+        standbyParams.put("dbusername", dbusername);
+
+        if (sqlStatement instanceof MySqlInsertStatement) {
+            AutoCompensateInsertHandler.newInstance().prepareCompensationAfterInserting(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
+        } else if (sqlStatement instanceof MySqlUpdateStatement) {
+            AutoCompensateUpdateHandler.newInstance().prepareCompensationAfterUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
+        }
+        /**
+         * 经测试，语句userRepository.delete(Long.valueOf(new Random().nextInt(1000)));在文件org.apache.servicecomb.saga.omega.transaction.AutoCompensableRecovery中apply方法执行后才会被拦截，
+         * 导致方法内先执行了clearCache，而后续无法获取到context，也无法判断是自动补偿
+         * 但insert和update语句是可以的，自己编写delete方法也是可以的，为避免类似错误，将clearCache放在此处执行
+         */
+        CurrentThreadOmegaContext.clearCache();
     }
 
     protected Map<String, String> selectColumnNameType(PreparedStatement delegate, String tableName) throws SQLException {
@@ -137,7 +182,46 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         return columnNameType;
     }
 
-    protected String parsePrimaryKeyColumnName(PreparedStatement delegate, SQLStatement sqlStatement, String tableName) throws SQLException {
+    protected void prepareBackupTable(Connection connection, String tableName, String txleBackupTableName) {
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        try {
+            String schema = TxleConstants.APP_NAME;
+            boolean isExistsBackupTable = false;
+            preparedStatement = connection.prepareStatement("SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + schema + "' AND TABLE_NAME = '" + txleBackupTableName + "'");
+            resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                isExistsBackupTable = resultSet.getInt(1) > 0;
+            }
+            if (!isExistsBackupTable) {
+                connection.prepareStatement("CREATE DATABASE IF NOT EXISTS txle DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_general_ci").execute();
+                // copy table without constraints(pk, index...) so that the original data could be written for many times.
+                connection.prepareStatement("CREATE TABLE IF NOT EXISTS " + schema + "." + txleBackupTableName + " AS SELECT * FROM " + tableName + " LIMIT 0").execute();
+                connection.prepareStatement("ALTER TABLE " + schema + "." + txleBackupTableName + " ADD globalTxId VARCHAR(36)").execute();
+                connection.prepareStatement("ALTER TABLE " + schema + "." + txleBackupTableName + " ADD localTxId VARCHAR(36)").execute();
+            }
+        } catch (SQLException e) {
+            // No obviously effect to main business in case of error.
+            LOG.error(TxleConstants.logErrorPrefixWithTime() + "Failed to create backup table for txle.", e);
+        } finally {
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+                    LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close PreparedStatement after executing method 'saveAutoCompensationInfo' for delete SQL.", e);
+                }
+            }
+            if (resultSet != null) {
+                try {
+                    resultSet.close();
+                } catch (SQLException e) {
+                    LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for delete SQL.", e);
+                }
+            }
+        }
+    }
+
+    protected String parsePrimaryKeyColumnName(PreparedStatement delegate, String tableName) throws SQLException {
         String primaryKeyColumnName = "id", sql = "SHOW FULL COLUMNS FROM " + tableName + TxleConstants.ACTION_SQL;
 
         // start to mark duration for maintaining sql By Gannalyo.
@@ -221,18 +305,17 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         return whereSqlForCompensation.toString();
     }
 
-    public boolean saveTxleUndoLog(PreparedStatement delegate, String localTxId, String executeSql, String compensateSql, String originalDataJson, String server) throws SQLException {
+    public boolean saveTxleUndoLog(PreparedStatement delegate, String globalTxId, String localTxId, String executeSql, String compensateSql, String server) throws SQLException {
         int index = 1;
         Timestamp currentTime = new Timestamp(System.currentTimeMillis());
         PreparedStatement preparedStatement = null;
         try {
-            String sql = "insert into txle_undo_log(globaltxid, localtxid, executesql, compensatesql, originalinfo, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?, ?)" + TxleConstants.ACTION_SQL;
+            String sql = "insert into txle_undo_log(globaltxid, localtxid, executesql, compensatesql, status, server, lastmodifytime, createtime) values (?, ?, ?, ?, ?, ?, ?, ?)" + TxleConstants.ACTION_SQL;
             preparedStatement = delegate.getConnection().prepareStatement(sql);
-            preparedStatement.setString(index++, CurrentThreadOmegaContext.getGlobalTxIdFromCurThread());
+            preparedStatement.setString(index++, globalTxId);
             preparedStatement.setString(index++, localTxId);
             preparedStatement.setString(index++, executeSql);
             preparedStatement.setString(index++, compensateSql);
-            preparedStatement.setString(index++, originalDataJson);
             preparedStatement.setInt(index++, 0);
             preparedStatement.setString(index++, server);
             preparedStatement.setTimestamp(index++, currentTime);

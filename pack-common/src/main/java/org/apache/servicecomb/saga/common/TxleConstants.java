@@ -30,6 +30,12 @@ public final class TxleConstants {
     public static final String CONSUL_LEADER_KEY = APP_NAME + "/service/leader";
     public static final String CONSUL_LEADER_KEY_VALUE = "leader election key for " + TxleConstants.APP_NAME + " service";
 
+    public enum Operation {
+        DONOTHING,
+        SUCCESS,
+        FAIL
+    }
+
     private TxleConstants() {
     }
 

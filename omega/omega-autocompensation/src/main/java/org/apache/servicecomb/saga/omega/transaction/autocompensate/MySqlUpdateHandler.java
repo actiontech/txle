@@ -8,18 +8,25 @@ package org.apache.servicecomb.saga.omega.transaction.autocompensate;
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.SQLStatement;
-import com.alibaba.druid.sql.ast.statement.SQLUpdateSetItem;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
-import com.alibaba.fastjson.JSON;
 import org.apache.servicecomb.saga.common.TxleConstants;
-import org.apache.servicecomb.saga.omega.context.ApplicationContextUtil;
-import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Map;
 
+/**
+ * 更新数据逻辑
+ * 1.更新前，备份影响数据到对应的备份数据表
+ * 2.执行更新数据操作
+ * 3.更新后，备份影响数据到对应的备份数据表
+ * 4.更新数据操作与生成补偿备份操作在同一事务中，防止脏写，即补偿备份前后或删除数据前后，避免其它业务对涉及数据进行更新
+ * 5.后续需要补偿时，先对比更新后的备份数据与数据库中的数据是否完全一致，若完全一致则直接执行补偿SQL，若非完全一致则放弃补偿，直接上报差错
+ */
 public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 
     private static volatile MySqlUpdateHandler mySqlUpdateHandler = null;
@@ -37,67 +44,69 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
     }
 
     @Override
-    public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
-        ResultSet rs = null;
+    public boolean prepareCompensationBeforeUpdating(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+        Connection connection;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
         try {
-            MySqlUpdateStatement updateStatement = (MySqlUpdateStatement) sqlStatement;
+            MySqlUpdateStatement deleteStatement = (MySqlUpdateStatement) sqlStatement;
             // 1.take table's name out
-            SQLName table = updateStatement.getTableName();
-            String tableName = table.toString();
+            SQLName table = deleteStatement.getTableName();
+            String tableName = table.toString().toLowerCase();
+            String schema = TxleConstants.APP_NAME;
+            String txleBackupTableName = "backup_old_" + tableName;
             standbyParams.put("tablename", tableName);
             standbyParams.put("operation", "update");
 
             // 2.take conditions out
-            // select * ... by where ... ps: having, etc.
-            SQLExpr where = updateStatement.getWhere();
+            SQLExpr where = deleteStatement.getWhere();
             // It doesn't matter, even though the 'where-sql' contains a line break.
             String whereSql = where.toString();
             LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
 
-            // 3.take primary-key name
-            String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
+            // 3.create backup table
+            connection = delegate.getConnection();
+            this.prepareBackupTable(connection, tableName, txleBackupTableName);
 
-            // 4.take the original data out and put a lock on data.
-            /**
-             * logic here.
-             * 1.For compensation SQL, append the latest value of all fields to the 'WHERE' conditions. The aim is to detect whether the data is modified when compensation SQL is executed later.
-             *      Report exception information to the Accident Platform in case of compensating abortively.
-             * 2.Read the latest value (after modifying) instead of using the 'WHERE' conditions directly, because conditions maybe contain some formulas, such as 'money = money - 10'.
-             * 3.Read old and new data.
-             * 4.Separate old and new data.
-             */
-            List<Map<String, Object>> newDataList = selectNewDataList(delegate, updateStatement, tableName, primaryKeyColumnName, whereSql);
-            List<Map<String, Object>> originalDataList = selectOriginalData(newDataList);
-            if (originalDataList == null || originalDataList.isEmpty()) {
-                LOG.debug(TxleConstants.logDebugPrefixWithTime() + "Did not save compensation info to table 'Txle_Undo_Log' due to the executeSql's result hadn't any effect to data. localTxId: [{}], server: [{}].", localTxId, server);
-                return true;
-            }
-            StringBuffer ids = new StringBuffer();
-            originalDataList.forEach(map -> {
-                if (ids.length() == 0) {
-                    ids.append(map.get(primaryKeyColumnName));
-                } else {
-                    ids.append(", " + map.get(primaryKeyColumnName));
+            // 4.backup data
+            String backupDataSql = String.format("INSERT INTO " + schema + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
+            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - backupDataSql: [{}].", Thread.currentThread().getId(), backupDataSql);
+            int backupResult = connection.prepareStatement(backupDataSql).executeUpdate();
+            if (backupResult > 0) {
+                // 5.construct compensateSql
+                preparedStatement = connection.prepareStatement("SELECT GROUP_CONCAT(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" + schema + "' AND TABLE_NAME = '" + txleBackupTableName + "' AND COLUMN_NAME NOT IN ('globalTxId', 'localTxId')");
+                resultSet = preparedStatement.executeQuery();
+                if (resultSet.next()) {
+                    String[] fieldNameArr = resultSet.getString(1).split(",");
+                    StringBuilder setColumns = new StringBuilder();
+                    for (String fieldName : fieldNameArr) {
+                        if (setColumns.length() == 0) {
+                            setColumns.append("T." + fieldName + " = T1." + fieldName);
+                        } else {
+                            setColumns.append(", T." + fieldName + " = T1." + fieldName);
+                        }
+                    }
+
+                    // take primary-key name
+                    String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, tableName);
+                    String compensateSql = String.format("UPDATE %s T INNER JOIN %s T1 ON T." + primaryKeyColumnName + " = T1." + primaryKeyColumnName + " SET %s WHERE T1.globalTxId = '%s' AND T1.localTxId = '%s' "
+                            + TxleConstants.ACTION_SQL, tableName, schema + "." + txleBackupTableName, setColumns.toString(), globalTxId, localTxId);
+
+                    // 6.save txle_undo_log
+                    return this.saveTxleUndoLog(delegate, globalTxId, localTxId, executeSql, compensateSql, server);
                 }
-            });
-            standbyParams.put("ids", ids);
-
-            String originalDataJson = JSON.toJSONString(originalDataList);
-
-            // PS: Do not joint the conditions of 'executeSql' to 'compensateSql' immediately, because the result may not be same to execute a SQL twice at different time.
-            // Recommendation: construct compensateSql by original data.
-            // 5.construct compensateSql
-            String compensateSql = constructCompensateSql(delegate, updateStatement, tableName, newDataList, whereSql);
-
-            // 6.save txle_undo_log
-            return this.saveTxleUndoLog(delegate, localTxId, executeSql, compensateSql, originalDataJson, server);
+            }
+            return false;
         } catch (SQLException e) {
-            LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for update SQL.", e);
+            LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for update sql.", e);
             throw e;
         } finally {
-            if (rs != null) {
+            if (preparedStatement != null) {
+                preparedStatement.close();
+            }
+            if (resultSet != null) {
                 try {
-                    rs.close();
+                    resultSet.close();
                 } catch (SQLException e) {
                     LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for update SQL.", e);
                 }
@@ -105,118 +114,51 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
         }
     }
 
-    private String constructCompensateSql(PreparedStatement delegate, MySqlUpdateStatement updateStatement, String tableName, List<Map<String, Object>> newDataList, String whereSql) throws SQLException {
-        if (newDataList == null || newDataList.isEmpty()) {
-            throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Could not get the original data when constructed the 'compensateSql' for executing update SQL.");
-        }
-
-        List<SQLUpdateSetItem> updateSetItemList = updateStatement.getItems();
-        if (updateSetItemList == null || updateSetItemList.isEmpty()) {
-            throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Had no set-item for update SQL.");
-        }
-
-        Map<String, String> columnNameType = this.selectColumnNameType(delegate, tableName);
-        StringBuffer compensateSqls = new StringBuffer();
-        for (Map<String, Object> dataMap : newDataList) {
-            this.resetColumnValueByDBType(columnNameType, dataMap);
-            String setColumns = constructSetColumns(updateSetItemList, dataMap);
-            String whereSqlForCompensation = this.constructWhereSqlForCompensation(dataMap);
-
-            String compensateSql = String.format("UPDATE %s SET %s WHERE %s" + TxleConstants.ACTION_SQL + ";", tableName, setColumns, whereSqlForCompensation);
-            if (compensateSqls.length() == 0) {
-                compensateSqls.append(compensateSql);
-            } else {
-                compensateSqls.append("\n" + compensateSql);
-            }
-        }
-
-        return compensateSqls.toString();
-    }
-
-    private String constructSetColumns(List<SQLUpdateSetItem> updateSetItemList, Map<String, Object> dataMap) {
-        StringBuffer setColumns = new StringBuffer();
-        for (SQLUpdateSetItem setItem : updateSetItemList) {
-            String column = setItem.getColumn().toString();
-            if (setColumns.length() == 0) {
-                setColumns.append(column + " = " + dataMap.get(column));
-            } else {
-                setColumns.append(", " + column + " = " + dataMap.get(column));
-            }
-        }
-        return setColumns.toString();
-    }
-
-    private List<Map<String, Object>> selectNewDataList(PreparedStatement delegate, MySqlUpdateStatement updateStatement, String tableName, String primaryKeyColumnName, String whereSql) throws SQLException {
-        Connection connection = null;
+    @Override
+    public boolean prepareCompensationAfterUpdating(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+        Connection connection;
         PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
         try {
-            List<SQLUpdateSetItem> updateSetItemList = updateStatement.getItems();
-            if (updateSetItemList == null || updateSetItemList.isEmpty()) {
-                throw new SQLException("Have no set-item for update SQL.");
-            }
+            MySqlUpdateStatement deleteStatement = (MySqlUpdateStatement) sqlStatement;
+            // 1.take table's name out
+            SQLName table = deleteStatement.getTableName();
+            String tableName = table.toString().toLowerCase();
+            String schema = TxleConstants.APP_NAME;
+            String txleBackupTableName = "backup_new_" + tableName;
+            standbyParams.put("tablename", tableName);
+            standbyParams.put("operation", "update");
 
-            StringBuffer newColumnValues = new StringBuffer();
-            for (SQLUpdateSetItem setItem : updateSetItemList) {
-                String columnValue = setItem.getValue().toString();
-                if (newColumnValues.length() > 0) {
-                    newColumnValues.append(", ");
-                }
-                newColumnValues.append(columnValue + " n_c_v_" + setItem.getColumn().toString());
-            }
+            // 2.take conditions out
+            SQLExpr where = deleteStatement.getWhere();
+            // It doesn't matter, even though the 'where-sql' contains a line break.
+            String whereSql = where.toString();
+            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - table: [{}] - where: [{}].", Thread.currentThread().getId(), tableName, whereSql);
 
-            // 'FOR UPDATE' is needed to lock data.
-            String originalDataSql = String.format("SELECT T.*, %s FROM %s T WHERE %s FOR UPDATE" + TxleConstants.ACTION_SQL, newColumnValues, tableName, whereSql);
-            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - originalDataSql: [{}].", Thread.currentThread().getId(), originalDataSql);
-
-            // start to mark duration for business sql By Gannalyo.
-            ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(originalDataSql, false);
-
+            // 3.create backup table
             connection = delegate.getConnection();
-            preparedStatement = connection.prepareStatement(originalDataSql);
-            List<Map<String, Object>> originalDataList = new ArrayList<Map<String, Object>>();
-            ResultSet dataResultSet = preparedStatement.executeQuery();
+            this.prepareBackupTable(connection, tableName, txleBackupTableName);
 
-            // end mark duration for maintaining sql By Gannalyo.
-            ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
-
-            while (dataResultSet.next()) {
-                Map<String, Object> dataMap = new HashMap<String, Object>();
-                ResultSetMetaData metaData = dataResultSet.getMetaData();
-                for (int i = 1; i <= metaData.getColumnCount(); i++) {
-                    String column = metaData.getColumnName(i);
-                    dataMap.put(column, dataResultSet.getObject(column));
-                }
-
-                originalDataList.add(dataMap);
-            }
-            return originalDataList;
+            // 4.backup data
+            String backupDataSql = String.format("INSERT INTO " + schema + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
+            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - backupDataSql: [{}].", Thread.currentThread().getId(), backupDataSql);
+            int backupResult = connection.prepareStatement(backupDataSql).executeUpdate();
+            return backupResult > 0;
+        } catch (SQLException e) {
+            LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to save auto-compensation info for update sql.", e);
+            throw e;
         } finally {
-//			try {
-//				if (connection != null) {
-//					connection.close();
-//				}
-//			} finally {
             if (preparedStatement != null) {
                 preparedStatement.close();
             }
-//			}
-        }
-    }
-
-    private List<Map<String, Object>> selectOriginalData(List<Map<String, Object>> newDataList) {
-        List<Map<String, Object>> originalDataList = new ArrayList<>();
-        for (Map<String, Object> newDataMap : newDataList) {
-            Map<String, Object> originalDataMap = new HashMap<>();
-            Iterator<Map.Entry<String, Object>> iterator = newDataMap.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<String, Object> entry = iterator.next();
-                if (!entry.getKey().startsWith("n_c_v_")) {
-                    originalDataMap.put(entry.getKey(), newDataMap.get(entry.getValue()));
+            if (resultSet != null) {
+                try {
+                    resultSet.close();
+                } catch (SQLException e) {
+                    LOG.error(TxleConstants.logErrorPrefixWithTime() + "Fail to close ResultSet after executing method 'saveAutoCompensationInfo' for update SQL.", e);
                 }
             }
-            originalDataList.add(originalDataMap);
         }
-        return originalDataList;
     }
 
 }

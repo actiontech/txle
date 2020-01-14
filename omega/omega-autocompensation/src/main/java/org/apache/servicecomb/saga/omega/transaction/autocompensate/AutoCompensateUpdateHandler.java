@@ -27,11 +27,19 @@ public class AutoCompensateUpdateHandler extends AutoCompensateHandler {
         return autoCompensateUpdateHandler;
     }
 
-    @Override
-    public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+    public boolean prepareCompensationBeforeUpdating(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
 
         if (JdbcConstants.MYSQL.equals(sqlStatement.getDbType())) {
-            return MySqlUpdateHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
+            return MySqlUpdateHandler.newInstance().prepareCompensationBeforeUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
+        }
+
+        return false;
+    }
+
+    public boolean prepareCompensationAfterUpdating(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+
+        if (JdbcConstants.MYSQL.equals(sqlStatement.getDbType())) {
+            return MySqlUpdateHandler.newInstance().prepareCompensationAfterUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
         }
 
         return false;

@@ -68,8 +68,6 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 							+ " because global transaction " + context.globalTxId() + " has already aborted.");
 				}
 
-				CurrentThreadOmegaContext.clearCache();
-
 				// To submit the TxEndedEvent.
 				interceptor.postIntercept(parentTxId, TxleConstants.AUTO_COMPENSABLE_METHOD);
 			}

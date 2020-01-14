@@ -14,27 +14,26 @@ import java.util.Map;
 
 public class AutoCompensateDeleteHandler extends AutoCompensateHandler {
 
-	private static volatile AutoCompensateDeleteHandler autoCompensateDeleteHandler = null;
+    private static volatile AutoCompensateDeleteHandler autoCompensateDeleteHandler = null;
 
-	public static AutoCompensateDeleteHandler newInstance() {
-		if (autoCompensateDeleteHandler == null) {
-			synchronized (AutoCompensateDeleteHandler.class) {
-				if (autoCompensateDeleteHandler == null) {
-					autoCompensateDeleteHandler = new AutoCompensateDeleteHandler();
-				}
-			}
-		}
-		return autoCompensateDeleteHandler;
-	}
+    public static AutoCompensateDeleteHandler newInstance() {
+        if (autoCompensateDeleteHandler == null) {
+            synchronized (AutoCompensateDeleteHandler.class) {
+                if (autoCompensateDeleteHandler == null) {
+                    autoCompensateDeleteHandler = new AutoCompensateDeleteHandler();
+                }
+            }
+        }
+        return autoCompensateDeleteHandler;
+    }
 
-	@Override
-	public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+    public boolean prepareCompensationBeforeDeleting(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
 
-		if (JdbcConstants.MYSQL.equals(sqlStatement.getDbType())) {
-			return MySqlDeleteHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
-		}
+        if (JdbcConstants.MYSQL.equals(sqlStatement.getDbType())) {
+            return MySqlDeleteHandler.newInstance().prepareCompensationBeforeDeleting(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
+        }
 
-		return false;
-	}
+        return false;
+    }
 
 }

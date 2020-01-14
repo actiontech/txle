@@ -27,11 +27,10 @@ public class AutoCompensateInsertHandler extends AutoCompensateHandler {
         return autoCompensateInsertHandler;
     }
 
-    @Override
-    public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+    public boolean prepareCompensationAfterInserting(PreparedStatement delegate, SQLStatement sqlStatement, String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
 
         if (JdbcConstants.MYSQL.equals(sqlStatement.getDbType())) {
-            return MySqlInsertHandler.newInstance().saveAutoCompensationInfo(delegate, sqlStatement, executeSql, localTxId, server, standbyParams);
+            return MySqlInsertHandler.newInstance().prepareCompensationAfterInserting(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
         }
 
         return false;

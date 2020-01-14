@@ -18,17 +18,11 @@ import java.util.Map;
  */
 public interface IAutoCompensateDao {
 
-	/**
-	 * To execute the dynamic auto-compensation SQL.
-	 *
-	 * @param autoCompensateSql SQL for auto compensation.
-	 * @return result
-	 * @author Gannalyo
-	 * @since 201807-30
-	 */
-	boolean executeAutoCompensateSql(String autoCompensateSql);
+	int executeUpdate(String sql);
 
-	List<Map<String, Object>> execute(String sql, Object... params);
+	List<Map<String, Object>> executeQuery(String sql, Object... params);
+
+	int executeQueryCount(String sql, Object... params);
 
 	void setDataSource(DataSource dataSource);
 

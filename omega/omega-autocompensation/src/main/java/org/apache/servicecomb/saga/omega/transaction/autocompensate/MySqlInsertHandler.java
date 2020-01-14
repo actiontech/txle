@@ -20,6 +20,16 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 插入数据逻辑
+ * 1.插入前无数据需要备份，故不做处理
+ * 2.执行插入数据操作
+ * 3.插入后，生成的反向SQL的where条件中包含所有字段与值，如此在后续执行反向SQL时可避免脏写问题
+ * 4.插入数据操作与生成补偿备份操作在同一事务中，防止脏写，即避免业务执行后，补偿备份前有其它业务对涉及数据进行更新
+ * 5.后续需要补偿时，直接执行补偿SQL即可，补偿SQL举例如：【DELETE FROM txle_sample_user WHERE createtime = '2020-01-09 13:47:15.0' and balance = 2.00000 and name = 'xiongjiujiu' and id = 1006 and version = 2;】
+ *
+ * ps：目前仅支持普通的插入语句，暂未支持INSERT INTO table SELECT ...等复杂插入语句
+ */
 public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 
     private static volatile MySqlInsertHandler mySqlInsertHandler = null;
@@ -37,18 +47,18 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
     }
 
     @Override
-    public boolean saveAutoCompensationInfo(PreparedStatement delegate, SQLStatement sqlStatement,
-                                            String executeSql, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+    public boolean prepareCompensationAfterInserting(PreparedStatement delegate, SQLStatement sqlStatement,
+                                            String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
         ResultSet rs = null;
         try {
             MySqlInsertStatement insertStatement = (MySqlInsertStatement) sqlStatement;
             // 1.take table's name out
-            String tableName = insertStatement.getTableName().toString();
+            String tableName = insertStatement.getTableName().toString().toLowerCase();
             standbyParams.put("tablename", tableName);
             standbyParams.put("operation", "insert");
 
             // 2.take primary-key's name out
-            String primaryKeyName = this.parsePrimaryKeyColumnName(delegate, sqlStatement, tableName);
+            String primaryKeyName = this.parsePrimaryKeyColumnName(delegate, tableName);
 
             // 3.take primary-key's value out
             Set<Object> primaryKeyValues = getGeneratedKey(delegate);
@@ -66,14 +76,15 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
             // 4.take the new data out
             List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
 
-            // 5.save txle_undo_log
+            // 5.construct compensate sql
 //			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + TxleConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
-            String compensateSql = constructCompensateSql(delegate, insertStatement, tableName, newDataList);
+            String compensateSql = constructCompensateSql(delegate, tableName, newDataList);
 
             // start to mark duration for business sql By Gannalyo.
             ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
 
-            boolean result = this.saveTxleUndoLog(delegate, localTxId, executeSql, compensateSql, null, server);
+            // 6.save txle_undo_log
+            boolean result = this.saveTxleUndoLog(delegate, globalTxId, localTxId, executeSql, compensateSql, server);
 
             // end mark duration for maintaining sql By Gannalyo.
             ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).endMarkSQLDuration();
@@ -93,7 +104,7 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
         }
     }
 
-    private String constructCompensateSql(PreparedStatement delegate, MySqlInsertStatement insertStatement, String tableName, List<Map<String, Object>> newDataList) throws SQLException {
+    private String constructCompensateSql(PreparedStatement delegate, String tableName, List<Map<String, Object>> newDataList) throws SQLException {
         if (newDataList == null || newDataList.isEmpty()) {
             throw new SQLException(TxleConstants.LOG_ERROR_PREFIX + "Could not get the new data when constructed the 'compensateSql' for executing insert SQL.");
         }

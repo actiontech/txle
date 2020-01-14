@@ -39,15 +39,23 @@ public class AutoCompensateDao implements IAutoCompensateDao {
     @Modifying
     @Transactional
     @Override
-    public boolean executeAutoCompensateSql(String autoCompensateSql) {
-        return jdbcTemplate.update(autoCompensateSql + TxleConstants.ACTION_SQL) > 0;
+    public int executeUpdate(String sql) {
+        return jdbcTemplate.update(sql + TxleConstants.ACTION_SQL);
     }
 
     @Modifying
     @Transactional
     @Override
-    public List<Map<String, Object>> execute(String sql, Object... params) {
+    public List<Map<String, Object>> executeQuery(String sql, Object... params) {
         return jdbcTemplate.queryForList(sql, params);
     }
 
+    @Override
+    public int executeQueryCount(String sql, Object... params) {
+        List<Map<String, Object>> list = jdbcTemplate.queryForList(sql, params);
+        if (list != null) {
+            return Integer.parseInt(list.get(0).values().stream().findFirst().get().toString());
+        }
+        return 0;
+    }
 }

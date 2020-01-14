@@ -61,6 +61,7 @@ public class PreparedStatementWrapper extends StatementWrapper implements Prepar
     @SuppressWarnings("unchecked")
 	@Override
     public int executeUpdate() throws SQLException {
+        // support db transaction
         SQLException e = null;
         long start = System.nanoTime();
         int rowCount = 0;

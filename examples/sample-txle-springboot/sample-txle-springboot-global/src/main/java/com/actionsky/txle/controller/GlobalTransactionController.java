@@ -51,7 +51,7 @@ public class GlobalTransactionController {
 
         try {
             // 1.记录交易
-            restTemplate.postForObject(transferServiceUrl + "/createTransfer/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
+//            restTemplate.postForObject(transferServiceUrl + "/createTransfer/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
 
             // 2.扣款
             restTemplate.postForObject(userServiceUrl + "/deductMoneyFromUser/{userId}/{balance}", null, String.class, userId, amount);
@@ -72,7 +72,7 @@ public class GlobalTransactionController {
     public String testGlobalTransactionAuto(@PathVariable int userId, @PathVariable double amount, @PathVariable int merchantid) {
         try {
             // 1.记录交易
-            restTemplate.postForObject(transferServiceUrl + "/createTransferAuto/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
+//            restTemplate.postForObject(transferServiceUrl + "/createTransferAuto/{userId}/{amount}/{merchantid}", null, String.class, userId, amount, merchantid);
             // 2.扣款
             restTemplate.postForObject(userServiceUrl + "/deductMoneyFromUserAuto/{userId}/{balance}", null, String.class, userId, amount);
             // 3.汇款
