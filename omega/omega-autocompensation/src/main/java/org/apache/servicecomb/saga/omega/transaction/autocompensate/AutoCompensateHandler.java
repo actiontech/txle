@@ -30,6 +30,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
     private static final Logger LOG = LoggerFactory.getLogger(AutoCompensateHandler.class);
 
     private static volatile AutoCompensateHandler autoCompensateHandler = null;
+    protected String schema = TxleConstants.APP_NAME;
 
     public static AutoCompensateHandler newInstance() {
         if (autoCompensateHandler == null) {
@@ -79,6 +80,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
             AutoCompensateUpdateHandler.newInstance().prepareCompensationBeforeUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
         } else if (sqlStatement instanceof MySqlDeleteStatement) {
             AutoCompensateDeleteHandler.newInstance().prepareCompensationBeforeDeleting(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
+            // Remove cache after ending compensation preparation and business.
             CurrentThreadOmegaContext.clearCache();
         } else {
             standbyParams.clear();
@@ -130,11 +132,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         } else if (sqlStatement instanceof MySqlUpdateStatement) {
             AutoCompensateUpdateHandler.newInstance().prepareCompensationAfterUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
         }
-        /**
-         * 经测试，语句userRepository.delete(Long.valueOf(new Random().nextInt(1000)));在文件org.apache.servicecomb.saga.omega.transaction.AutoCompensableRecovery中apply方法执行后才会被拦截，
-         * 导致方法内先执行了clearCache，而后续无法获取到context，也无法判断是自动补偿
-         * 但insert和update语句是可以的，自己编写delete方法也是可以的，为避免类似错误，将clearCache放在此处执行
-         */
+        // Remove cache after ending compensation preparation and business.
         CurrentThreadOmegaContext.clearCache();
     }
 

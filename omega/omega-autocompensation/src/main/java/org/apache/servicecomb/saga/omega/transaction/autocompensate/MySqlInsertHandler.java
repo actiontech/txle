@@ -21,14 +21,13 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 插入数据逻辑
- * 1.插入前无数据需要备份，故不做处理
- * 2.执行插入数据操作
- * 3.插入后，生成的反向SQL的where条件中包含所有字段与值，如此在后续执行反向SQL时可避免脏写问题
- * 4.插入数据操作与生成补偿备份操作在同一事务中，防止脏写，即避免业务执行后，补偿备份前有其它业务对涉及数据进行更新
- * 5.后续需要补偿时，直接执行补偿SQL即可，补偿SQL举例如：【DELETE FROM txle_sample_user WHERE createtime = '2020-01-09 13:47:15.0' and balance = 2.00000 and name = 'xiongjiujiu' and id = 1006 and version = 2;】
- *
- * ps：目前仅支持普通的插入语句，暂未支持INSERT INTO table SELECT ...等复杂插入语句
+ * insert logic
+ * 1.do nothing before inserting new data
+ * 2.perform delete operation
+ * 3.write new data to the backup table after inserting
+ * 5.in a transaction, to prepare backup data and insert new data, the aim is to prevent a dirty change
+ * 6.perform the compensation sql immediately in case of error, the compensation sql likes [ DELETE FROM txle_sample_user WHERE createtime = '2020-01-09 13:47:15.0' and balance = 2.00000 and name = 'xiongjiujiu' and id = 1006 and version = 2 ]
+ * ps: do not support complex sql, e.g. [ INSERT INTO table SELECT ... ]
  */
 public class MySqlInsertHandler extends AutoCompensateInsertHandler {
 

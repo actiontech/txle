@@ -20,12 +20,13 @@ import java.sql.SQLException;
 import java.util.Map;
 
 /**
- * 更新数据逻辑
- * 1.更新前，备份影响数据到对应的备份数据表
- * 2.执行更新数据操作
- * 3.更新后，备份影响数据到对应的备份数据表
- * 4.更新数据操作与生成补偿备份操作在同一事务中，防止脏写，即补偿备份前后或删除数据前后，避免其它业务对涉及数据进行更新
- * 5.后续需要补偿时，先对比更新后的备份数据与数据库中的数据是否完全一致，若完全一致则直接执行补偿SQL，若非完全一致则放弃补偿，直接上报差错
+ * update logic
+ * 1.create backup table
+ * 2.write original data to the backup table before updating
+ * 3.perform update operation
+ * 4.write new data to the backup table after updating
+ * 5.in a transaction, to prepare backup data and delete original data, the aim is to prevent a dirty change
+ * 6.check data's consistency between backup data and current latest data in case of error, if it's true, then perform compensation sql, if not, report to accident platform
  */
 public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
 
@@ -53,7 +54,6 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
             // 1.take table's name out
             SQLName table = deleteStatement.getTableName();
             String tableName = table.toString().toLowerCase();
-            String schema = TxleConstants.APP_NAME;
             String txleBackupTableName = "backup_old_" + tableName;
             standbyParams.put("tablename", tableName);
             standbyParams.put("operation", "update");
@@ -69,12 +69,12 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
             this.prepareBackupTable(connection, tableName, txleBackupTableName);
 
             // 4.backup data
-            String backupDataSql = String.format("INSERT INTO " + schema + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
+            String backupDataSql = String.format("INSERT INTO " + this.schema + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
             LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - backupDataSql: [{}].", Thread.currentThread().getId(), backupDataSql);
             int backupResult = connection.prepareStatement(backupDataSql).executeUpdate();
             if (backupResult > 0) {
                 // 5.construct compensateSql
-                preparedStatement = connection.prepareStatement("SELECT GROUP_CONCAT(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" + schema + "' AND TABLE_NAME = '" + txleBackupTableName + "' AND COLUMN_NAME NOT IN ('globalTxId', 'localTxId')");
+                preparedStatement = connection.prepareStatement("SELECT GROUP_CONCAT(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" + this.schema + "' AND TABLE_NAME = '" + txleBackupTableName + "' AND COLUMN_NAME NOT IN ('globalTxId', 'localTxId')");
                 resultSet = preparedStatement.executeQuery();
                 if (resultSet.next()) {
                     String[] fieldNameArr = resultSet.getString(1).split(",");
@@ -90,7 +90,7 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
                     // take primary-key name
                     String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, tableName);
                     String compensateSql = String.format("UPDATE %s T INNER JOIN %s T1 ON T." + primaryKeyColumnName + " = T1." + primaryKeyColumnName + " SET %s WHERE T1.globalTxId = '%s' AND T1.localTxId = '%s' "
-                            + TxleConstants.ACTION_SQL, tableName, schema + "." + txleBackupTableName, setColumns.toString(), globalTxId, localTxId);
+                            + TxleConstants.ACTION_SQL, tableName, this.schema + "." + txleBackupTableName, setColumns.toString(), globalTxId, localTxId);
 
                     // 6.save txle_undo_log
                     return this.saveTxleUndoLog(delegate, globalTxId, localTxId, executeSql, compensateSql, server);
@@ -124,7 +124,6 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
             // 1.take table's name out
             SQLName table = deleteStatement.getTableName();
             String tableName = table.toString().toLowerCase();
-            String schema = TxleConstants.APP_NAME;
             String txleBackupTableName = "backup_new_" + tableName;
             standbyParams.put("tablename", tableName);
             standbyParams.put("operation", "update");
@@ -140,7 +139,7 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
             this.prepareBackupTable(connection, tableName, txleBackupTableName);
 
             // 4.backup data
-            String backupDataSql = String.format("INSERT INTO " + schema + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
+            String backupDataSql = String.format("INSERT INTO " + this.schema + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
             LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - backupDataSql: [{}].", Thread.currentThread().getId(), backupDataSql);
             int backupResult = connection.prepareStatement(backupDataSql).executeUpdate();
             return backupResult > 0;
