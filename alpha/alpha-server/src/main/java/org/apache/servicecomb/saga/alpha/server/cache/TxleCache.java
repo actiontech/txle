@@ -13,6 +13,7 @@ import com.ecwid.consul.v1.session.model.Session;
 import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.alpha.core.cache.CacheEntity;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
+import org.apache.servicecomb.saga.common.CrossSystemInetAddress;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +24,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestTemplate;
 
 import java.lang.invoke.MethodHandles;
-import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -125,7 +125,7 @@ public class TxleCache implements ITxleCache {
     public void refreshDistributedCache(String cacheKey, String cacheValue, int expire, String restApi) {
         try {
             if (serviceList != null && !serviceList.isEmpty()) {
-                String currentHostPort = InetAddress.getLocalHost().getHostName() + ":" + serverPort;
+                String currentHostPort = CrossSystemInetAddress.readCrossSystemIPv4() + ":" + serverPort;
                 Set<String> ipPortSet = new HashSet<>();
                 serviceList.forEach(ipPort -> {
                     try {
@@ -259,7 +259,7 @@ public class TxleCache implements ITxleCache {
                 if (serviceMap != null && !serviceMap.isEmpty()) {
                     Set<String> ipPortSet = new HashSet<>();
                     serviceList.clear();
-                    String currentHostPort = InetAddress.getLocalHost().getHostName() + ":" + serverPort;
+                    String currentHostPort = CrossSystemInetAddress.readCrossSystemIPv4() + ":" + serverPort;
                     serviceMap.keySet().forEach(key -> {
                         String ipPort = "";
                         try {
@@ -292,10 +292,14 @@ public class TxleCache implements ITxleCache {
             if (sessionList != null) {
                 List<Session> sessions = sessionList.getValue();
                 if (sessions != null && sessions.size() > 1) {
+                    String localHostPort = CrossSystemInetAddress.readCrossSystemIPv4() + ":" + serverPort;
                     for (Session session : sessions) {
                         if (!consulSessionId.equals(session.getId()) && txleConsulClient.getConsulClient().setKVValue(CONSUL_LEADER_KEY + "?acquire=" + session.getId(), CONSUL_LEADER_KEY_VALUE).getValue()) {
                             String[] sessionName = session.getName().split("-");
-                            setSynchronizedCache(sessionName[2] + ":" + sessionName[3]);
+                            String sessionHostPort = sessionName[2] + ":" + sessionName[3];
+                            if (!localHostPort.equalsIgnoreCase(sessionHostPort)) {
+                                setSynchronizedCache(sessionHostPort);
+                            }
                             break;
                         }
                     }
