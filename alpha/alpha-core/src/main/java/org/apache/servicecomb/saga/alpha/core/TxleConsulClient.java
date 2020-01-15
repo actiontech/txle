@@ -6,9 +6,13 @@
 package org.apache.servicecomb.saga.alpha.core;
 
 import com.ecwid.consul.v1.ConsulClient;
+import com.ecwid.consul.v1.QueryParams;
+import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.health.model.Check;
 import com.ecwid.consul.v1.session.model.NewSession;
+import com.ecwid.consul.v1.session.model.Session;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
+import org.apache.servicecomb.saga.common.CrossSystemInetAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +26,6 @@ import org.springframework.cloud.consul.ConsulProperties;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.lang.invoke.MethodHandles;
-import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -138,7 +141,7 @@ public class TxleConsulClient implements ApplicationRunner {
                 // To create a key for leader election no matter if it is exists.
                 consulClient.setKVValue(CONSUL_LEADER_KEY, CONSUL_LEADER_KEY_VALUE);
                 NewSession session = new NewSession();
-                serverHost = InetAddress.getLocalHost().getHostName();
+                serverHost = CrossSystemInetAddress.readCrossSystemIPv4();
                 session.setName("session-" + serverName + "-" + serverHost + "-" + serverPort + "-" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
                 consulSessionId = consulClient.sessionCreate(session, null).getValue();
                 return consulSessionId;
@@ -177,6 +180,17 @@ public class TxleConsulClient implements ApplicationRunner {
         }
     }
 
+    public void destroyCurrentSession() {
+        try {
+            Response<Session> session = consulClient.getSessionInfo(consulSessionId, QueryParams.DEFAULT);
+            if (session != null) {
+                consulClient.sessionDestroy(session.getValue().getId(), QueryParams.DEFAULT);
+            }
+        } catch (Exception e) {
+            log.error("Failed to destroy current session from Consul.", e);
+        }
+    }
+
     @PostConstruct
     void init() {
         if (enabled) {
@@ -202,6 +216,7 @@ public class TxleConsulClient implements ApplicationRunner {
     void shutdown() {
         if (enabled) {
             this.destroyConsulCriticalServices();
+            this.destroyCurrentSession();
         }
     }
 
