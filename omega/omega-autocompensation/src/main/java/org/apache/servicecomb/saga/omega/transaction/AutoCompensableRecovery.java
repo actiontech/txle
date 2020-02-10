@@ -50,7 +50,7 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 		try {
 			String localTxId = context.localTxId();
 
-			// Recoding current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
+			// Recording current thread identify, globalTxId and localTxId, the aim is to relate auto-compensation SQL by current thread identify. By Gannalyo
 			CurrentThreadOmegaContext.putThreadGlobalLocalTxId(new OmegaContextServiceConfig(context, true, false));
 
 			AlphaResponse response = interceptor.preIntercept(parentTxId, TxleConstants.AUTO_COMPENSABLE_METHOD, compensable.timeout(),
@@ -67,6 +67,9 @@ public class AutoCompensableRecovery implements AutoCompensableRecoveryPolicy {
 					throw new InvalidTransactionException(TxleConstants.LOG_ERROR_PREFIX + "Abort sub transaction " + localTxId
 							+ " because global transaction " + context.globalTxId() + " has already aborted.");
 				}
+
+				// Remove cache after ending compensation preparation and business.
+				CurrentThreadOmegaContext.clearCache();
 
 				// To submit the TxEndedEvent.
 				interceptor.postIntercept(parentTxId, TxleConstants.AUTO_COMPENSABLE_METHOD);

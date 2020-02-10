@@ -80,8 +80,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
             AutoCompensateUpdateHandler.newInstance().prepareCompensationBeforeUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
         } else if (sqlStatement instanceof MySqlDeleteStatement) {
             AutoCompensateDeleteHandler.newInstance().prepareCompensationBeforeDeleting(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
-            // Remove cache after ending compensation preparation and business.
-            CurrentThreadOmegaContext.clearCache();
         } else {
             standbyParams.clear();
             // Default is closed, means that just does record, if it's open, then program will throw an exception about current special SQL, just for auto-compensation.
@@ -132,8 +130,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         } else if (sqlStatement instanceof MySqlUpdateStatement) {
             AutoCompensateUpdateHandler.newInstance().prepareCompensationAfterUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
         }
-        // Remove cache after ending compensation preparation and business.
-        CurrentThreadOmegaContext.clearCache();
     }
 
     protected Map<String, String> selectColumnNameType(PreparedStatement delegate, String tableName) throws SQLException {
@@ -184,7 +180,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         try {
-            String schema = TxleConstants.APP_NAME;
             boolean isExistsBackupTable = false;
             preparedStatement = connection.prepareStatement("SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + schema + "' AND TABLE_NAME = '" + txleBackupTableName + "'");
             resultSet = preparedStatement.executeQuery();

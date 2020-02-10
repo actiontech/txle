@@ -138,7 +138,13 @@ public class MySqlUpdateHandler extends AutoCompensateUpdateHandler {
             connection = delegate.getConnection();
             this.prepareBackupTable(connection, tableName, txleBackupTableName);
 
+            // take primary-key name
+            String primaryKeyColumnName = this.parsePrimaryKeyColumnName(delegate, tableName);
             // 4.backup data
+            // 4.1 delete the previous backup for some data, only reserve the latest backup
+            String deletePreviousBackupSql = String.format("DELETE FROM " + this.schema + "." + txleBackupTableName + " WHERE globalTxId = '%s' AND localTxId = '%s'" +
+                    " AND " + primaryKeyColumnName + " IN (SELECT " + primaryKeyColumnName + " FROM %s WHERE %s) " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
+            connection.prepareStatement(deletePreviousBackupSql).executeUpdate();
             String backupDataSql = String.format("INSERT INTO " + this.schema + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
             LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - backupDataSql: [{}].", Thread.currentThread().getId(), backupDataSql);
             int backupResult = connection.prepareStatement(backupDataSql).executeUpdate();

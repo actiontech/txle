@@ -106,7 +106,8 @@ public class AutoCompensateService implements IAutoCompensateService {
             int backupDataCount = autoCompensateDao.executeQueryCount("SELECT COUNT(1) FROM " + schema + "." + txleBackupTableName + " T WHERE T.globalTxId = ? AND T.localTxId = ? FOR UPDATE", globalTxId, localTxId);
             if (backupDataCount > 0) {
                 String pkName = this.parsePrimaryKeyColumnName(tableName);
-                int currentDataCount = autoCompensateDao.executeQueryCount("SELECT COUNT(1) FROM " + schema + "." + txleBackupTableName + " T, " + tableName + " T1 WHERE T." + pkName + " = T1." + pkName + " AND T.globalTxId = ? AND T.localTxId = ?", globalTxId, localTxId);
+                int currentDataCount = autoCompensateDao.executeQueryCount("SELECT COUNT(1) FROM " + tableName + " T WHERE T.id IN (SELECT T1.id FROM " + schema + "." + txleBackupTableName + " T1 WHERE T1.globalTxId = ? AND T1.localTxId = ?)", globalTxId, localTxId);
+                // in case of updating many times for some same data, to delete the previous changes, so it only has one backup for any data.
                 if (backupDataCount == currentDataCount) {
                     List<Map<String, Object>> columnList = autoCompensateDao.executeQuery(
                             "SELECT GROUP_CONCAT(COLUMN_NAME) COLUMN_NAMES FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '" + schema + "' AND TABLE_NAME = '" + txleBackupTableName + "' AND COLUMN_NAME NOT IN ('globalTxId', 'localTxId')");
@@ -124,21 +125,19 @@ public class AutoCompensateService implements IAutoCompensateService {
                         String currentDataSql = "SELECT " + columnNames + " FROM " + tableName + " T, " + schema + "." + txleBackupTableName + " T1 WHERE T." + pkName + " = T1." + pkName + " AND T1.globalTxId = '" + globalTxId + "' AND T1.localTxId = '" + localTxId + "'";
 
                         String backupDataMD5 = getMD5Digest(backupDataSql, backupDataCount);
-                        String currentDataMD5 = getMD5Digest(currentDataSql, backupDataCount);
-                        boolean isConsistent = backupDataMD5.equals(currentDataMD5);
-                        if (!isConsistent) {
-                            throw new RuntimeException("That's not consistent between backup data and current data.");
+                        String currentDataMD5 = getMD5Digest(currentDataSql, currentDataCount);
+                        if (backupDataMD5.equals(currentDataMD5)) {
+                            return true;
                         }
-                        return isConsistent;
                     }
                 }
             }
+            throw new RuntimeException("That's not consistent between backup data and current data.");
         }
         return true;
     }
 
     private String getMD5Digest(String sql, int count) throws NoSuchAlgorithmException, IOException {
-        // MD5虽可能会发生数据碰撞，但是极其小的概率，且表中全字段MD5概率就更小了
         MessageDigest md5 = MessageDigest.getInstance("MD5");
 
         int pageSize = 100;
