@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Random;
 
 /**
  * @author Gannalyo
@@ -110,21 +109,15 @@ public class UserService {
     @Transactional
     @AutoCompensable
     public int updateBalanceByUserIdAuto(@Param("userId") long userId, @Param("balance") double balance) {
-//        UserEntity userEntity = userRepository.findOne(userId);
-//        if (userEntity != null) {
-//            if (userEntity.getBalance() < balance) {
-//                throw new RuntimeException("Sorry, not sufficient balance under your account.");
-//            }
-//        }
-//        if (userRepository.updateBalanceByUserId(userId, balance) < 1) {
-//        userRepository.updateBalanceByUserId(1, balance);
-//        userRepository.delete(1002L);
-//        userRepository.deleteById(Long.valueOf(new Random().nextInt(1000)));
-//        userRepository.delete(userEntity);
-        userRepository.insert();
-//        if (userRepository.save(new UserEntity("xiongjiujiu", 2, 2)) == null) {
-//            throw new RuntimeException("Sorry, not sufficient balance under your account.");
-//        }
+        UserEntity userEntity = userRepository.findOne(userId);
+        if (userEntity != null) {
+            if (userEntity.getBalance() < balance) {
+                throw new RuntimeException("Sorry, not sufficient balance under your account.");
+            }
+        }
+        if (userRepository.updateBalanceByUserId(userId, balance) < 1) {
+            throw new RuntimeException("Sorry, not sufficient balance under your account.");
+        }
         return 1;
     }
 
