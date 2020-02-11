@@ -89,8 +89,8 @@ public class ComplexScenarioGlobalTxController {
 
     // 子业务复杂场景(如一个子业务中包含多个相同或异同数据的数据库操作)
     @SagaStart(category = "txle-springboot-global")
-    @GetMapping("/testComplexSubBusinessUpdate/{userId}/{amount}/{merchantid}")
-    public String testComplexSubBusinessUpdate(@PathVariable int userId, @PathVariable double amount, @PathVariable int merchantid) {
+    @GetMapping("/testComplexSubBusinessAuto/{userId}/{amount}/{merchantid}")
+    public String testComplexSubBusinessAuto(@PathVariable int userId, @PathVariable double amount, @PathVariable int merchantid) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
         System.err.println("[" + sdf.format(new Date()) + "] Executing method '" + this.getClass() + ".testGlobalTransactionTimeout'. \t\tParameters[userId = " + userId + ", amount = " + amount + ", merchantid = " + merchantid + "]");
 
