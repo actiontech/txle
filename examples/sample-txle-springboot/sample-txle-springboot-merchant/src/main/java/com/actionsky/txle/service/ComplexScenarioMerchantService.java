@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
 import org.apache.servicecomb.saga.omega.transaction.accidentplatform.AccidentHandleType;
 import org.apache.servicecomb.saga.omega.transaction.accidentplatform.ClientAccidentHandlingService;
+import org.apache.servicecomb.saga.omega.transaction.annotations.AutoCompensable;
 import org.apache.servicecomb.saga.omega.transaction.annotations.Compensable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,6 +105,31 @@ public class ComplexScenarioMerchantService {
             // 不要抛出异常，否则org.apache.servicecomb.saga.omega.context.CompensationContext中报(IllegalAccessException | InvocationTargetException)错误
         }
         return 0;
+    }
+
+    @Transactional
+    @AutoCompensable
+    public int complexUpdateMerchantAuto(@Param("merchantId") long merchantId, @Param("balance") double balance) {
+        if (balance == 2) {
+            throw new RuntimeException("Merchant auto normal throw exception");
+        }
+        if (merchantId == 0) {
+            MerchantEntity merchant = new MerchantEntity("xiongjiujiu", 0, 1);
+            if (merchantRepository.save(merchant) == null) {
+                throw new RuntimeException("Failed to add merchant. merchant = " + merchant.toJsonString());
+            }
+        } else if (merchantId > 1000) {
+            if (merchantRepository.deleteById(merchantId) < 1) {
+                throw new RuntimeException("Failed to delete merchant. id = " + merchantId);
+            }
+        } else {
+            merchantRepository.save(new MerchantEntity("xiongjiujiu", 0, 1));
+            merchantRepository.updateBalanceById(merchantId, balance);
+            if (merchantRepository.updateBalanceById(merchantId, balance) < 1) {
+                throw new RuntimeException("Failed to update merchant. merchantId = " + merchantId);
+            }
+        }
+        return 1;
     }
 
 }

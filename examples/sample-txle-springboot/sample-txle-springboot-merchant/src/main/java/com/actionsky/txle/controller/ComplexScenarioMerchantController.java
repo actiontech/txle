@@ -41,4 +41,12 @@ public class ComplexScenarioMerchantController {
         return TxleConstants.OK;
     }
 
+    @PostMapping("/complexPayMoneyToMerchant/{merchantid}/{balance}")
+    public String complexPayMoneyToMerchant(@PathVariable long merchantid, @PathVariable double balance) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+        System.err.println("[" + sdf.format(new Date()) + "] Executing method '" + this.getClass() + ".payMoneyToMerchantTimeout'. \t\tParameters[merchantid = " + merchantid + ", balance = " + balance + "]");
+        complexScenarioMerchantService.complexUpdateMerchantAuto(merchantid, balance);
+        return TxleConstants.OK;
+    }
+
 }

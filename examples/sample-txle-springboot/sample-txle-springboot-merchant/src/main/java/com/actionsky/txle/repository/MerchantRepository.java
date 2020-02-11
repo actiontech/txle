@@ -23,4 +23,9 @@ public interface MerchantRepository extends JpaRepository<MerchantEntity, Long> 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE MerchantEntity T SET T.balance = T.balance + :balance WHERE id = :merchantid")
     int updateBalanceById(@Param("merchantid") long merchantid, @Param("balance") double balance);
+
+    @Transactional
+    @Modifying(clearAutomatically = true)
+    @Query(value = "DELETE FROM txle_sample_merchant WHERE id = ?1", nativeQuery = true)
+    int deleteById(@Param("merchantid") long merchantid);
 }
