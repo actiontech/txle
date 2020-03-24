@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.actionsky.txle.grpc";
+option java_outer_classname = "TxleTransactionProto";
+
+service TxleTransactionService {
+  rpc OnInitialize (TxleClientConfig) returns (stream TxleServerConfigStream) {}
+  rpc OnBuildBidirectionalStream (stream TxleGrpcClientStream) returns (stream TxleGrpcServerStream) {}
+
+  rpc OnStartTransaction (TxleTransactionStart) returns (TxleTxStartAck) {}
+  rpc OnEndTransaction (TxleTransactionEnd) returns (TxleTxEndAck) {}
+
+  rpc OnSynDatabase (TxleBusinessDBInfo) returns (TxleBasicAck) {}
+}
+
+message TxleClientConfig {
+  string serviceName = 1;// not null
+  string serviceIP = 2;// not null
+  string serviceCategory = 3;
+}
+
+message TxleServerConfigStream {
+  bool isClientCompensate = 1;
+}
+
+// The first interaction
+message TxleTransactionStart {
+  string serviceName = 1;// not null
+  string serviceIP = 2;// not null
+  string serviceCategory = 3;
+  string globalTxId = 4;// not null
+  int32 timeout = 5;
+  repeated TxleSubTransactionStart subTxInfo = 6;
+}
+
+message TxleSubTransactionStart {
+  string localTxId = 1;// not null
+  string sql = 2;// not null
+  string dbNodeId = 3;// not null
+  string dbSchema = 4;// not null
+  int32 timeout = 5;
+  int32 retries = 6;
+  int32 order = 7;
+}
+
+message TxleTxStartAck {
+  enum TransactionStatus {
+    NORMAL = 0;
+    ABORTED = 1;
+    PAUSED = 2;
+    DEGRADED = 3;
+    FAULTTOLERANT = 4;
+  }
+  TransactionStatus status = 1;
+  string message = 2;
+  repeated TxleSubTxSql subTxSql = 3;
+}
+
+message TxleSubTxSql {
+  string localTxId = 1;
+  repeated string subTxSql = 2;
+  string dbNodeId = 3;// not null
+  string dbSchema = 4;
+  int32 procedureNumber = 5;
+  int32 order = 6;
+}
+
+// The continuously interaction
+message TxleTransactionEnd {
+  string globalTxId = 1;// not null
+  // Can the global transaction be ended?
+  bool isCanOver = 2;// default is false
+  repeated TxleSubTransactionEnd subTxInfo = 3;
+}
+
+message TxleSubTransactionEnd {
+  string localTxId = 1;// not null
+  bool isSuccessful = 2;// default is false
+}
+
+message TxleTxEndAck {
+  enum TransactionStatus {
+    NORMAL = 0;
+    ABORTED = 1;
+    PAUSED = 2;
+    DEGRADED = 3;
+    FAULTTOLERANT = 4;
+  }
+  TransactionStatus status = 1;
+  string message = 2;
+}
+
+message TxleGrpcServerStream {
+  repeated TxleServerExecuteSql executeSql = 1;
+}
+
+message TxleServerExecuteSql {
+  string dbNodeId = 1;
+  string dbSchema = 2;
+  string globalTxId = 3;
+  string localTxId = 4;
+  repeated string subTxSql = 5;
+  string method = 6;
+}
+
+message TxleGrpcClientStream {
+  repeated TxleClientSqlResult sqlResult = 1;
+}
+
+message TxleClientSqlResult {
+  string dbNodeId = 1;
+  string globalTxId = 2;
+  string localTxId = 3;
+  string method = 4;
+  bool isExecutedOK = 5;// default is true, it'll be false in case of exception
+}
+
+message TxleBusinessDBInfo {
+  int64 timestamp = 1;
+  bool isFullDose = 2;
+  repeated TxleBusinessNode node = 3;
+}
+
+message TxleBusinessNode {
+  string id = 1;
+  repeated TxleBusinessDatabase database = 2;
+}
+
+message TxleBusinessDatabase {
+  string name = 1;
+  repeated TxleBusinessTable table = 2;
+}
+
+message TxleBusinessTable {
+  string name = 1;
+  repeated TxleBusinessField field = 2;
+}
+
+message TxleBusinessField {
+  string name = 1;
+  string type = 2;
+  bool isPrimaryKey = 3;
+}
+
+message TxleBasicAck {
+  bool isReceived = 1;
+  bool isSuccessful = 2;
+}

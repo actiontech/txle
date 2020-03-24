@@ -27,7 +27,7 @@
 	</modules>
 
 	<properties>
-		<txle.version>2.19.11.0</txle.version>
+		<txle.version>9.9.9.9</txle.version>
 	</properties>
 
 	<dependencies>

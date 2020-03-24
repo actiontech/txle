@@ -72,6 +72,11 @@ class SpringTxEventRepository implements TxEventRepository {
   }
 
   @Override
+  public List<TxEvent> findTimeoutEvents(List<String> globalTxId) {
+    return eventRepo.findTimeoutEvents(globalTxId, new Date());
+  }
+
+  @Override
   public Optional<TxEvent> findTxStartedEvent(String globalTxId, String localTxId) {
     return eventRepo.findFirstStartedEventByGlobalTxIdAndLocalTxId(globalTxId, localTxId);
   }
@@ -212,14 +217,17 @@ class SpringTxEventRepository implements TxEventRepository {
     return eventRepo.selectEndedEventIdsWithinSomePeriod(new PageRequest(pageIndex, pageSize), startTime, endTime);
   }
 
+  public TxEvent selectMinRetriesEventByTxIdType(String globalTxId, String localTxId, String type) {
+    return eventRepo.selectMinRetriesEventByTxIdType(globalTxId, localTxId, type);
+  }
+
   @Override
   public TxEvent selectEventByGlobalTxIdType(String globalTxId, String type) {
     return eventRepo.selectEventByGlobalTxIdType(globalTxId, type);
   }
 
-  @Override
-  public long selectSubTxCount(String globalTxId) {
-    return eventRepo.selectSubTxCount(globalTxId);
+  public boolean checkIsAlreadyRetried(String globalTxId, String localTxId) {
+    return eventRepo.selectStartedAndAbortedEndRate(globalTxId, localTxId) == 0;
   }
 
   // 计算全局事务的状态

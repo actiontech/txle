@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   localTxId varchar(36) NOT NULL,
   parentTxId varchar(36) DEFAULT NULL,
   type varchar(50) NOT NULL,
-  compensationMethod varchar(256) NOT NULL,
+  compensationMethod varchar(256) NULL,
   expiryTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   payloads blob,
   retries int(11) NOT NULL DEFAULT '0',
@@ -38,6 +38,25 @@ CREATE TABLE IF NOT EXISTS TxEvent (
   INDEX saga_tx_type_index (type)
 ) DEFAULT CHARSET=utf8mb4 $$
 
+CREATE TABLE IF NOT EXISTS TxEventAddition (
+  surrogateId bigint NOT NULL AUTO_INCREMENT,
+  serviceName varchar(100) NOT NULL,
+  instanceId varchar(100) NOT NULL,
+  globalTxId varchar(36) NOT NULL,
+  localTxId varchar(36) NOT NULL,
+  dbNodeId varchar(50) NOT NULL,
+  dbSchema varchar(50) NOT NULL,
+  businessSql varchar(2000) NOT NULL,
+  backupSql varchar(3000) NOT NULL,
+  compensateSql varchar(2000) NOT NULL,
+  compensateStatus int(1) NOT NULL DEFAULT 0 COMMENT '0-uncompensated, 1-compensated',
+  executeOrder int(2) NOT NULL DEFAULT 0,
+  creationTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (surrogateId),
+  INDEX saga_global_tx_index (globalTxId),
+  INDEX saga_surrogateId_index (surrogateId)
+) DEFAULT CHARSET=utf8mb4 $$
+
 CREATE TABLE IF NOT EXISTS Command (
   surrogateId bigint NOT NULL AUTO_INCREMENT,
   eventId bigint NOT NULL UNIQUE,
@@ -46,7 +65,7 @@ CREATE TABLE IF NOT EXISTS Command (
   globalTxId varchar(36) NOT NULL,
   localTxId varchar(36) NOT NULL,
   parentTxId varchar(36) DEFAULT NULL,
-  compensationMethod varchar(256) NOT NULL,
+  compensationMethod varchar(256) NULL,
   payloads blob,
   status varchar(12),
   lastModified datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -169,3 +188,40 @@ BEGIN
   SELECT name INTO v_name FROM DataDictionaryItem WHERE value = P AND ddcode = P_KEY;
   RETURN v_name;
 END $$
+
+CREATE TABLE IF NOT EXISTS BusinessDBLatestDetail (
+  id bigint(0) NOT NULL AUTO_INCREMENT,
+  timestamp bigint(0) NOT NULL COMMENT '时间戳类似版本号，写入数据时需大于记录中最大的时间戳',
+  node varchar(50) NULL COMMENT '数据库实例节点标识',
+  dbschema varchar(20) NULL COMMENT '数据库名称',
+  tablename varchar(30) NULL COMMENT '数据表名称',
+  field varchar(30) NULL COMMENT '字段名称',
+  fieldtype varchar(20) NULL,
+  isprimarykey int(1) NOT NULL DEFAULT 0 COMMENT '是否为主键，1-主键，0-非主键',
+  createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS BusinessDBBackupInfo (
+  id bigint(0) NOT NULL AUTO_INCREMENT,
+  servicename varchar(50) NOT NULL,
+  instanceid varchar(50) NOT NULL,
+  dbnodeid varchar(50) NOT NULL COMMENT '数据库实例节点标识',
+  dbschema varchar(50) NOT NULL COMMENT '数据库实例名称',
+  backuptablename varchar(50) NOT NULL COMMENT '备份表名称',
+  status int(1) NOT NULL DEFAULT 1 COMMENT '1-正常，2-异常',
+  createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) DEFAULT CHARSET=utf8mb4;
+
+-- CREATE TABLE IF NOT EXISTS TxEventStatus (
+--   id bigint(0) NOT NULL AUTO_INCREMENT,
+--   servicename varchar(50) NOT NULL,
+--   instanceid varchar(50) NOT NULL,
+--   globaltxid varchar(36) NOT NULL,
+--   localtxid varchar(36),
+--   status int(1) NOT NULL DEFAULT 1 COMMENT '1-正常，2-异常',
+--   reason varchar(50) NOT NULL,
+--   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--   PRIMARY KEY (id)
+-- ) DEFAULT CHARSET=utf8mb4;

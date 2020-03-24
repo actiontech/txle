@@ -47,6 +47,8 @@ public interface TxEventRepository {
 
   TxEvent findTimeoutEventsBeforeEnding(String globalTxId);
 
+  List<TxEvent> findTimeoutEvents(List<String> globalTxId);
+
   /**
    * Find a {@link TxEvent} which satisfies below requirements:
    * <ol>
@@ -91,6 +93,8 @@ public interface TxEventRepository {
 
   TxEvent selectEventByGlobalTxIdType(String globalTxId, String type);
 
-  long selectSubTxCount(String globalTxId);
+  TxEvent selectMinRetriesEventByTxIdType(String globalTxId, String localTxId, String type);
+
+  boolean checkIsAlreadyRetried(String globalTxId, String localTxId);
 
 }

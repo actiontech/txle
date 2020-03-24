@@ -5,6 +5,9 @@
 
 package org.apache.servicecomb.saga.alpha.core.listener;
 
+import com.actionsky.txle.cache.CacheName;
+import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.grpc.interfaces.ICustomRepository;
 import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
@@ -17,10 +20,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.invoke.MethodHandles;
-import java.util.HashSet;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.apache.servicecomb.saga.common.EventType.SagaStartedEvent;
 import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
@@ -41,9 +43,17 @@ public class TxEventAfterPersistingListener implements Observer {
     @Autowired
     private IDataDictionaryService dataDictionaryService;
 
+    @Autowired
+    private ICustomRepository customRepository;
+
+    @Autowired
+    private ITxleEhCache txleEhCache;
+
     private final Set<String> serverNameIdCategory = new HashSet<>();
 
     private final Set<String> globalTxIdSet = new HashSet<>();
+
+    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     @Override
     public void update(Observable arg0, Object arg1) {
@@ -67,16 +77,59 @@ public class TxEventAfterPersistingListener implements Observer {
                     if (globalTxIdSet.size() > 20000) {
                         removeDistributedTxStatusCache(globalTxIdSet);
                     }
+
+                    this.saveBusinessDBBackupInfo(event);
                 }
             }
         }
     }
 
+    private void saveBusinessDBBackupInfo(TxEvent event) {
+        Object cacheValue = txleEhCache.get(CacheName.GLOBALTX, "backup-table-check");
+        if (cacheValue != null) {
+            Map<String, List<String[]>> values = (Map<String, List<String[]>>) cacheValue;
+            if (values != null && !values.isEmpty()) {
+                List<String[]> backupInfoList = values.get(event.globalTxId());
+                if (backupInfoList != null) {
+                    Set<String> backupTables = new HashSet<>();
+                    backupInfoList.forEach(backupInfo -> {
+                        if (!backupTables.contains(backupInfo[2])) {
+                            if (!this.checkIsExistsBackupTable(event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[2])) {
+                                if (this.customRepository.executeUpdate("INSERT INTO BusinessDBBackupInfo (servicename, instanceid, dbnodeid, dbschema, backuptablename) VALUES (?, ?, ?, ?, ?)", event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[2]) > 0) {
+                                    backupTables.add(backupInfo[2]);
+                                }
+                            } else {
+                                backupTables.add(backupInfo[2]);
+                            }
+                        }
+                        if (!backupTables.contains(backupInfo[3])) {
+                            if (!this.checkIsExistsBackupTable(event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[3])) {
+                                if (this.customRepository.executeUpdate("INSERT INTO BusinessDBBackupInfo (servicename, instanceid, dbnodeid, dbschema, backuptablename) VALUES (?, ?, ?, ?, ?)", event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[3]) > 0) {
+                                    backupTables.add(backupInfo[3]);
+                                }
+                            } else {
+                                backupTables.add(backupInfo[3]);
+                            }
+                        }
+                    });
+                    values.remove(event.globalTxId());
+                    txleEhCache.put(CacheName.GLOBALTX, "backup-table-check", values);
+                }
+            }
+        }
+    }
+
+    private boolean checkIsExistsBackupTable(String serviceName, String instanceId, String dbNodeId, String database, String backupTableName) {
+        String sql = "SELECT COUNT(1) FROM BusinessDBBackupInfo T WHERE T.servicename = ? AND T.instanceid = ? AND T.dbnodeid = ? AND T.dbschema = ? AND T.backuptablename = ? AND T.status = ?";
+        return this.customRepository.count(sql, serviceName, instanceId, dbNodeId, database, backupTableName, 1) > 0;
+    }
+
     private void removeDistributedTxStatusCache(Set<String> globalTxIdSet) {
-        new Thread(() -> {
+        // replace a new thread with a thread pool so that avoid to create too many new threads
+        executorService.execute(() -> {
             txleCache.removeDistributedTxStatusCache(globalTxIdSet);
             globalTxIdSet.clear();
-        }).start();
+        });
     }
 
     private void putServerNameIdCategory(TxEvent event) {
@@ -84,11 +137,11 @@ public class TxEventAfterPersistingListener implements Observer {
         final String serverNameInstanceCategory = event.serviceName() + "__" + event.instanceId() + "__" + event.category();
         boolean result = serverNameIdCategory.add(serverNameInstanceCategory);
         if (result) {
-            new Thread(() -> {
+            executorService.execute(() -> {
                 int showOrder = dataDictionaryService.selectMaxShowOrder(globalTxServer);
                 final DataDictionaryItem ddItem = new DataDictionaryItem(globalTxServer, event.serviceName(), event.instanceId(), event.category(), showOrder + 1, 1, "");
                 dataDictionaryService.createDataDictionary(ddItem);
-            }).start();
+            });
         }
     }
 

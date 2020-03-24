@@ -42,6 +42,10 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
           " ORDER BY surrogateId DESC LIMIT 1", nativeQuery = true)
   TxEvent findTimeoutEventsBeforeEnding(String globalTxId, Date currentDateTime);
 
+  @Query(value = "SELECT * FROM TxEvent t WHERE t.globalTxId IN ?1 AND t.type IN ('TxStartedEvent', 'SagaStartedEvent') AND t.expiryTime < ?2" +
+          " AND NOT EXISTS (SELECT 1 FROM TxEvent WHERE globalTxId IN ?1 AND type = 'SagaEndedEvent')", nativeQuery = true)
+  List<TxEvent> findTimeoutEvents(List<String> globalTxId, Date currentDateTime);
+
   @Query("SELECT t FROM TxEvent t "
       + "WHERE t.globalTxId = ?1 "
       + "  AND t.localTxId = ?2 "
@@ -50,6 +54,9 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
 
   @Query("FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId = ?2 AND t.type = 'TxStartedEvent'")
   List<TxEvent> selectTxStartedEventByLocalTxId(String globalTxId, String localTxId);
+
+  @Query("FROM TxEvent t WHERE t.globalTxId = ?1 AND t.localTxId = ?2")
+  List<TxEvent> selectSubEventByLocalTxId(String globalTxId, String localTxId);
 
   @Query("SELECT t FROM TxEvent t "
       + "WHERE t.globalTxId = ?1 AND t.type = 'TxStartedEvent' AND EXISTS ( "
@@ -136,7 +143,10 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query("FROM TxEvent T WHERE T.globalTxId = ?1 AND T.type = ?2")
   TxEvent selectEventByGlobalTxIdType(String globalTxId, String type);
 
-  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent T WHERE T.globalTxId = ?1 AND T.type = 'TxStartedEvent') T1", nativeQuery = true)
-  long selectSubTxCount(String globalTxId);
+  @Query(value = "SELECT * FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = ?3 ORDER BY T.retries LIMIT 1", nativeQuery = true)
+  TxEvent selectMinRetriesEventByTxIdType(String globalTxId, String localTxId, String type);
+
+  @Query(value = "SELECT COUNT(1) % 2 FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2", nativeQuery = true)
+  int selectStartedAndAbortedEndRate(String globalTxId, String localTxId);
 
 }

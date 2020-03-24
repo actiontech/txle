@@ -16,6 +16,11 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import brave.Tracing;
+import com.actionsky.txle.configuration.TxleConfig;
+import com.actionsky.txle.grpc.interfaces.CompensateService;
+import com.actionsky.txle.grpc.interfaces.GlobalTxHandler;
+import com.actionsky.txle.grpc.interfaces.GrpcTransactionEndpoint;
+import com.actionsky.txle.grpc.interfaces.bizdbinfo.IBusinessDBLatestDetailService;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
@@ -43,6 +48,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -53,8 +59,9 @@ import javax.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.*;
 
-@EntityScan(basePackages = "org.apache.servicecomb.saga.alpha")
-@Import({KafkaProducerConfig.class, TracingConfiguration.class, CommonConfig.class})
+@EntityScan(basePackages = {"org.apache.servicecomb.saga.alpha", "com.actionsky.txle"})
+@EnableJpaRepositories(basePackages = {"org.apache.servicecomb.saga.alpha", "com.actionsky.txle"})
+@Import({KafkaProducerConfig.class, TracingConfiguration.class, CommonConfig.class, TxleConfig.class})
 @EnableScheduling
 @Configuration
 class AlphaConfig {
@@ -168,34 +175,39 @@ class AlphaConfig {
   }
 
   @Bean
-  TxConsistentService txConsistentService(
-          GrpcServerConfig serverConfig,
-          ScheduledExecutorService scheduler,
-          TxEventRepository eventRepository,
-          CommandRepository commandRepository,
-          TxTimeoutRepository timeoutRepository,
-          OmegaCallback omegaCallback,
-          Map<String, Map<String, OmegaCallback>> omegaCallbacks,
-          IConfigCenterService dbDegradationConfigService,
-          Tracing tracing,
-          IAccidentHandlingService accidentHandlingService,
-          ITxleCache txleCache,
-          TxleConsulClient txleConsulClient) {
+  TxConsistentService txConsistentService(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository) {
+    return new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
+  }
 
-    new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleCache, txleConsulClient).run();
+  @Bean
+  EventScanner eventScanner(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository,
+                                   OmegaCallback omegaCallback, ITxleCache txleCache, TxleConsulClient txleConsulClient) {
+    EventScanner eventScanner = new EventScanner(scheduler, eventRepository, commandRepository,
+            timeoutRepository, omegaCallback, eventPollingInterval, txleCache, txleConsulClient);
+    eventScanner.run();
+    return eventScanner;
+  }
 
-    TxConsistentService consistentService = new TxConsistentService(eventRepository, commandRepository, timeoutRepository);
-
-    ServerStartable starTable = buildGrpc(serverConfig, consistentService, omegaCallbacks, dbDegradationConfigService, tracing, accidentHandlingService);
+  @Bean
+  public ServerStartable serverStartable(TxConsistentService txConsistentService, GrpcServerConfig serverConfig,
+                                         Map<String, Map<String, OmegaCallback>> omegaCallbacks,
+                                         IConfigCenterService dbDegradationConfigService,
+                                         Tracing tracing, IAccidentHandlingService accidentHandlingService,
+                                         GlobalTxHandler globalTxHandler, CompensateService compensateService, com.actionsky.txle.cache.ITxleEhCache txleEhCache,
+                                         TxEventRepository eventRepository, IBusinessDBLatestDetailService businessDBLatestDetailService) {
+    ServerStartable starTable = buildGrpc(serverConfig, txConsistentService, omegaCallbacks, dbDegradationConfigService,
+            tracing, accidentHandlingService, globalTxHandler, compensateService, txleEhCache, eventRepository, businessDBLatestDetailService);
     new Thread(starTable::start).start();
-
-    return consistentService;
+    return starTable;
   }
 
   private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService,
-                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, Tracing tracing, IAccidentHandlingService accidentHandlingService) {
+                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService,
+                                    Tracing tracing, IAccidentHandlingService accidentHandlingService, GlobalTxHandler globalTxHandler,
+                                    CompensateService compensateService, com.actionsky.txle.cache.ITxleEhCache txleEhCache, TxEventRepository eventRepository, IBusinessDBLatestDetailService businessDBLatestDetailService) {
     return new GrpcStartable(serverConfig, tracing,
-            new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService));
+            new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService),
+            new GrpcTransactionEndpoint(globalTxHandler, compensateService, txleEhCache, accidentHandlingService, eventRepository, txConsistentService, businessDBLatestDetailService));
   }
 
   @Bean

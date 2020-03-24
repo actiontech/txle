@@ -265,6 +265,34 @@ public class TxEvent/* extends TxEventExtension*/ {
     return category;
   }
 
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public void setCompensationMethod(String compensationMethod) {
+        this.compensationMethod = compensationMethod;
+    }
+
+    public void setExpiryTime(Date expiryTime) {
+        this.expiryTime = expiryTime;
+    }
+
+    public void setRetryMethod(String retryMethod) {
+        this.retryMethod = retryMethod;
+    }
+
+    public void setRetries(int retries) {
+        this.retries = retries;
+    }
+
+    public void setPayloads(byte[] payloads) {
+        this.payloads = payloads;
+    }
+
+    public void setCreationTime(Date creationTime) {
+        this.creationTime = creationTime;
+    }
+
   @Override
   public String toString() {
     return "TxEvent{" +

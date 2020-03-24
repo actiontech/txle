@@ -62,4 +62,17 @@ public final class TxleConstants {
     public static String constructConfigCacheKey(String instanceId, String category, int type) {
         return "config_cache_" + instanceId + "_" + category + "_" + type;
     }
+
+    public static String giveBackupTableNameForOldData(String dbSchema, String tableName) {
+        return dbSchema + "_backup_old_" + tableName;
+    }
+
+    public static String giveBackupTableNameForNewData(String dbSchema, String tableName) {
+        return dbSchema + "_backup_new_" + tableName;
+    }
+
+    public static String getServiceInstanceId(String serviceName, String serviceIp) {
+        return serviceName + "-" + serviceIp;
+    }
+
 }

@@ -48,6 +48,11 @@ public class TxConsistentServiceTest {
     }
 
     @Override
+    public List<TxEvent> findTimeoutEvents(List<String> globalTxId) {
+      return null;
+    }
+
+    @Override
     public Optional<TxEvent> findTxStartedEvent(String globalTxId, String localTxId) {
       return events.stream()
           .filter(event -> globalTxId.equals(event.globalTxId()) && localTxId.equals(event.localTxId()))
@@ -130,9 +135,15 @@ public class TxConsistentServiceTest {
     }
 
     @Override
-    public long selectSubTxCount(String globalTxId) {
-      return 0;
+    public TxEvent selectMinRetriesEventByTxIdType(String globalTxId, String localTxId, String type) {
+      return null;
     }
+
+    @Override
+    public boolean checkIsAlreadyRetried(String globalTxId, String localTxId) {
+      return false;
+    }
+
   };
 
   private final String globalTxId = UUID.randomUUID().toString();

@@ -19,6 +19,8 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import com.actionsky.txle.grpc.interfaces.eventaddition.ITxEventAdditionService;
+import com.actionsky.txle.grpc.interfaces.eventaddition.TxEventAddition;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
@@ -54,7 +56,10 @@ public class TxConsistentService {
 	@Autowired
 	private ITxleCache txleCache;
 
-  private final List<String> types = Arrays.asList(TxEndedEvent.name(), TxAbortedEvent.name());
+	@Autowired
+	private ITxEventAdditionService eventAdditionService;
+
+	private final List<String> types = Arrays.asList(TxEndedEvent.name(), TxAbortedEvent.name());
 
   public TxConsistentService(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository) {
     this.eventRepository = eventRepository;
@@ -302,4 +307,46 @@ public class TxConsistentService {
 				timeout.category(),
 				("Transaction timeout").getBytes());
 	}
+
+	public boolean registerGlobalTx(TxEvent event) {
+		try {
+			txleMetrics.startMarkTxDuration(event);
+			eventRepository.save(event);
+		} catch (Exception e) {
+			LOG.error("Failed to register global transaction [{}].", event, e);
+			return false;
+		} finally {
+			txleMetrics.endMarkTxDuration(event);
+		}
+		return true;
+	}
+
+	public boolean registerSubTx(TxEvent subTxEvent, TxEventAddition subTxEventAddition) {
+		try {
+			txleMetrics.countChildTxNumber(subTxEvent);
+			txleMetrics.startMarkTxDuration(subTxEvent);
+
+			eventRepository.save(subTxEvent);
+
+			if (subTxEventAddition != null) {
+				eventAdditionService.save(subTxEventAddition);
+			}
+
+			if (TxCompensatedEvent.name().equals(subTxEvent.type())) {
+				eventAdditionService.updateCompensateStatus(subTxEvent.instanceId(), subTxEvent.globalTxId(), subTxEvent.localTxId());
+			}
+		} catch (Exception e) {
+			LOG.error("Failed to register global transaction [{}].", subTxEvent, e);
+			return false;
+		} finally {
+			txleMetrics.countTxNumber(subTxEvent, false, subTxEvent.retries() > 0);
+			txleMetrics.endMarkTxDuration(subTxEvent);
+		}
+		return true;
+	}
+
+	public boolean checkIsExistsEventType(String globalTxId, String localTxId, String type) {
+		return eventRepository.checkIsExistsEventType(globalTxId, localTxId, type);
+	}
+
 }

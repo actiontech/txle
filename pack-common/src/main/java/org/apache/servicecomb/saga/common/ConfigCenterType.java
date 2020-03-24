@@ -23,7 +23,8 @@ public enum ConfigCenterType {
     PauseGlobalTx,
     HistoryTableIntervalRule,
     AccidentReport,
-    SqlMonitor;
+    SqlMonitor,
+    ClientCompensate;
 
     public int toInteger() {
         switch (this) {
@@ -55,6 +56,8 @@ public enum ConfigCenterType {
                 return 50;
             case SqlMonitor:
                 return 51;
+            case ClientCompensate:
+                return 52;
             default:
                 return 1;
         }
@@ -90,6 +93,8 @@ public enum ConfigCenterType {
                 return "差错上报";
             case SqlMonitor:
                 return "SQL监控";
+            case ClientCompensate:
+                return "客户端补偿";
             default:
                 return "全局事务";
         }
@@ -125,8 +130,55 @@ public enum ConfigCenterType {
                 return AccidentReport;
             case 51:
                 return SqlMonitor;
+            case 52:
+                return ClientCompensate;
             default:
                 throw new RuntimeException("No type value for " + type + ".");
+        }
+    }
+
+    public boolean defaultValue() {
+        switch (this) {
+            case GlobalTx:
+                return true;
+            case Compensation:
+                return true;
+            case AutoCompensation:
+                return true;
+            case BizInfoToKafka:
+                return false;
+            case TxMonitor:
+                return true;
+            case Alert:
+                return false;
+            case Schedule:
+                return true;
+            case GlobalTxFaultTolerant:
+                return false;
+            case CompensationFaultTolerant:
+                return false;
+            case AutoCompensationFaultTolerant:
+                return false;
+            case PauseGlobalTx:
+                return false;
+            case AccidentReport:
+                return true;
+            case SqlMonitor:
+                return true;
+            case ClientCompensate:
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    public int defaultIntValue() {
+        switch (this) {
+            // 历史表间隔规则。值：0-日，1-月，2-季，3-年。注：不转储10天内的数据。
+            case HistoryTableIntervalRule:
+                return 1;
+            default:
+                return -1;
         }
     }
 }

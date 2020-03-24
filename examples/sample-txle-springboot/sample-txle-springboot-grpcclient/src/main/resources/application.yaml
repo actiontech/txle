@@ -1,0 +1,31 @@
+server:
+  port: 8008
+
+spring:
+  application:
+    name: sample-txle-springboot-grpcclient
+  datasource:
+    primary:
+      platform: mysql
+#      url: jdbc:mysql://10.186.62.75:3306/db2?useSSL=false # 双数据源时需要使用jdb-url
+      jdbc-url: jdbc:mysql://10.186.62.75:3306/db2?useSSL=false
+      username: root
+      password: 123456
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+    secondary:
+      platform: mysql
+      jdbc-url: jdbc:mysql://10.186.62.75:3306/db3?useSSL=false
+      username: root
+      password: 123456
+      driver-class-name: com.mysql.jdbc.Driver
+  jpa:
+    database: mysql
+    show-sql: true
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+alpha:
+  cluster:
+    address: localhost:8080
