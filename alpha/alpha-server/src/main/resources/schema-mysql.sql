@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS BusinessDBLatestDetail (
   isprimarykey int(1) NOT NULL DEFAULT 0 COMMENT '是否为主键，1-主键，0-非主键',
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
 
 CREATE TABLE IF NOT EXISTS BusinessDBBackupInfo (
   id bigint(0) NOT NULL AUTO_INCREMENT,
@@ -212,16 +212,4 @@ CREATE TABLE IF NOT EXISTS BusinessDBBackupInfo (
   status int(1) NOT NULL DEFAULT 1 COMMENT '1-正常，2-异常',
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
-) DEFAULT CHARSET=utf8mb4;
-
--- CREATE TABLE IF NOT EXISTS TxEventStatus (
---   id bigint(0) NOT NULL AUTO_INCREMENT,
---   servicename varchar(50) NOT NULL,
---   instanceid varchar(50) NOT NULL,
---   globaltxid varchar(36) NOT NULL,
---   localtxid varchar(36),
---   status int(1) NOT NULL DEFAULT 1 COMMENT '1-正常，2-异常',
---   reason varchar(50) NOT NULL,
---   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
---   PRIMARY KEY (id)
--- ) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 $$
