@@ -109,7 +109,7 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
             // register global and subsidiary transactions
             globalTxHandler.registerStartTx(tx, startAck, isExistsGlobalTx, localTxBackupSql, localTxCompensateSql);
         } catch (Exception e) {
-            startAck = TxleTxStartAck.newBuilder().setStatus(TxleTxStartAck.TransactionStatus.ABORTED).setMessage(e.getMessage());
+            startAck = TxleTxStartAck.newBuilder().setStatus(TxleTxStartAck.TransactionStatus.ABORTED).setMessage("Failed to start global transaction [" + tx.getGlobalTxId() + "].");
             LOG.error("Failed to start global transaction [{}].", tx.getGlobalTxId(), e);
             if (isExistsGlobalTx) {
                 // start and end the first sub-tx were all successful, however, it's failed to start current sub-tx, so the first sub-tx should be compensated.
@@ -171,7 +171,7 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
 
             globalTxHandler.endGlobalTx(tx.getGlobalTxId(), tx.getIsCanOver(), null, endAck, isNeedCompensate);
         } catch (Exception e) {
-            endAck = TxleTxEndAck.newBuilder().setStatus(TxleTxEndAck.TransactionStatus.ABORTED).setMessage(e.getMessage());
+            endAck = TxleTxEndAck.newBuilder().setStatus(TxleTxEndAck.TransactionStatus.ABORTED).setMessage("Failed to end global transaction [" + tx.getGlobalTxId() + "].");
             LOG.error("Failed to end global transaction [{}].", tx.getGlobalTxId(), e);
         } finally {
             endAckStreamObserver.onNext(endAck.build());
