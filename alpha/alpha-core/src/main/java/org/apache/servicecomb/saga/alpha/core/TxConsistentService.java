@@ -51,9 +51,6 @@ public class TxConsistentService {
   private IKafkaMessageRepository kafkaMessageRepository;
 
 	@Autowired
-    private TxleMetrics txleMetrics;
-
-	@Autowired
 	private ITxleCache txleCache;
 
 	@Autowired
@@ -68,19 +65,13 @@ public class TxConsistentService {
   }
 
   public boolean handle(TxEvent event) {
-	  // start duration.
-	  txleMetrics.startMarkTxDuration(event);
 	  if (types.contains(event.type()) && isGlobalTxAborted(event)) {
 		  LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted",
 				  event.type(), event.globalTxId());
-		  // end duration.
-		  txleMetrics.endMarkTxDuration(event);
 		  return false;
 	  }
 
 	  eventRepository.save(event);
-	  // end duration.
-	  txleMetrics.endMarkTxDuration(event);
 
 	  return true;
   }
@@ -93,11 +84,6 @@ public class TxConsistentService {
 	 * @author Gannalyo
 	 */
 	public int handleSupportTxPause(TxEvent event) {
-		// start duration.
-		txleMetrics.startMarkTxDuration(event);
-		// child transaction count
-		txleMetrics.countChildTxNumber(event);
-
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
 		if (!types.contains(type) && isGlobalTxAborted(event)) {
 			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
@@ -105,9 +91,6 @@ public class TxConsistentService {
 			if (SagaEndedEvent.name().equals(type)) {
 				eventRepository.save(event);
 			}
-			txleMetrics.countTxNumber(event, false, event.retries() > 0);
-			// end duration.
-			txleMetrics.endMarkTxDuration(event);
 			return -1;
 		}
 
@@ -180,17 +163,10 @@ public class TxConsistentService {
 				}
 			} catch (Exception e) {
 				LOG.error("Failed to save event globalTxId {} localTxId {} type {}", globalTxId, localTxId, type, e);
-			} finally {
-				txleMetrics.countTxNumber(event, false, event.retries() > 0);
-				// end duration.
-				txleMetrics.endMarkTxDuration(event);
 			}
 
 			return 1;
 		}
-
-		// end duration.
-		txleMetrics.endMarkTxDuration(event);
 
 		return 0;
 	}
@@ -310,22 +286,16 @@ public class TxConsistentService {
 
 	public boolean registerGlobalTx(TxEvent event) {
 		try {
-			txleMetrics.startMarkTxDuration(event);
 			eventRepository.save(event);
 		} catch (Exception e) {
 			LOG.error("Failed to register global transaction [{}].", event, e);
 			return false;
-		} finally {
-			txleMetrics.endMarkTxDuration(event);
 		}
 		return true;
 	}
 
 	public boolean registerSubTx(TxEvent subTxEvent, TxEventAddition subTxEventAddition) {
 		try {
-			txleMetrics.countChildTxNumber(subTxEvent);
-			txleMetrics.startMarkTxDuration(subTxEvent);
-
 			eventRepository.save(subTxEvent);
 
 			if (subTxEventAddition != null) {
@@ -338,9 +308,6 @@ public class TxConsistentService {
 		} catch (Exception e) {
 			LOG.error("Failed to register global transaction [{}].", subTxEvent, e);
 			return false;
-		} finally {
-			txleMetrics.countTxNumber(subTxEvent, false, subTxEvent.retries() > 0);
-			txleMetrics.endMarkTxDuration(subTxEvent);
 		}
 		return true;
 	}

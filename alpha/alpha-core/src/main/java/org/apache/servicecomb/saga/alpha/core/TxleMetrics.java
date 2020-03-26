@@ -122,7 +122,7 @@ public class TxleMetrics extends Collector {
         return metricList;
     }
 
-    public void countTxNumber(TxEvent event, boolean isTimeout, boolean isRetried) {
+    public void countTxNumber(TxEvent event) {
         if (!isEnableMonitor(event)) {
             return;
         }
@@ -147,9 +147,9 @@ public class TxleMetrics extends Collector {
                     txleTransactionSuccessfulTotal.labels(serviceName, category).inc();
                     globalTxIdAndTypes.remove(event.globalTxId());
                     return;
-                } else if (TxAbortedEvent.name().equals(type)) {
-                    txleTransactionFailedTotal.labels(serviceName, category).inc();
+//                } else if (TxAbortedEvent.name().equals(type)) {
                 } else if (TxCompensatedEvent.name().equals(type)) {
+                    txleTransactionFailedTotal.labels(serviceName, category).inc();
                     txleTransactionRollbackedTotal.labels(serviceName, category).inc();
                 } else if (AdditionalEventType.SagaPausedEvent.name().equals(type)) {
                     txleTransactionPausedTotal.labels(serviceName, category).inc();
@@ -164,40 +164,39 @@ public class TxleMetrics extends Collector {
             }
 
             // handle retried transaction
-            if (isTimeout && !eventTypesOfCurrentTx.contains("TxTimeoutEvent")) {
+            if (new Date().compareTo(event.expiryTime()) > 0 && !eventTypesOfCurrentTx.contains("TxTimeoutEvent")) {
                 eventTypesOfCurrentTx.add("TxTimeoutEvent");
                 globalTxIdAndTypes.put(event.globalTxId(), eventTypesOfCurrentTx);
                 txleTransactionTimeoutTotal.labels(serviceName, category).inc();
             }
 
             // handle retried transaction. ps: do not support retries in timeout case.
-            if (isRetried && !eventTypesOfCurrentTx.contains("TxRetriedEvent")) {
+            if (event.retries() > 0 && !eventTypesOfCurrentTx.contains("TxRetriedEvent")) {
                 eventTypesOfCurrentTx.add("TxRetriedEvent");
                 globalTxIdAndTypes.put(event.globalTxId(), eventTypesOfCurrentTx);
                 txleTransactionRetriedTotal.labels(serviceName, category).inc();
             }
+
+            this.countChildTxNumber(event);
         } catch (Exception e) {
             log.error("Count txle transaction number exception: " + e);
         }
     }
 
-    public void countChildTxNumber(TxEvent event) {
+    private void countChildTxNumber(TxEvent event) {
         if (!isEnableMonitor(event)) {
             return;
         }
         if (TxStartedEvent.name().equals(event.type()) && !localTxIdSet.contains(event.localTxId())) {
             txleTransactionChildTotal.labels(event.serviceName(), event.category()).inc();
-            // localTxIdSet主要是针对超时场景，所以仅添加超时的子事务标识即可
-            if (event.retries() > 0) {
-                localTxIdSet.add(event.localTxId());
-            }
-        } else if (TxEndedEvent.name().equals(event.type()) || SagaEndedEvent.name().equals(event.type()) || TxAbortedEvent.name().equals(event.type())) {
+            localTxIdSet.add(event.localTxId());
+        } else if (SagaEndedEvent.name().equals(event.type())) {
             localTxIdSet.remove(event.localTxId());
         }
 
         if (localTxIdSet.isEmpty()) {
             log.info("The 'localTxIdSet' variable is empty, and it will be collected when JVM executes GC at the next time.");
-            // 释放内存，非常重要。remove无法是否内存，容易导致OOM。
+            // release memory
             localTxIdSet.clear();
         }
     }

@@ -10,6 +10,7 @@ import com.actionsky.txle.cache.ITxleEhCache;
 import com.actionsky.txle.grpc.interfaces.ICustomRepository;
 import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
+import org.apache.servicecomb.saga.alpha.core.TxleMetrics;
 import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
@@ -49,6 +50,9 @@ public class TxEventAfterPersistingListener implements Observer {
     @Autowired
     private ITxleEhCache txleEhCache;
 
+    @Autowired
+    private TxleMetrics txleMetrics;
+
     private final Set<String> serverNameIdCategory = new HashSet<>();
 
     private final Set<String> globalTxIdSet = new HashSet<>();
@@ -58,27 +62,38 @@ public class TxEventAfterPersistingListener implements Observer {
     @Override
     public void update(Observable arg0, Object arg1) {
         if (arg0 != null) {
-            // TODO move metrics here
             TxEvent event = ((GlobalTxListener) arg0).getEvent();
             if (event != null) {
-                log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
-                String type = event.type();
-                if (SagaStartedEvent.name().equals(type)) {
-                    // increase 1 for the minimum identify of undone event when some global transaction starts.
-                    EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
-                    this.putServerNameIdCategory(event);
-                } else if (TxStartedEvent.name().equals(type)) {
-                    this.putServerNameIdCategory(event);
-                } else if (EventType.SagaEndedEvent.name().equals(event.type())) {
-                    globalTxIdSet.add(event.globalTxId());
-                    kafkaMessageProducer.send(event);
+                if (event.id() == -1) {
+                    txleMetrics.startMarkTxDuration(event);
+                    txleMetrics.countTxNumber(event);
+                } else {
+                    txleMetrics.endMarkTxDuration(event);
 
-                    // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
-                    if (globalTxIdSet.size() > 20000) {
-                        removeDistributedTxStatusCache(globalTxIdSet);
+                    log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
+                    switch (EventType.valueOf(event.type())) {
+                        case SagaStartedEvent:
+                            // increase 1 for the minimum identify of undone event when some global transaction starts.
+                            EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
+                            this.putServerNameIdCategory(event);
+                            break;
+                        case TxStartedEvent:
+                            this.putServerNameIdCategory(event);
+                            break;
+                        case SagaEndedEvent:
+                            globalTxIdSet.add(event.globalTxId());
+                            kafkaMessageProducer.send(event);
+
+                            // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
+                            if (globalTxIdSet.size() > 20000) {
+                                removeDistributedTxStatusCache(globalTxIdSet);
+                            }
+
+                            this.saveBusinessDBBackupInfo(event);
+                            break;
+                        default:
+                            break;
                     }
-
-                    this.saveBusinessDBBackupInfo(event);
                 }
             }
         }

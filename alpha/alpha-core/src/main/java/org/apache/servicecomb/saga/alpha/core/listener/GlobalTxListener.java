@@ -22,13 +22,11 @@ public class GlobalTxListener extends Observable {
     }
 
     public void listenEvent(TxEvent event) {
-        if (EventType.SagaEndedEvent.name().equals(event.type())) {
-            this.event = event;
-            // a mark for changing to data
-            setChanged();
+        this.event = event;
+        // a mark for changing to data
+        setChanged();
 
-            // to notify all observers when the data was changed
-            notifyObservers();
-        }
+        // to notify all observers when the data was changed
+        notifyObservers();
     }
 }

@@ -53,6 +53,7 @@ class SpringTxEventRepository implements TxEventRepository {
 
   @Override
   public void save(TxEvent event) {
+    globalTxListener.listenEvent(event);
     TxEvent saveEvent = eventRepo.save(event);
     if (saveEvent != null) {
       event.setSurrogateId(saveEvent.id());
