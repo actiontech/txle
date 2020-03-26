@@ -7,7 +7,7 @@ package com.actionsky.txle.configuration;
 
 import com.actionsky.txle.cache.EhCacheConfig;
 import com.actionsky.txle.cache.ITxleEhCache;
-import com.actionsky.txle.cache.TxleCache;
+import com.actionsky.txle.cache.TxleEhCache;
 import com.actionsky.txle.grpc.interfaces.CompensateService;
 import com.actionsky.txle.grpc.interfaces.CustomRepository;
 import com.actionsky.txle.grpc.interfaces.GlobalTxHandler;
@@ -29,8 +29,8 @@ import org.springframework.context.annotation.Import;
 public class TxleConfig {
 
     @Bean
-    public ITxleEhCache cacheTool() {
-        return new TxleCache();
+    public ITxleEhCache txleEhCache() {
+        return new TxleEhCache();
     }
 
     @Bean

@@ -22,7 +22,7 @@ import java.util.List;
  * @author Gannalyo
  * @since 2020/2/19
  */
-public class TxleCache implements ITxleEhCache {
+public class TxleEhCache implements ITxleEhCache {
 
     @Autowired
     private CacheManager cacheManager;
