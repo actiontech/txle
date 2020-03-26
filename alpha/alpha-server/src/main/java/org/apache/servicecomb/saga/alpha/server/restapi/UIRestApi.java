@@ -271,7 +271,7 @@ public class UIRestApi {
                     if ("terminate".equals(operation)) {
                         // Do not compensate after terminating.
                         TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
-                        endedEvent.setSurrogateId(null);
+                        endedEvent.setSurrogateId(-1L);
                         eventRepository.save(endedEvent);
                     }
                     // Set cache for global transaction status.
@@ -280,7 +280,7 @@ public class UIRestApi {
                     } else {
                         txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
                     }
-                    txleMetrics.countTxNumber(event, false, false);
+                    txleMetrics.countTxNumber(event);
                 }
             });
         } catch (Exception e) {
@@ -334,7 +334,7 @@ public class UIRestApi {
                     if (globalTxIdList.contains(event.globalTxId())) {
                         TxEvent pausedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaPausedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
-                        txleMetrics.countTxNumber(event, false, false);
+                        txleMetrics.countTxNumber(event);
                     }
                 });
             }
@@ -381,7 +381,7 @@ public class UIRestApi {
                     if (globalTxIdList.contains(event.globalTxId())) {
                         TxEvent continuedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(continuedEvent);
-                        txleMetrics.countTxNumber(event, false, false);
+                        txleMetrics.countTxNumber(event);
                     }
                 });
             }
