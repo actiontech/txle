@@ -15,6 +15,8 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlDeleteStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
+import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
+import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
@@ -38,6 +40,9 @@ public class CompensateService {
     private ICustomRepository customRepository;
 
     @Autowired
+    private IKafkaMessageRepository kafkaMessageRepository;
+
+    @Autowired
     private ITxleEhCache txleEhCache;
 
     public void prepareBackupSql(TxleTransactionStart tx, TxleTxStartAck.Builder txStartAck, boolean isExistsGlobalTx, Map<String, String> localTxBackupSql) {
@@ -58,7 +63,9 @@ public class CompensateService {
                 TxleSubTxSql.Builder subTxSql = TxleSubTxSql.newBuilder().setLocalTxId(subTx.getLocalTxId()).setDbNodeId(subTx.getDbNodeId()).setDbSchema(subTx.getDbSchema()).setOrder(subTx.getOrder());
                 this.constructBackupSqls(tx, isExistsGlobalTx, subTx, subTxSql, tableNameWithSchema, txleOldBackupTableName, txleOldBackupTableNameWithSchema, txleNewBackupTableName, txleNewBackupTableNameWithSchema);
 
+                String operation = "";
                 if (sqlStatement instanceof MySqlInsertStatement) {
+                    operation = "insert";
                     // the formal business sql
                     subTxSql.addSubTxSql(subTx.getSql());
                     // the backup new data sql
@@ -68,10 +75,12 @@ public class CompensateService {
                     }
                     subTxSql.addSubTxSql(String.format("INSERT INTO " + txleNewBackupTableNameWithSchema + " SELECT *, '%s', '%s' FROM %s WHERE " + primaryKey + " = (SELECT LAST_INSERT_ID()) FOR UPDATE " + TxleConstants.ACTION_SQL, tx.getGlobalTxId(), subTx.getLocalTxId(), tableNameWithSchema));
                 } else if (sqlStatement instanceof MySqlDeleteStatement) {
+                    operation = "delete";
                     subTxSql.addSubTxSql(String.format("INSERT INTO " + txleOldBackupTableNameWithSchema + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE "
                             + TxleConstants.ACTION_SQL, tx.getGlobalTxId(), subTx.getLocalTxId(), tableNameWithSchema, ((MySqlDeleteStatement) sqlStatement).getWhere().toString()));
                     subTxSql.addSubTxSql(subTx.getSql());
                 } else if (sqlStatement instanceof MySqlUpdateStatement) {
+                    operation = "update";
                     subTxSql.addSubTxSql(String.format("INSERT INTO " + txleOldBackupTableNameWithSchema + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE "
                             + TxleConstants.ACTION_SQL, tx.getGlobalTxId(), subTx.getLocalTxId(), tableNameWithSchema, ((MySqlUpdateStatement) sqlStatement).getWhere().toString()));
                     subTxSql.addSubTxSql(subTx.getSql());
@@ -91,6 +100,8 @@ public class CompensateService {
                 final StringBuilder backupSqls = new StringBuilder();
                 subTxSql.getSubTxSqlList().forEach(sql -> backupSqls.append(sql + TxleConstants.STRING_SEPARATOR));
                 localTxBackupSql.put(subTx.getLocalTxId(), backupSqls.toString());
+
+                kafkaMessageRepository.save(new KafkaMessage(tx.getGlobalTxId(), subTx.getLocalTxId(), "", subTx.getDbNodeId(), "", tableNameWithSchema, operation, ""));
             } catch (Exception e) {
                 handleExceptionWithFaultToleranceChecking("Failed to prepare sqls for backup.", e, tx, txStartAck);
             }
