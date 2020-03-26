@@ -5,7 +5,6 @@
 package com.actionsky.txle.exception;
 
 import com.actionsky.txle.cache.ITxleEhCache;
-import com.actionsky.txle.cache.TxleCache;
 import com.actionsky.txle.grpc.TxleTxEndAck;
 import com.actionsky.txle.grpc.TxleTxStartAck;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
@@ -17,7 +16,7 @@ import org.slf4j.LoggerFactory;
  * @since 2020/2/28
  */
 public class ExceptionFaultTolerance extends RuntimeException {
-    private static final Logger LOG = LoggerFactory.getLogger(TxleCache.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ExceptionFaultTolerance.class);
 
     public ExceptionFaultTolerance(String message) {
         super(message);
