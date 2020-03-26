@@ -73,7 +73,7 @@ class GrpcClientStreamObserver implements StreamObserver<TxleGrpcClientStream> {
     private void handleRetryResult(TxleClientSqlResult feedback) {
         // 成功，则记录TxEndedEvent事件，失败记录TxAbortedEvent事件并次数减1
         TxEvent subEvent = eventRepository.selectMinRetriesEventByTxIdType(feedback.getGlobalTxId(), feedback.getLocalTxId(), EventType.TxStartedEvent.name());
-        subEvent.setSurrogateId(null);
+        subEvent.setSurrogateId(-1L);
         subEvent.setRetries(0);
         subEvent.setExpiryTime(new Date(TxEvent.MAX_TIMESTAMP));
         subEvent.setType(feedback.getIsExecutedOK() ? EventType.TxEndedEvent.name() : EventType.TxAbortedEvent.name());
