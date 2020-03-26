@@ -163,7 +163,7 @@ public class GlobalTxHandler {
                 }
 
                 // global tx aborted
-                TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(tx.getGlobalTxId(), tx.getIsCanOver());
+                TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(eventList, tx.getGlobalTxId(), tx.getIsCanOver());
                 if (txStatus.ordinal() == TxleTxStartAck.TransactionStatus.ABORTED.ordinal()) {
                     isNeedCompensate = true;
                 }
@@ -234,7 +234,7 @@ public class GlobalTxHandler {
         executorService.execute(() -> {
             try {
                 TxEvent subEvent = eventRepository.selectMinRetriesEventByTxIdType(globalTxId, subTx.getLocalTxId(), EventType.TxStartedEvent.name());
-                subEvent.setSurrogateId(null);
+                subEvent.setSurrogateId(-1L);
                 subEvent.setType(EventType.TxCompensatedEvent.name());
                 subEvent.setRetries(0);
                 subEvent.setRetryMethod(null);
@@ -353,7 +353,7 @@ public class GlobalTxHandler {
         }
 
         // start current retry
-        subStartedEvent.setSurrogateId(null);
+        subStartedEvent.setSurrogateId(-1L);
         if (subStartedEvent.retries() > 0) {
             subStartedEvent.setRetries(subStartedEvent.retries() - 1);
         }
@@ -401,7 +401,7 @@ public class GlobalTxHandler {
             }
 
             if (isCanOver) {
-                endTxEvent.setSurrogateId(null);
+                endTxEvent.setSurrogateId(-1L);
                 endTxEvent.setType(SagaEndedEvent.name());
                 boolean registerResult = txConsistentService.registerGlobalTx(endTxEvent);
                 if (!registerResult) {
@@ -436,7 +436,7 @@ public class GlobalTxHandler {
                 return false;
             }
 
-            TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(tx.getGlobalTxId(), false);
+            TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(null, tx.getGlobalTxId(), false);
             if (TxleTxStartAck.TransactionStatus.NORMAL.ordinal() != txStatus.ordinal()) {
                 startAck.setStatus(txStatus);
                 return false;
@@ -495,12 +495,14 @@ public class GlobalTxHandler {
     }
 
     // compute status for global transaction
-    private TxleTxStartAck.TransactionStatus computeGlobalTxStatus(String globalTxId, boolean isCanOver) {
+    private TxleTxStartAck.TransactionStatus computeGlobalTxStatus(List<TxEvent> txEvents, String globalTxId, boolean isCanOver) {
         TxleTxStartAck.TransactionStatus txStatus = TxleTxStartAck.TransactionStatus.NORMAL;
         try {
-            List<TxEvent> txEvents = eventRepository.selectTxEventByGlobalTxIds(Arrays.asList(globalTxId));
-            if (txEvents == null || txEvents.isEmpty()) {
-                return TxleTxStartAck.TransactionStatus.ABORTED;
+            if (txEvents == null) {
+                txEvents = eventRepository.selectTxEventByGlobalTxIds(Arrays.asList(globalTxId));
+                if (txEvents == null || txEvents.isEmpty()) {
+                    return TxleTxStartAck.TransactionStatus.ABORTED;
+                }
             }
 
             Set<String> zeroRetriesLocalTxIds = new HashSet<>();
