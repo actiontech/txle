@@ -17,8 +17,8 @@ public interface BusinessDBLatestDetailRepository extends CrudRepository<Busines
 
     @Transactional
     @Modifying
-    @Query("DELETE FROM BusinessDBLatestDetail T WHERE T.node = ?1 AND T.dbschema = ?2")
-    int deleteHistoryInfo(String node, String dbSchema);
+    @Query("DELETE FROM BusinessDBLatestDetail T WHERE T.timestamp < ?1 AND T.node = ?2 AND T.dbschema = ?3")
+    int deleteHistoryInfo(long timestamp, String node, String dbSchema);
 
     @Transactional
     @Modifying

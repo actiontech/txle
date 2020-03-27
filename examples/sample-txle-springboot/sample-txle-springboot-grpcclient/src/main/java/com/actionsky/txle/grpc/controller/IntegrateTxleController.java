@@ -27,7 +27,9 @@ import java.io.ObjectOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Gannalyo
@@ -43,7 +45,7 @@ public class IntegrateTxleController {
     private TxleGrpcServerStreamObserver serverStreamObserver;
     private StreamObserver<TxleGrpcClientStream> clientStreamObserver;
     private final String grpcServerAddress = "127.0.0.1:8080";
-    private String dbMD5Info;
+    private Map<String, String> dbMD5InfoMap = new HashMap<>();
     private int globalTxIndex = 0;
 
     @Autowired
@@ -377,16 +379,24 @@ public class IntegrateTxleController {
 
     @PostConstruct
     void init() {
+        new Thread(() -> this.onSynDatabaseFullDose()).start();
+    }
+
+    public void onSynDatabaseFullDose() {
         try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            long timestamp = System.currentTimeMillis();
+            this.synDatabase(true, timestamp, "db2", "txle_sample_user", "primary");
+            this.synDatabase(true, timestamp, "db3", "txle_sample_merchant", "second");
+
+            // 全量同步成功后，才启动增量同步
+            this.onSynDatabase();
+        } catch (RuntimeException e) {
+            LOG.error("Failed to synchronize the full-dose data.", e);
+            throw new RuntimeException(e);
         }
-        new Thread(() -> this.onSynDatabase()).start();
     }
 
     public void onSynDatabase() {
-        boolean isFullDose = true;
         while (true) {
             try {
                 Thread.sleep(30000);
@@ -394,37 +404,48 @@ public class IntegrateTxleController {
                 e.printStackTrace();
             }
 
-            // 模拟第三方简易程序，此处仅检测一张表，而非整库
-            String tempMD5Info = getMD5Digest("db2", "txle_sample_user");
-            if (dbMD5Info == null || !dbMD5Info.equals(tempMD5Info)) {
-                System.err.println("数据库db2有表结构发生变化。。。。" + System.currentTimeMillis());
+            long timestamp = System.currentTimeMillis();
+            this.synDatabase(false, timestamp, "db2", "txle_sample_user", "primary");
+            this.synDatabase(false, timestamp, "db3", "txle_sample_merchant", "second");
+        }
+    }
 
-                TxleBusinessDBInfo.Builder databaseSetBuilder = TxleBusinessDBInfo.newBuilder();
-                TxleBusinessTable.Builder table = TxleBusinessTable.newBuilder().setName("txle_sample_user");
-                List columnList = this.primaryCustomService.executeQuery("SELECT column_name, data_type, column_key FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'db2' AND TABLE_NAME = 'txle_sample_user'");
-                if (columnList != null && !columnList.isEmpty()) {
-                    columnList.forEach(column -> {
-                        Object[] columns = (Object[]) column;
-                        table.addField(TxleBusinessField.newBuilder().setName(columns[0].toString()).setType(columns[1].toString()).setIsPrimaryKey("PRI".equals(columns[2])).build());
-                    });
-                }
+    private void synDatabase(boolean isFullDose, long timestamp, String dbSchema, String tableName, String dataSource) {
+        // 模拟第三方简易程序，此处仅检测两张表，而非整库
+        String tempMD5Info = getMD5Digest(dbSchema, tableName), tableNameWithSchema = dbSchema + "." + tableName;
+        String dbMD5Info = dbMD5InfoMap.get(tableNameWithSchema);
+        if (dbMD5Info == null || !dbMD5Info.equals(tempMD5Info)) {
+            System.err.println("数据库表" + dbSchema + "." + tableName + "表结构发生变化。。。。" + System.currentTimeMillis());
 
-                TxleBusinessDatabase database0 = TxleBusinessDatabase.newBuilder().setName("db2").addTable(0, table.build()).build();
-                TxleBusinessNode node = TxleBusinessNode.newBuilder().setId("10.186.62.75").addDatabase(0, database0).build();
+            TxleBusinessDBInfo.Builder databaseSetBuilder = TxleBusinessDBInfo.newBuilder();
+            TxleBusinessTable.Builder table = TxleBusinessTable.newBuilder().setName(tableName);
+            List columnList;
+            String sql = "SELECT column_name, data_type, column_key FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
+            if ("primary".equals(dataSource)) {
+                columnList = this.primaryCustomService.executeQuery(sql, dbSchema, tableName);
+            } else {
+                columnList = this.secondaryCustomService.executeQuery(sql, dbSchema, tableName);
+            }
 
-                databaseSetBuilder.addNode(node);
-                databaseSetBuilder.setTimestamp(System.currentTimeMillis());
-                databaseSetBuilder.setIsFullDose(isFullDose);
+            if (columnList != null && !columnList.isEmpty()) {
+                columnList.forEach(column -> {
+                    Object[] columns = (Object[]) column;
+                    table.addField(TxleBusinessField.newBuilder().setName(columns[0].toString()).setType(columns[1].toString()).setIsPrimaryKey("PRI".equals(columns[2])).build());
+                });
+            }
 
-                TxleBasicAck txleBasicAck = stubBlockingService.onSynDatabase(databaseSetBuilder.build());
-                System.err.println("onSynDatabase - txleBasicAck: received = " + txleBasicAck.getIsReceived() + ", result = " + txleBasicAck.getIsSuccessful());
-                // txle端同步成功才赋值，若同步不成功，则不赋值即后续还会尝试本次同步
-                if (txleBasicAck.getIsSuccessful()) {
-                    dbMD5Info = tempMD5Info;
-                    if (isFullDose) {
-                        isFullDose = false;
-                    }
-                }
+            TxleBusinessDatabase database0 = TxleBusinessDatabase.newBuilder().setName(dbSchema).addTable(0, table.build()).build();
+            TxleBusinessNode node = TxleBusinessNode.newBuilder().setId("10.186.62.75").addDatabase(0, database0).build();
+
+            databaseSetBuilder.addNode(node);
+            databaseSetBuilder.setTimestamp(timestamp);
+            databaseSetBuilder.setIsFullDose(isFullDose);
+
+            TxleBasicAck txleBasicAck = stubBlockingService.onSynDatabase(databaseSetBuilder.build());
+            System.err.println("syn " + dbSchema + " - txleBasicAck: received = " + txleBasicAck.getIsReceived() + ", result = " + txleBasicAck.getIsSuccessful());
+            // txle端同步成功才赋值，若同步不成功，则不赋值即后续还会尝试本次同步
+            if (txleBasicAck.getIsSuccessful()) {
+                dbMD5InfoMap.put(tableNameWithSchema, tempMD5Info);
             }
         }
     }

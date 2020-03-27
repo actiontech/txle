@@ -28,9 +28,9 @@ public class BusinessDBLatestDetailService implements IBusinessDBLatestDetailSer
         if (isFullDose) {
             businessDBLatestDetails.forEach(detail -> {
                 // delete all data ahead of saving in the full-dose scenario
-                if (!deleteSqlSet.contains(detail.getNode() + detail.getDbschema())) {
-                    deleteSqlSet.add(detail.getNode() + detail.getDbschema());
-                    bizDBDetailRepository.deleteHistoryInfo(detail.getNode(), detail.getDbschema());
+                if (!deleteSqlSet.contains(detail.getTimestamp() + detail.getNode() + detail.getDbschema())) {
+                    deleteSqlSet.add(detail.getTimestamp() + detail.getNode() + detail.getDbschema());
+                    bizDBDetailRepository.deleteHistoryInfo(detail.getTimestamp(), detail.getNode(), detail.getDbschema());
                 }
             });
         } else {
