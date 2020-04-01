@@ -69,7 +69,12 @@ public class TxleEhCache implements ITxleEhCache {
     public boolean readConfigCache(String serviceInstanceId, String category, ConfigCenterType type) {
         Element element = readConfigCacheElement(serviceInstanceId, category, type);
         if (element != null) {
-            return (boolean) element.getObjectValue();
+            Object value = element.getObjectValue();
+            if (TxleConstants.ENABLED.equals(value) || "true".equals(value)) {
+                return true;
+            } else if (TxleConstants.DISABLED.equals(value) || "false".equals(value)) {
+                return false;
+            }
         }
         return type.defaultValue();
     }
