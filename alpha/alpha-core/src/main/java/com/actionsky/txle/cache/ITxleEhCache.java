@@ -31,5 +31,7 @@ public interface ITxleEhCache {
 
     boolean readConfigCache(String serviceInstanceId, String category, ConfigCenterType type);
 
+    boolean readConfigCache(String serviceInstanceId, String category, ConfigCenterType type, String globalTxId);
+
     int readIntConfigCache(String serviceInstanceId, String category, ConfigCenterType type);
 }

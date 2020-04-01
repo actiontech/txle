@@ -67,28 +67,37 @@ public class TxleEhCache implements ITxleEhCache {
     }
 
     public boolean readConfigCache(String serviceInstanceId, String category, ConfigCenterType type) {
-        Element element = readConfigCacheElement(serviceInstanceId, category, type);
+        return readConfigCache(serviceInstanceId, category, type, null);
+    }
+
+    public boolean readConfigCache(String serviceInstanceId, String category, ConfigCenterType type, String globalTxId) {
+        Element element = readConfigCacheElement(serviceInstanceId, category, type, globalTxId);
         if (element != null) {
             Object value = element.getObjectValue();
-            if (TxleConstants.ENABLED.equals(value) || "true".equals(value)) {
-                return true;
-            } else if (TxleConstants.DISABLED.equals(value) || "false".equals(value)) {
-                return false;
+            if (value != null) {
+                if (TxleConstants.ENABLED.equals(value.toString()) || "true".equals(value.toString())) {
+                    return true;
+                } else if (TxleConstants.DISABLED.equals(value.toString()) || "false".equals(value.toString())) {
+                    return false;
+                }
             }
         }
         return type.defaultValue();
     }
 
     public int readIntConfigCache(String serviceInstanceId, String category, ConfigCenterType type) {
-        Element element = readConfigCacheElement(serviceInstanceId, category, type);
+        Element element = readConfigCacheElement(serviceInstanceId, category, type, null);
         if (element != null) {
             return (int) element.getObjectValue();
         }
         return type.defaultIntValue();
     }
 
-    private Element readConfigCacheElement(String serviceInstanceId, String category, ConfigCenterType type) {
+    private Element readConfigCacheElement(String serviceInstanceId, String category, ConfigCenterType type, String globalTxId) {
         String configKey = TxleConstants.constructConfigCacheKey(serviceInstanceId, category, type.toInteger());
+        if (globalTxId != null) {
+            configKey = TxleConstants.constructConfigCacheKeyWithGlobalTxId(serviceInstanceId, category, type.toInteger(), globalTxId);
+        }
         Element element = cacheManager.getCache(CacheName.CONFIG.toString()).get(configKey);
         if (element == null) {
             configKey = TxleConstants.constructConfigCacheKey(null, null, type.toInteger());

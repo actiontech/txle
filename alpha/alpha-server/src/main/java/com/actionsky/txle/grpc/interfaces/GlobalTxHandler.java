@@ -430,10 +430,11 @@ public class GlobalTxHandler {
                 return false;
             }
 
-            boolean pausedTx = this.txleEhCache.readConfigCache(instanceId, tx.getServiceCategory(), ConfigCenterType.PauseGlobalTx);
-            if (pausedTx) {
-                startAck.setStatus(TxleTxStartAck.TransactionStatus.PAUSED);
-                return false;
+            boolean pausedTx = this.txleEhCache.readConfigCache(instanceId, tx.getServiceCategory(), ConfigCenterType.PauseGlobalTx, tx.getGlobalTxId());
+            while (pausedTx) {
+//                Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60)  * 1000);
+                Thread.sleep(60 * 1000);
+                pausedTx = this.txleEhCache.readConfigCache(instanceId, tx.getServiceCategory(), ConfigCenterType.PauseGlobalTx);
             }
 
             TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(null, tx.getGlobalTxId(), false);
@@ -472,10 +473,11 @@ public class GlobalTxHandler {
                 return false;
             }
 
-            boolean pausedTx = this.txleEhCache.readConfigCache(txCache.getInstanceId(), txCache.getServiceCategory(), ConfigCenterType.PauseGlobalTx);
-            if (pausedTx) {
-                endAck.setStatus(TxleTxEndAck.TransactionStatus.PAUSED);
-                return false;
+            boolean pausedTx = this.txleEhCache.readConfigCache(txCache.getInstanceId(), txCache.getServiceCategory(), ConfigCenterType.PauseGlobalTx, tx.getGlobalTxId());
+            while (pausedTx) {
+//                Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60)  * 1000);
+                Thread.sleep(60 * 1000);
+                pausedTx = this.txleEhCache.readConfigCache(txCache.getInstanceId(), txCache.getServiceCategory(), ConfigCenterType.PauseGlobalTx);
             }
 
             // in end tx interface, need to compensate/retry/end if an abort occurs

@@ -5,6 +5,8 @@
 
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
+import com.actionsky.txle.cache.CacheName;
+import com.actionsky.txle.cache.ITxleEhCache;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
@@ -61,6 +63,9 @@ public class UIRestApi {
 
     @Autowired
     private ITxleCache txleCache;
+
+    @Autowired
+    private ITxleEhCache txleEhCache;
 
     public UIRestApi(TableFieldRepository tableFieldRepository, TxEventRepository eventRepository) {
         this.tableFieldRepository = tableFieldRepository;
@@ -271,14 +276,17 @@ public class UIRestApi {
                     if ("terminate".equals(operation)) {
                         // Do not compensate after terminating.
                         TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
-                        endedEvent.setSurrogateId(-1L);
+                            endedEvent.setSurrogateId(-1L);
                         eventRepository.save(endedEvent);
                     }
                     // Set cache for global transaction status.
+                    final String pauseGlobalTxKey = TxleConstants.constructConfigCacheKeyWithGlobalTxId(event.instanceId(), event.category(), ConfigCenterType.PauseGlobalTx.toInteger(), event.globalTxId());
                     if ("pause".equals(operation)) {
                         txleCache.putDistributedTxSuspendStatusCache(event.globalTxId(), true, 60);
+                        txleEhCache.put(CacheName.CONFIG, pauseGlobalTxKey, true, 300);
                     } else {
                         txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
+                        txleEhCache.remove(CacheName.CONFIG, pauseGlobalTxKey);
                     }
                     txleMetrics.countTxNumber(event);
                 }
@@ -310,6 +318,7 @@ public class UIRestApi {
             String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
             configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ipPort + " - pauseAllTransaction"));
             txleCache.putDistributedConfigCache(pauseAllGlobalTxKey, true);
+            txleEhCache.put(CacheName.CONFIG, pauseAllGlobalTxKey, true);
 
             // 2.Construct a paused event for every global transaction as long as it is not paused and done.
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
@@ -392,6 +401,7 @@ public class UIRestApi {
         } finally {
             txleCache.removeDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
             txleCache.getTxSuspendStatusCache().clear();
+            txleEhCache.remove(CacheName.CONFIG, TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
         }
         return ResponseEntity.ok(rv);
     }

@@ -97,7 +97,7 @@ public class TxEventAfterPersistingListener implements Observer {
                         }
                     }
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (Exception e) {
                 log.error("Failed to execute listener after persisting event. globalTxId = {}, localTxId = {}", event.globalTxId(), event.localTxId(), e);
             }
         }
