@@ -72,8 +72,8 @@
             overflowToDisk="true"
             diskPersistent="true"
             timeToIdleSeconds="0"
-            timeToLiveSeconds="300"
             memoryStoreEvictionPolicy="LRU">
+        <!--timeToLiveSeconds="300"--><!-- config不设置超时时间，大部分是常驻，针对个别需要设置的由代码控制 -->
         <!--<cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory"/>-->
     </cache>
 

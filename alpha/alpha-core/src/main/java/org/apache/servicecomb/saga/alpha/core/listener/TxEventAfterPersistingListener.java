@@ -63,38 +63,42 @@ public class TxEventAfterPersistingListener implements Observer {
     public void update(Observable arg0, Object arg1) {
         if (arg0 != null) {
             TxEvent event = ((GlobalTxListener) arg0).getEvent();
-            if (event != null) {
-                if (event.id() == -1) {
-                    txleMetrics.startMarkTxDuration(event);
-                    txleMetrics.countTxNumber(event);
-                } else {
-                    txleMetrics.endMarkTxDuration(event);
+            try {
+                if (event != null) {
+                    if (event.id() == -1) {
+                        txleMetrics.startMarkTxDuration(event);
+                        txleMetrics.countTxNumber(event);
+                    } else {
+                        txleMetrics.endMarkTxDuration(event);
 
-                    log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
-                    switch (EventType.valueOf(event.type())) {
-                        case SagaStartedEvent:
-                            // increase 1 for the minimum identify of undone event when some global transaction starts.
-                            EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
-                            this.putServerNameIdCategory(event);
-                            break;
-                        case TxStartedEvent:
-                            this.putServerNameIdCategory(event);
-                            break;
-                        case SagaEndedEvent:
-                            globalTxIdSet.add(event.globalTxId());
-                            kafkaMessageProducer.send(event);
+                        log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
+                        switch (EventType.valueOf(event.type())) {
+                            case SagaStartedEvent:
+                                // increase 1 for the minimum identify of undone event when some global transaction starts.
+                                EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
+                                this.putServerNameIdCategory(event);
+                                break;
+                            case TxStartedEvent:
+                                this.putServerNameIdCategory(event);
+                                break;
+                            case SagaEndedEvent:
+                                globalTxIdSet.add(event.globalTxId());
+                                kafkaMessageProducer.send(event);
 
-                            // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
-                            if (globalTxIdSet.size() > 20000) {
-                                removeDistributedTxStatusCache(globalTxIdSet);
-                            }
+                                // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
+                                if (globalTxIdSet.size() > 20000) {
+                                    removeDistributedTxStatusCache(globalTxIdSet);
+                                }
 
-                            this.saveBusinessDBBackupInfo(event);
-                            break;
-                        default:
-                            break;
+                                this.saveBusinessDBBackupInfo(event);
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
+            } catch (IllegalArgumentException e) {
+                log.error("Failed to execute listener after persisting event. globalTxId = {}, localTxId = {}", event.globalTxId(), event.localTxId(), e);
             }
         }
     }
@@ -128,7 +132,7 @@ public class TxEventAfterPersistingListener implements Observer {
                         }
                     });
                     values.remove(event.globalTxId());
-                    txleEhCache.put(CacheName.GLOBALTX, "backup-table-check", values);
+                    txleEhCache.put(CacheName.GLOBALTX, "backup-table-check", values, 300);
                 }
             }
         }

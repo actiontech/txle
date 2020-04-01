@@ -158,7 +158,7 @@ public class CompensateService {
                  * 后续在A或B正常结束(备份肯定执行成功了)后，会将缓存中的备份表信息记录到数据库，同时移除备份表关联的所有缓存信息，即A和B都会被移除掉
                  *
                  * 当然，如果A或B正常结束后，如果再有C也涉及此备份表，那么依据上面的判断后从而不再触发备份操作
-                 * 如果在server1节点记录，但是在server2节点结束，那么server1中的缓存将不会被清除，若后续其它全局事务有相同的数据表操作，保守的是达到缓存到期时间自动清除(参见ehcache配置文件)
+                 * 如果在server1节点记录，但是在server2节点结束，那么server1中的缓存将不会被清除，若后续其它全局事务有相同的数据表操作，保守的是达到缓存到期时间自动清除
                  */
                 List<String[]> txValues = values.get(tx.getGlobalTxId());
                 if (txValues == null) {
@@ -166,7 +166,7 @@ public class CompensateService {
                 }
                 txValues.add(new String[]{subTx.getDbNodeId(), subTx.getDbSchema(), txleOldBackupTableName, txleNewBackupTableName});
                 values.put(tx.getGlobalTxId(), txValues);
-                txleEhCache.put(CacheName.GLOBALTX, "backup-table-check", values);
+                txleEhCache.put(CacheName.GLOBALTX, "backup-table-check", values, 300);
             }
         }
     }
