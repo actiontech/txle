@@ -14,6 +14,7 @@ import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,18 +38,19 @@ import java.util.Map;
  */
 @RestController
 public class IntegrateTxleController {
-
     private static final Logger LOG = LoggerFactory.getLogger(IntegrateTxleController.class);
 
-    private final TxleTransactionServiceGrpc.TxleTransactionServiceStub stubService;
-    private final TxleTransactionServiceGrpc.TxleTransactionServiceBlockingStub stubBlockingService;
+    private TxleTransactionServiceGrpc.TxleTransactionServiceStub stubService;
+    private TxleTransactionServiceGrpc.TxleTransactionServiceBlockingStub stubBlockingService;
     private TxleGrpcServerStreamObserver serverStreamObserver;
     private StreamObserver<TxleGrpcClientStream> clientStreamObserver;
-    private final String txleGrpcServerAddress = "127.0.0.1:8080";
     private String primaryDBSchema;
     private String secondaryDBSchema;
     private Map<String, String> dbMD5InfoMap = new HashMap<>();
     private int globalTxIndex = 0;
+
+    @Value("${alpha.cluster.address:127.0.0.1:8080}")
+    private String txleGrpcServerAddress;
 
     @Autowired
     private PrimaryCustomService primaryCustomService;
@@ -59,7 +61,8 @@ public class IntegrateTxleController {
     @Autowired
     private RestTemplate restTemplate;
 
-    public IntegrateTxleController() {
+    @PostConstruct
+    void init() {
         ManagedChannel channel = ManagedChannelBuilder.forTarget(txleGrpcServerAddress).usePlaintext()/*.maxInboundMessageSize(10 * 1024 * 1024)*/.build();
         this.stubService = TxleTransactionServiceGrpc.newStub(channel);
         this.stubBlockingService = TxleTransactionServiceGrpc.newBlockingStub(channel);
@@ -69,11 +72,24 @@ public class IntegrateTxleController {
         stubService.onInitialize(clientConfig, new TxleServerConfigStreamObserver(this));
 
         this.onInitialize();
+        this.initDBSchema();
+        new Thread(() -> this.onSynDatabaseFullDose()).start();
     }
 
     private void onInitialize() {
         this.clientStreamObserver = stubService.onBuildBidirectionalStream(this.serverStreamObserver);
         serverStreamObserver.setClientStreamObserver(clientStreamObserver);
+    }
+
+    private void initDBSchema() {
+        List list = this.primaryCustomService.executeQuery("select database()");
+        if (list != null && !list.isEmpty()) {
+            this.primaryDBSchema = list.get(0).toString();
+        }
+        list = this.secondaryCustomService.executeQuery("select database()");
+        if (list != null && !list.isEmpty()) {
+            this.secondaryDBSchema = list.get(0).toString();
+        }
     }
 
     public String getTxleGrpcServerAddress() {
@@ -394,23 +410,6 @@ public class IntegrateTxleController {
             }
         } catch (Exception e) {
             LOG.error("Occur an exception when ending global transaction [{}].", globalTxId, e);
-        }
-    }
-
-    @PostConstruct
-    void init() {
-        this.initDBSchema();
-        new Thread(() -> this.onSynDatabaseFullDose()).start();
-    }
-
-    private void initDBSchema() {
-        List list = this.primaryCustomService.executeQuery("select database()");
-        if (list != null && !list.isEmpty()) {
-            this.primaryDBSchema = list.get(0).toString();
-        }
-        list = this.secondaryCustomService.executeQuery("select database()");
-        if (list != null && !list.isEmpty()) {
-            this.secondaryDBSchema = list.get(0).toString();
         }
     }
 
