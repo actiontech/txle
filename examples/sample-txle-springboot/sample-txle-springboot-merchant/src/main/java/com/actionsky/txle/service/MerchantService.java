@@ -6,6 +6,7 @@
 package com.actionsky.txle.service;
 
 import com.actionsky.txle.entity.MerchantEntity;
+import com.actionsky.txle.grpc.IntegrateTxleService;
 import com.actionsky.txle.repository.MerchantRepository;
 import com.google.gson.JsonObject;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * @author Gannalyo
@@ -55,6 +57,9 @@ public class MerchantService {
 
     @Value("${spring.datasource.username:\"\"}")
     private String dbusername;
+
+    @Autowired
+    private IntegrateTxleService integrateTxleService;
 
     @Transactional
     @Compensable(compensationMethod = "updateBalanceByMerchantIdRollback")
@@ -122,5 +127,19 @@ public class MerchantService {
     }
 
     public void highPerformanceRollback() {
+    }
+
+    @Transactional
+    public boolean updateBalanceInGRPCIntegration(String xid, boolean isCanOver, long merchantid, double balance) {
+        // 原业务SQL无需在此处执行，在全局事务启动成功后，与备份SQL一同执行
+//        int result = merchantRepository.updateBalanceById(merchantid, balance);
+        String localTxId = UUID.randomUUID().toString(), sql = "UPDATE txle_sample_merchant T SET T.balance = T.balance + " + balance + " WHERE id = '" + merchantid + "'";
+        boolean result = this.integrateTxleService.executeSqlUnderTxleTransaction(xid, isCanOver, localTxId, sql, 0, 0);
+        // 手动补偿场景：由业务人员自行收集所影响的数据信息
+        messageSender.reportMessageToServer(new KafkaMessage(drivername, dburl, dbusername, "txle_sample_merchant", "update", merchantid + ""));
+        if (balance > 200) {
+            throw new RuntimeException("The 'Merchant' Service threw a runtime exception in case of balance was more than 200.");
+        }
+        return result;
     }
 }

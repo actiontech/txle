@@ -11,6 +11,10 @@ import org.apache.servicecomb.saga.omega.context.annotations.SagaStart;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * @author Gannalyo
@@ -107,5 +112,23 @@ public class GlobalTransactionController {
             throw e;
         }
         return TxleConstants.OK;
+    }
+
+    @GetMapping("/testGRPCIntegration/{userId}/{amount}/{merchantid}")
+    public String testGRPCIntegration(@PathVariable int userId, @PathVariable double amount, @PathVariable int merchantid) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+        System.err.println("[" + sdf.format(new Date()) + "] Executing method '" + this.getClass() + ".testGlobalTransaction'. \t\tParameters[userId = " + userId + ", amount = " + amount + ", merchantid = " + merchantid + "]");
+        try {
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.set("globalTxId", UUID.randomUUID().toString());
+            params.set("isCanOver", "false");
+            restTemplate.postForObject(userServiceUrl + "/deductMoneyInGRPCIntegration/{userId}/{balance}", new HttpEntity<>(params, new HttpHeaders()), String.class, userId, amount);
+
+            params.set("isCanOver", "true");
+            restTemplate.postForObject(merchantServiceUrl + "/payMoneyInGRPCIntegration/{merchantid}/{balance}", new HttpEntity<>(params, new HttpHeaders()), String.class, merchantid, amount);
+            return TxleConstants.OK;
+        } catch (Exception e) {
+            throw e;
+        }
     }
 }

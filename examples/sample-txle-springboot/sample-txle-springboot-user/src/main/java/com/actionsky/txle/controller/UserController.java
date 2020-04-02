@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -24,6 +25,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private HttpServletRequest request;
 
     @PostMapping("/deductMoneyFromUser/{userId}/{balance}")
     public String deductMoneyFromUser(@PathVariable long userId, @PathVariable double balance) {
@@ -46,6 +50,16 @@ public class UserController {
     public String highPerformance() {
         userService.highPerformance();
         return TxleConstants.OK;
+    }
+
+    @PostMapping("/deductMoneyInGRPCIntegration/{userId}/{balance}")
+    public String deductMoneyInGRPCIntegration(@PathVariable long userId, @PathVariable double balance) {
+        String xid = request.getParameter("globalTxId");
+        boolean isCanOver = "true".equals(request.getParameter("isCanOver"));
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+        System.err.println("[" + sdf.format(new Date()) + "] Executing method '" + this.getClass() + ".deductMoneyInGRPCIntegration'. \t\tParameters[xid = " + xid + ", userId = " + userId + ", balance = " + balance + "]");
+        return userService.updateBalanceInGRPCIntegration(xid, isCanOver, userId, balance) + "";
     }
 
 }

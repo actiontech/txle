@@ -6,6 +6,7 @@
 package com.actionsky.txle.service;
 
 import com.actionsky.txle.entity.UserEntity;
+import com.actionsky.txle.grpc.IntegrateTxleService;
 import com.actionsky.txle.repository.UserRepository;
 import com.google.gson.JsonObject;
 import org.apache.servicecomb.saga.omega.context.OmegaContext;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * @author Gannalyo
@@ -53,6 +55,9 @@ public class UserService {
 
     @Value("${spring.datasource.username:\"\"}")
     private String dbusername;
+
+    @Autowired
+    private IntegrateTxleService integrateTxleService;
 
     @Transactional
     @Compensable(compensationMethod = "updateBalanceByUserIdRollback")
@@ -129,5 +134,23 @@ public class UserService {
     }
 
     public void highPerformanceRollback() {
+    }
+
+    @Transactional
+    public boolean updateBalanceInGRPCIntegration(String xid, boolean isCanOver, long userId, double balance) {
+        LOG.error("Executing method 'updateBalanceInGRPCIntegration'.");
+        UserEntity userEntity = userRepository.findOne(userId);
+        // 手动补偿场景：由业务人员自行收集所影响的数据信息
+        messageSender.reportMessageToServer(new KafkaMessage(drivername, dburl, dbusername, "txle_sample_user", "update", userId + ""));
+        if (userEntity != null) {
+            if (userEntity.getBalance() < balance) {
+                throw new RuntimeException("Sorry, not sufficient balance under your account.");
+            }
+        }
+
+        // 原业务SQL无需在此处执行，在全局事务启动成功后，与备份SQL一同执行
+//        int result = userRepository.updateBalanceByUserId(userId, balance);
+        String localTxId = UUID.randomUUID().toString(), sql = "update txle_sample_user set balance = balance - " + balance + " where id = '" + userId + "'";
+        return this.integrateTxleService.executeSqlUnderTxleTransaction(xid, isCanOver, localTxId, sql, 0, 0);
     }
 }
