@@ -44,7 +44,9 @@ public class IntegrateTxleController {
     private final TxleTransactionServiceGrpc.TxleTransactionServiceBlockingStub stubBlockingService;
     private TxleGrpcServerStreamObserver serverStreamObserver;
     private StreamObserver<TxleGrpcClientStream> clientStreamObserver;
-    private final String grpcServerAddress = "127.0.0.1:8080";
+    private final String txleGrpcServerAddress = "127.0.0.1:8080";
+    private String primaryDBSchema;
+    private String secondaryDBSchema;
     private Map<String, String> dbMD5InfoMap = new HashMap<>();
     private int globalTxIndex = 0;
 
@@ -58,7 +60,7 @@ public class IntegrateTxleController {
     private RestTemplate restTemplate;
 
     public IntegrateTxleController() {
-        ManagedChannel channel = ManagedChannelBuilder.forTarget(grpcServerAddress).usePlaintext()/*.maxInboundMessageSize(10 * 1024 * 1024)*/.build();
+        ManagedChannel channel = ManagedChannelBuilder.forTarget(txleGrpcServerAddress).usePlaintext()/*.maxInboundMessageSize(10 * 1024 * 1024)*/.build();
         this.stubService = TxleTransactionServiceGrpc.newStub(channel);
         this.stubBlockingService = TxleTransactionServiceGrpc.newBlockingStub(channel);
         this.serverStreamObserver = new TxleGrpcServerStreamObserver(this);
@@ -74,8 +76,8 @@ public class IntegrateTxleController {
         serverStreamObserver.setClientStreamObserver(clientStreamObserver);
     }
 
-    public String getGrpcServerAddress() {
-        return grpcServerAddress;
+    public String getTxleGrpcServerAddress() {
+        return txleGrpcServerAddress;
     }
 
     public PrimaryCustomService getPrimaryCustomService() {
@@ -84,6 +86,14 @@ public class IntegrateTxleController {
 
     public SecondaryCustomService getSecondaryCustomService() {
         return this.secondaryCustomService;
+    }
+
+    public String getPrimaryDBSchema() {
+        return this.primaryDBSchema;
+    }
+
+    public String getSecondaryDBSchema() {
+        return this.secondaryDBSchema;
     }
 
     public void onReconnect() {
@@ -100,7 +110,7 @@ public class IntegrateTxleController {
     public void onStartTransaction(@PathVariable int scene, @PathVariable String globalTxId) {
         TxleTransactionStart.Builder transaction = TxleTransactionStart.newBuilder().setServiceName("actiontech-dble").setServiceIP("0.0.0.0").setGlobalTxId(globalTxId).setTimeout(0);
 
-        // 场景：1-正常，2-异常，3-重试且成功，4-重试不成功，5-多批次子事务(执行1后再执行5)，6-超时，7-一个子事务内两条一样的操作，8-无限重试和超时
+        // 场景：1-正常，2-异常，3-重试且成功，4-重试不成功，5-多批次子事务(执行1后再执行5)，6-超时，7-一个子事务内两条一样的操作，8-无限重试和超时，9-暂停
         switch (scene) {
             case 1:
                 normalSubTx(transaction);
@@ -109,7 +119,7 @@ public class IntegrateTxleController {
                 abnormalSubTx(transaction);
                 break;
             case 3:
-                // 该场景测试说明：在测试前需破坏网络或数据库，使数据库db3的sql“update txle_sample_merchant set balance = balance + 1 where id = 1”执行失败，
+                // 该场景测试说明：在测试前需破坏网络或数据库，使数据库secondaryDBSchema的sql“update txle_sample_merchant set balance = balance + 1 where id = 1”执行失败，
                 // 在执行结束事件前，恢复网络或数据库，即可重试成功
                 retrySuccessfulSubTx(transaction);
                 break;
@@ -131,6 +141,9 @@ public class IntegrateTxleController {
             case 8:
                 retryFailedAndTimeoutSubTx(transaction);
                 break;
+            case 9:
+                normalSubTx(transaction);
+                break;
             default:
                 return;
         }
@@ -142,9 +155,9 @@ public class IntegrateTxleController {
             } else {
                 LOG.info("Successfully started global transaction [" + globalTxId + "].");
                 startAck.getSubTxSqlList().forEach(subSql -> {
-                    if ("db2".equals(subSql.getDbSchema())) {
+                    if (primaryDBSchema.equals(subSql.getDbSchema())) {
                         primaryCustomService.executeSubTxSqls(subSql.getSubTxSqlList());
-                    } else if ("db3".equals(subSql.getDbSchema())) {
+                    } else if (secondaryDBSchema.equals(subSql.getDbSchema())) {
                         secondaryCustomService.executeSubTxSqls(subSql.getSubTxSqlList());
                     }
                 });
@@ -152,12 +165,15 @@ public class IntegrateTxleController {
         } catch (Exception e) {
             LOG.error("Occur an exception when starting global transaction [{}].", transaction.getGlobalTxId(), e);
         } finally {
-            if (scene == 6) {
-                try {
+            try {
+                if (scene == 6) {
                     // 模拟超时场景
                     Thread.sleep(3000);
-                } catch (InterruptedException e) {
+                } else if (scene == 9) {
+                    // 暂停20秒，此时需尽快触发暂停操作
+                    Thread.sleep(20000);
                 }
+            } catch (InterruptedException e) {
             }
             this.onEndTransaction(scene, transaction.getGlobalTxId());
         }
@@ -173,10 +189,10 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(1).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(1).build();
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(0).setRetries(0).setOrder(2).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(0).setOrder(2).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
@@ -190,10 +206,10 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(1).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(1).build();
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where iddddddd = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(0).setRetries(0).setOrder(2).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(0).setOrder(2).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
@@ -207,10 +223,10 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(3).setOrder(1).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(3).setOrder(1).build();
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(0).setRetries(3).setOrder(2).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(3).setOrder(2).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
@@ -224,10 +240,10 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(3).setOrder(1).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(3).setOrder(1).build();
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where iddddddd = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(0).setRetries(3).setOrder(2).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(3).setOrder(2).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
@@ -241,9 +257,9 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(3).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(3).build();
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(0).setRetries(0).setOrder(4).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(0).setOrder(4).build();
 
         subTxList.add(subTx2);
         subTxList.add(subTx1);
@@ -258,9 +274,9 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-003").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(3).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-003").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(3).build();
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-004").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(0).setRetries(0).setOrder(4).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-004").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(0).setOrder(4).build();
 
         subTxList.add(subTx2);
         subTxList.add(subTx1);
@@ -274,10 +290,10 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(1).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(1).build();
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(3).setRetries(0).setOrder(2).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(3).setRetries(0).setOrder(2).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
@@ -291,10 +307,10 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(1).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(1).build();
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(2).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(2).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
@@ -308,10 +324,10 @@ public class IntegrateTxleController {
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
 
         TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema("db2").setTimeout(0).setRetries(0).setOrder(1).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(1).build();
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where iddddddd = 1")
-                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema("db3").setTimeout(30).setRetries(-1).setOrder(2).build();
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(30).setRetries(-1).setOrder(2).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
@@ -335,7 +351,7 @@ public class IntegrateTxleController {
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(false).build());
                     break;
                 case 3:
-                    // 该场景测试说明：在测试前需破坏网络或数据库，使数据库db3的sql“update txle_sample_merchant set balance = balance + 1 where id = 1”执行失败，
+                    // 该场景测试说明：在测试前需破坏网络或数据库，使数据库secondaryDBSchema的sql“update txle_sample_merchant set balance = balance + 1 where id = 1”执行失败，
                     // 在执行结束事件前，恢复网络或数据库，即可重试成功
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(false).build());
@@ -362,6 +378,10 @@ public class IntegrateTxleController {
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(false).build());
                     break;
+                case 9:
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(true).build());
+                    break;
                 default:
                     return;
             }
@@ -379,14 +399,26 @@ public class IntegrateTxleController {
 
     @PostConstruct
     void init() {
+        this.initDBSchema();
         new Thread(() -> this.onSynDatabaseFullDose()).start();
+    }
+
+    private void initDBSchema() {
+        List list = this.primaryCustomService.executeQuery("select database()");
+        if (list != null && !list.isEmpty()) {
+            this.primaryDBSchema = list.get(0).toString();
+        }
+        list = this.secondaryCustomService.executeQuery("select database()");
+        if (list != null && !list.isEmpty()) {
+            this.secondaryDBSchema = list.get(0).toString();
+        }
     }
 
     public void onSynDatabaseFullDose() {
         try {
             long timestamp = System.currentTimeMillis();
-            this.synDatabase(true, timestamp, "db2", "txle_sample_user", "primary");
-            this.synDatabase(true, timestamp, "db3", "txle_sample_merchant", "second");
+            this.synDatabase(true, timestamp, primaryDBSchema, "txle_sample_user", "primary");
+            this.synDatabase(true, timestamp, secondaryDBSchema, "txle_sample_merchant", "second");
 
             // 全量同步成功后，才启动增量同步
             this.onSynDatabase();
@@ -405,8 +437,8 @@ public class IntegrateTxleController {
             }
 
             long timestamp = System.currentTimeMillis();
-            this.synDatabase(false, timestamp, "db2", "txle_sample_user", "primary");
-            this.synDatabase(false, timestamp, "db3", "txle_sample_merchant", "second");
+            this.synDatabase(false, timestamp, primaryDBSchema, "txle_sample_user", "primary");
+            this.synDatabase(false, timestamp, secondaryDBSchema, "txle_sample_merchant", "second");
         }
     }
 

@@ -35,10 +35,10 @@ class TxleGrpcServerStreamObserver implements StreamObserver<TxleGrpcServerStrea
                 executeSql.getSubTxSqlList().forEach(sql -> System.err.println(sql));
                 boolean isExecutedOK = false;
                 try {
-                    if ("db2".equals(executeSql.getDbSchema())) {
+                    if (integrateTxleController.getPrimaryDBSchema().equals(executeSql.getDbSchema())) {
 //                        isExecutedOK = integrateTxleController.getPrimaryCustomService().executeSubTxSqls(executeSql.getSubTxSqlList()) == executeSql.getSubTxSqlCount();
                         integrateTxleController.getPrimaryCustomService().executeSubTxSqls(executeSql.getSubTxSqlList());
-                    } else if ("db3".equals(executeSql.getDbSchema())) {
+                    } else if (integrateTxleController.getSecondaryDBSchema().equals(executeSql.getDbSchema())) {
 //                        isExecutedOK = integrateTxleController.getSecondaryCustomService().executeSubTxSqls(executeSql.getSubTxSqlList()) == executeSql.getSubTxSqlCount();
                         integrateTxleController.getSecondaryCustomService().executeSubTxSqls(executeSql.getSubTxSqlList());
                     }
@@ -70,7 +70,7 @@ class TxleGrpcServerStreamObserver implements StreamObserver<TxleGrpcServerStrea
         try {
             integrateTxleController.onReconnect();
         } catch (Throwable e) {
-            LOG.error("Failed to reconnect to txle server - {}.", integrateTxleController.getGrpcServerAddress(), e);
+            LOG.error("Failed to reconnect to txle server - {}.", integrateTxleController.getTxleGrpcServerAddress(), e);
         }
     }
 

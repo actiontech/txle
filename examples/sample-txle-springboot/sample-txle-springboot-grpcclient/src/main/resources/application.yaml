@@ -5,20 +5,19 @@ spring:
   application:
     name: sample-txle-springboot-grpcclient
   datasource:
+    platform: mysql
+    # springboot2.0后，需要指定该配置，但目前仅能对主数据源进行初始化数据库，通过指定数据库名称可对同一实例下的不同数据库进行初始化操作
+    initialization-mode: always
     primary:
-      platform: mysql
-#      url: jdbc:mysql://10.186.62.75:3306/db2?useSSL=false # 双数据源时需要使用jdb-url
       jdbc-url: jdbc:mysql://10.186.62.75:3306/db2?useSSL=false
       username: root
       password: 123456
-      driver-class-name: com.mysql.cj.jdbc.Driver
-
+      driver-class-name: com.mysql.jdbc.Driver
     secondary:
-      platform: mysql
       jdbc-url: jdbc:mysql://10.186.62.75:3306/db3?useSSL=false
       username: root
       password: 123456
-      driver-class-name: com.mysql.jdbc.Driver
+      driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     database: mysql
     show-sql: true

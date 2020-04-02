@@ -27,7 +27,7 @@ class TxleServerConfigStreamObserver implements StreamObserver<TxleServerConfigS
         try {
             integrateTxleController.onReconnect();
         } catch (Throwable e) {
-            LOG.error("Failed to reconnect to txle server - {}.", integrateTxleController.getGrpcServerAddress(), e);
+            LOG.error("Failed to reconnect to txle server - {}.", integrateTxleController.getTxleGrpcServerAddress(), e);
         }
     }
 
