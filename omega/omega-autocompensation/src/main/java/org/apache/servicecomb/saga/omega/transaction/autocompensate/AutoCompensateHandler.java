@@ -30,7 +30,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
     private static final Logger LOG = LoggerFactory.getLogger(AutoCompensateHandler.class);
 
     private static volatile AutoCompensateHandler autoCompensateHandler = null;
-    protected String schema = TxleConstants.APP_NAME;
+    private final String schema = TxleConstants.APP_NAME;
 
     public static AutoCompensateHandler newInstance() {
         if (autoCompensateHandler == null) {
@@ -41,6 +41,10 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
             }
         }
         return autoCompensateHandler;
+    }
+
+    protected String schema() {
+        return schema;
     }
 
     @Override
@@ -76,7 +80,9 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         standbyParams.put("dburl", dburl);
         standbyParams.put("dbusername", dbusername);
 
-        if (sqlStatement instanceof MySqlUpdateStatement) {
+        if (sqlStatement instanceof MySqlInsertStatement) {
+            return;
+        } else if (sqlStatement instanceof MySqlUpdateStatement) {
             AutoCompensateUpdateHandler.newInstance().prepareCompensationBeforeUpdating(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
         } else if (sqlStatement instanceof MySqlDeleteStatement) {
             AutoCompensateDeleteHandler.newInstance().prepareCompensationBeforeDeleting(delegate, sqlStatement, executeSql, globalTxId, localTxId, server, standbyParams);
@@ -138,7 +144,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         // start to mark duration for maintaining sql By Gannalyo.
         ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(sql, false);
 
-        Connection connection = null;
         PreparedStatement ps = null;
         ResultSet columnResultSet = null;
         Map<String, String> columnNameType = new HashMap<>();
@@ -159,9 +164,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         } catch (BeansException e) {
             throw e;
         } finally {
-//            try {
-//                if (connection != null) connection.close();
-//            } finally {
             try {
                 if (ps != null) {
                     ps.close();
@@ -171,7 +173,6 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
                     columnResultSet.close();
                 }
             }
-//            }
         }
         return columnNameType;
     }
