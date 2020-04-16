@@ -125,6 +125,7 @@ public class IntegrateTxleController {
     @PostMapping("/startTransaction/{scene}/{globalTxId}")
     public void onStartTransaction(@PathVariable int scene, @PathVariable String globalTxId) {
         TxleTransactionStart.Builder transaction = TxleTransactionStart.newBuilder().setServiceName("actiontech-dble").setServiceIP("0.0.0.0").setGlobalTxId(globalTxId).setTimeout(0);
+        boolean isStartedTx = false;
 
         // 场景：1-正常，2-异常，3-重试且成功，4-重试不成功，5-多批次子事务(执行1后再执行5)，6-超时，7-一个子事务内两条一样的操作，8-无限重试和超时，9-暂停
         switch (scene) {
@@ -149,7 +150,16 @@ public class IntegrateTxleController {
                 normalSubTxForSecondTime(transaction);
                 break;
             case 6:
-                timeoutSubTx(transaction);
+                timeoutAfterEndingAllSubTx(transaction);
+                break;
+            case 61:
+                timeoutBeforeEndingAllSubTx001(transaction);
+                break;
+            case 62:
+                timeoutBeforeEndingAllSubTx002(transaction);
+                break;
+            case 63:
+                timeoutBeforeEndingAllSubTx003(transaction);
                 break;
             case 7:
                 twoSameOperationSubTx(transaction);
@@ -169,6 +179,7 @@ public class IntegrateTxleController {
             if (TxleTxEndAck.TransactionStatus.ABORTED.ordinal() == startAck.getStatus().ordinal()) {
                 throw new RuntimeException("Occur an exception when starting global transaction [" + transaction.getGlobalTxId() + "].");
             } else {
+                isStartedTx = true;
                 LOG.info("Successfully started global transaction [" + globalTxId + "].");
                 startAck.getSubTxSqlList().forEach(subSql -> {
                     if (primaryDBSchema.equals(subSql.getDbSchema())) {
@@ -182,7 +193,7 @@ public class IntegrateTxleController {
             LOG.error("Occur an exception when starting global transaction [{}].", transaction.getGlobalTxId(), e);
         } finally {
             try {
-                if (scene == 6) {
+                if (scene == 6 || scene == 62) {
                     // 模拟超时场景
                     Thread.sleep(3000);
                 } else if (scene == 9) {
@@ -191,7 +202,10 @@ public class IntegrateTxleController {
                 }
             } catch (InterruptedException e) {
             }
-            this.onEndTransaction(scene, transaction.getGlobalTxId());
+            // 只有事务开启成功，才执行事务结束，不用担心不会结束全局事务，因为在服务端若开启事务失败，会自动结束全局事务
+            if (isStartedTx) {
+                this.onEndTransaction(scene, transaction.getGlobalTxId());
+            }
         }
     }
 
@@ -300,7 +314,7 @@ public class IntegrateTxleController {
         transaction.setTimeout(0).addAllSubTxInfo(subTxList);
     }
 
-    private void timeoutSubTx(TxleTransactionStart.Builder transaction) {
+    private void timeoutAfterEndingAllSubTx(TxleTransactionStart.Builder transaction) {
         int currentGlobalTxIdIndex = Integer.parseInt(transaction.getGlobalTxId().substring(29));
 
         List<TxleSubTransactionStart> subTxList = new ArrayList<>();
@@ -317,6 +331,45 @@ public class IntegrateTxleController {
         transaction.addAllSubTxInfo(subTxList);
     }
 
+    private void timeoutBeforeEndingAllSubTx001(TxleTransactionStart.Builder transaction) {
+        int currentGlobalTxIdIndex = Integer.parseInt(transaction.getGlobalTxId().substring(29));
+
+        List<TxleSubTransactionStart> subTxList = new ArrayList<>();
+
+        TxleSubTransactionStart subTx1 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(1).build();
+
+        subTxList.add(subTx1);
+
+        transaction.addAllSubTxInfo(subTxList);
+    }
+
+    private void timeoutBeforeEndingAllSubTx002(TxleTransactionStart.Builder transaction) {
+        int currentGlobalTxIdIndex = Integer.parseInt(transaction.getGlobalTxId().substring(29));
+
+        List<TxleSubTransactionStart> subTxList = new ArrayList<>();
+
+        TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(3).setRetries(0).setOrder(2).build();
+
+        subTxList.add(subTx2);
+
+        transaction.addAllSubTxInfo(subTxList);
+    }
+
+    private void timeoutBeforeEndingAllSubTx003(TxleTransactionStart.Builder transaction) {
+        int currentGlobalTxIdIndex = Integer.parseInt(transaction.getGlobalTxId().substring(29));
+
+        List<TxleSubTransactionStart> subTxList = new ArrayList<>();
+
+        TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-003").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(0).setOrder(2).build();
+
+        subTxList.add(subTx2);
+
+        transaction.addAllSubTxInfo(subTxList);
+    }
+
     private void twoSameOperationSubTx(TxleTransactionStart.Builder transaction) {
         int currentGlobalTxIdIndex = Integer.parseInt(transaction.getGlobalTxId().substring(29));
 
@@ -327,9 +380,15 @@ public class IntegrateTxleController {
         // 第二个SQL故意编写异常
         TxleSubTransactionStart subTx2 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_user set balance = balance - 1 where id = 1")
                 .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setDbNodeId("10.186.62.75").setDbSchema(primaryDBSchema).setTimeout(0).setRetries(0).setOrder(2).build();
+        TxleSubTransactionStart subTx3 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-003").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(0).setOrder(3).build();
+        TxleSubTransactionStart subTx4 = TxleSubTransactionStart.newBuilder().setSql("update txle_sample_merchant set balance = balance + 1 where id = 1")
+                .setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-004").setDbNodeId("10.186.62.75").setDbSchema(secondaryDBSchema).setTimeout(0).setRetries(0).setOrder(4).build();
 
         subTxList.add(subTx1);
         subTxList.add(subTx2);
+        subTxList.add(subTx3);
+        subTxList.add(subTx4);
 
         transaction.addAllSubTxInfo(subTxList);
     }
@@ -370,7 +429,10 @@ public class IntegrateTxleController {
                     // 该场景测试说明：在测试前需破坏网络或数据库，使数据库secondaryDBSchema的sql“update txle_sample_merchant set balance = balance + 1 where id = 1”执行失败，
                     // 在执行结束事件前，恢复网络或数据库，即可重试成功
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
-                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(false).build());
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002")
+                            .setIsSuccessful(false).build());
+                    // 重试成功场景：此处特意设置成功结果为false，触发重试，但由于实际【"update txle_sample_merchant set balance = balance + 1 where id = 1"】执行成功，故需执行其反向SQL以保证数据一致性
+                    this.secondaryCustomService.executeUpdate("update txle_sample_merchant set balance = balance - 1 where id = 1");
                     break;
                 case 4:
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
@@ -386,9 +448,20 @@ public class IntegrateTxleController {
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(true).build());
                     break;
+                case 61:
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build()).setIsCanOver(false);
+                    break;
+                case 62:
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(true).build()).setIsCanOver(false);
+                    break;
+                case 63:
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-003").setIsSuccessful(true).build()).setIsCanOver(true);
+                    break;
                 case 7:
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-002").setIsSuccessful(true).build());
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-003").setIsSuccessful(true).build());
+                    transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-004").setIsSuccessful(true).build());
                     break;
                 case 8:
                     transaction.addSubTxInfo(TxleSubTransactionEnd.newBuilder().setLocalTxId("sub-tx-" + currentGlobalTxIdIndex + "-001").setIsSuccessful(true).build());
@@ -407,6 +480,11 @@ public class IntegrateTxleController {
                 LOG.error("Occur an exception when ending global transaction [" + globalTxId + "].");
             } else {
                 LOG.info("Successfully started global transaction [" + globalTxId + "].");
+            }
+            if (scene == 61) {
+                restTemplate.postForObject("http://127.0.0.1:8008/startTransaction/{scene}/{globalTxId}", null, String.class, 62, transaction.getGlobalTxId());
+            } else if (scene == 62) {
+                restTemplate.postForObject("http://127.0.0.1:8008/startTransaction/{scene}/{globalTxId}", null, String.class, 63, transaction.getGlobalTxId());
             }
         } catch (Exception e) {
             LOG.error("Occur an exception when ending global transaction [{}].", globalTxId, e);

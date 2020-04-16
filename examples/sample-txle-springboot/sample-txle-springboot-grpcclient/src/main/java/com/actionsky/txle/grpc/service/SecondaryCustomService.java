@@ -28,6 +28,10 @@ public class SecondaryCustomService {
         return secondaryCustomRepository.executeQuery(sql, params);
     }
 
+    public int executeUpdate(String sql, Object... params) {
+        return secondaryCustomRepository.executeUpdate(sql, params);
+    }
+
     public int executeSubTxSqls(@Param("sqls") List<String> sqls) {
         int result = 0;
         for (String sql : sqls) {

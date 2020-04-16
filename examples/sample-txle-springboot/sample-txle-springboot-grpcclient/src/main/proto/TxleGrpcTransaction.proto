@@ -35,22 +35,27 @@ message TxleTransactionStart {
 }
 
 message TxleSubTransactionStart {
-  string localTxId = 1;// not null
-  string sql = 2;// not null
-  string dbNodeId = 3;// not null
-  string dbSchema = 4;// not null
-  int32 timeout = 5;
-  int32 retries = 6;
-  int32 order = 7;
+  string serviceName = 1;// it's the same with its parent tx if empty/invalid
+  string serviceIP = 2;// it's the same with its parent tx if empty/invalid
+  string serviceCategory = 3;// it's the same with its parent tx if empty/invalid
+  string localTxId = 4;// not null
+  string sql = 5;// not null
+  string dbNodeId = 6;// not null
+  string dbSchema = 7;// not null
+  int32 timeout = 8;
+  int32 retries = 9;
+  int32 order = 10;
 }
 
 message TxleTxStartAck {
   enum TransactionStatus {
-    NORMAL = 0;
-    ABORTED = 1;
-    PAUSED = 2;
-    DEGRADED = 3;
-    FAULTTOLERANT = 4;
+    RUNNING = 0;
+    PAUSED = 1;
+    ABORTED = 2;
+    OVER = 3;
+    TERMINATED = 4;
+    DEGRADED = 5;
+    FAULTTOLERANT = 6;
   }
   TransactionStatus status = 1;
   string message = 2;
@@ -81,11 +86,13 @@ message TxleSubTransactionEnd {
 
 message TxleTxEndAck {
   enum TransactionStatus {
-    NORMAL = 0;
-    ABORTED = 1;
-    PAUSED = 2;
-    DEGRADED = 3;
-    FAULTTOLERANT = 4;
+    RUNNING = 0;
+    PAUSED = 1;
+    ABORTED = 2;
+    OVER = 3;
+    TERMINATED = 4;
+    DEGRADED = 5;
+    FAULTTOLERANT = 6;
   }
   TransactionStatus status = 1;
   string message = 2;

@@ -27,6 +27,10 @@ public class PrimaryCustomService {
         return primaryCustomRepository.executeQuery(sql, params);
     }
 
+    public int executeUpdate(String sql, Object... params) {
+        return primaryCustomRepository.executeUpdate(sql, params);
+    }
+
     @Transactional
     public int executeSubTxSqls(@Param("sqls") List<String> sqls) {
         int result = 0;
