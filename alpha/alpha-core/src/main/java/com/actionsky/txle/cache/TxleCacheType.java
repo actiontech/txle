@@ -9,10 +9,11 @@ package com.actionsky.txle.cache;
  * @author Gannalyo
  * @since 2020/2/20
  */
-public enum CacheName {
+public enum TxleCacheType {
     INIT,
     CONFIG,
-    GLOBALTX;
+    GLOBALTX,
+    OTHER;
 
     public String toString() {
         switch (this) {
@@ -22,8 +23,11 @@ public enum CacheName {
                 return "config";
             case GLOBALTX:
                 return "globalTx";
+            case OTHER:
+                return "other";
             default:
                 return "default";
         }
     }
+
 }
