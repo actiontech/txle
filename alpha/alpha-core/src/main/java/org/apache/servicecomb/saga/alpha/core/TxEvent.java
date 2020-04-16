@@ -245,7 +245,7 @@ public class TxEvent/* extends TxEventExtension*/ {
     return payloads;
   }
 
-  public long id() {
+  public Long id() {
     return surrogateId;
   }
 
