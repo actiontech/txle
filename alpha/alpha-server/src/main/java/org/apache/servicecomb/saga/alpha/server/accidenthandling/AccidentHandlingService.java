@@ -15,7 +15,6 @@ import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleSta
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandling;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
-import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.common.TxleConstants;
@@ -45,9 +44,6 @@ public class AccidentHandlingService implements IAccidentHandlingService {
     // default is 1s
     private final RestTemplate restTemplate;
     private final int interval;
-
-    @Autowired
-    private IConfigCenterService dbDegradationConfigService;
 
     @Autowired
     private TxEventRepository eventRepository;
