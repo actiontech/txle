@@ -91,7 +91,7 @@ public class IntegrateTxleService {
 
             TxleTxStartAck startAck = stubBlockingService.onStartTransaction(startTx.build());
             switch (startAck.getStatus().ordinal()) {
-                case TxleTxStartAck.TransactionStatus.NORMAL_VALUE:
+                case TxleTxStartAck.TransactionStatus.RUNNING_VALUE:
                     LOG.info("Successfully started global transaction [" + globalTxId + "].");
                     startAck.getSubTxSqlList().forEach(subSql -> customRepository.executeSubTxSqls(subSql.getSubTxSqlList()));
                     break;
