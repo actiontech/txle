@@ -5,8 +5,8 @@
 
 -- *** All words should be lower case. ***
 -- Initialize configurations
-INSERT INTO Config VALUES (1, null, null, null, 12, 0,	1, '1',	'历史表间隔规则。值：0-日，1-月，2-季，3-年。注：不转储10天内的数据。', now());
-INSERT INTO Config VALUES (2, null, null, null, 4, 0,	1, 'disabled',	'默认关闭，避免因为未及时配置Kafka服务地址，导致每次请求时需花费60秒尝试发送Kafka消息。', now());
+INSERT INTO Config VALUES (1, null, null, null, 12, '历史表迁移时间间隔规则', 0,	1, '1',	'历史表间隔规则。值：0-日，1-月，2-季，3-年。注：不转储10天内的数据。', now());
+INSERT INTO Config VALUES (2, null, null, null, 4, '是否开启上报消息至Kafka服务功能', 0,	1, 'disabled',	'默认关闭，避免因为未及时配置Kafka服务地址，导致每次请求时需花费60秒尝试发送Kafka消息。', now());
 
 -- TxEvent - Table Fields Detail
 INSERT INTO TableField VALUES (5, 'txevent', 'surrogateid', '主键', 'bigint', 20, 0, 'true', '', 5, '', now());
@@ -81,8 +81,10 @@ INSERT INTO DataDictionaryItem VALUES (140, 'config-center-type', '手动补偿�
 INSERT INTO DataDictionaryItem VALUES (150, 'config-center-type', '自动补偿容错', 'cct-auto-compensation-fault-tolerant', '10', 50, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (160, 'config-center-type', '暂停全局事务', 'cct-pause-global-tx', '11', 55, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (161, 'config-center-type', '历史表间隔规则', 'cct-history-table-interval-rule', '12', 56, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (165, 'config-center-type', '终止全局事务', 'cct-terminate-global-tx', '13', 58, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (170, 'config-center-type', '差错上报', 'cct-accident-report', '50', 60, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (180, 'config-center-type', 'SQL监控', 'cct-sql-monitor', '51', 65, 1, '', now());
+INSERT INTO DataDictionaryItem VALUES (185, 'config-center-type', '客户端补偿', 'cct-client-compensate', '52', 70, 1, '', now());
 
 INSERT INTO DataDictionaryItem VALUES (190, 'config-center-status', '正常', 'ccs-normal', '0', 5, 1, '', now());
 INSERT INTO DataDictionaryItem VALUES (200, 'config-center-status', '历史', 'ccs-history', '1', 10, 1, '', now());

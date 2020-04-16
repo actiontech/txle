@@ -29,6 +29,8 @@ public final class TxleConstants {
 
     public static final String CONSUL_LEADER_KEY = APP_NAME + "/service/leader";
     public static final String CONSUL_LEADER_KEY_VALUE = "leader election key for " + TxleConstants.APP_NAME + " service";
+    public static final String TXLE_CONFIG_KEY = APP_NAME + "/service/config/";
+    public static final String TXLE_TX_KEY = APP_NAME + "/service/tx/";
 
     public enum Operation {
         DONOTHING,
@@ -59,12 +61,44 @@ public final class TxleConstants {
         return type + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()) + "] ";
     }
 
-    public static String constructConfigCacheKey(String instanceId, String category, int type) {
-        return "config_cache_" + instanceId + "_" + category + "_" + type;
+    public static String constructTxCacheKey(String globalTxId) {
+        return TXLE_TX_KEY + globalTxId;
     }
 
-    public static String constructConfigCacheKeyWithGlobalTxId(String instanceId, String category, int type, String globalTxId) {
-        return "config_cache_" + instanceId + "_" + category + "_" + type + "_" + globalTxId;
+    public static String constructClientInfoCacheKey(String globalTxId) {
+        return TXLE_TX_KEY + globalTxId + "/client-info";
+    }
+
+    public static String constructTxStatusCacheKey(String globalTxId) {
+        return TXLE_TX_KEY + globalTxId + "/status";
+    }
+
+    public static String constructTxConfigCacheKey(String globalTxId) {
+        return TXLE_CONFIG_KEY + globalTxId + "/config";
+    }
+
+    public static String constructGlobalConfigValueKey(String instanceId, String category, ConfigCenterType type) {
+        StringBuilder key = new StringBuilder(TXLE_CONFIG_KEY);
+        if (instanceId != null && instanceId.length() > 0) {
+            key.append(instanceId + "/");
+            if (category != null && category.length() > 0) {
+                key.append(category + "/");
+            }
+        }
+        key.append(type.toString() + "/value");
+        return key.toString();
+    }
+
+    public static String constructGlobalConfigAbilityKey(String instanceId, String category, ConfigCenterType type) {
+        StringBuilder key = new StringBuilder(TXLE_CONFIG_KEY);
+        if (instanceId != null && instanceId.length() > 0) {
+            key.append(instanceId + "/");
+            if (category != null && category.length() > 0) {
+                key.append(category + "/");
+            }
+        }
+        key.append(type.toString() + "/ability");
+        return key.toString();
     }
 
     public static String giveBackupTableNameForOldData(String dbSchema, String tableName) {

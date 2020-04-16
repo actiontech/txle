@@ -5,15 +5,14 @@
 
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
-import com.actionsky.txle.cache.CacheName;
-import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.cache.ITxleConsistencyCache;
+import com.actionsky.txle.enums.GlobalTxStatus;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.google.gson.GsonBuilder;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
-import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
@@ -31,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,9 +50,6 @@ public class UIRestApi {
     private TxEventRepository eventRepository;
 
     @Autowired
-    private IConfigCenterService configCenterService;
-
-    @Autowired
     private IDataDictionaryService dataDictionaryService;
 
     @Autowired
@@ -61,11 +58,13 @@ public class UIRestApi {
     @Autowired
     private IAccidentHandlingService accidentHandlingService;
 
+    @Resource(name = "dbDegradationConfigService")
     @Autowired
-    private ITxleCache txleCache;
+    private IConfigCenterService configCenterService;
 
+    @Resource(name = "txleMysqlCache")
     @Autowired
-    private ITxleEhCache txleEhCache;
+    private ITxleConsistencyCache consistencyCache;
 
     public UIRestApi(TableFieldRepository tableFieldRepository, TxEventRepository eventRepository) {
         this.tableFieldRepository = tableFieldRepository;
@@ -231,7 +230,9 @@ public class UIRestApi {
             // Arrays.asList(globalTxIds.split(","));
             List<String> globalTxIdList = new ArrayList<>();
             for (String globalTxId : globalTxIds.split(",")) {
-                globalTxIdList.add(globalTxId);
+                if (!globalTxIdList.contains(globalTxId)) {
+                    globalTxIdList.add(globalTxId);
+                }
             }
 
             // To filter which have been over.
@@ -241,7 +242,7 @@ public class UIRestApi {
                 return ResponseEntity.ok(rv);
             }
 
-            AtomicReference<String> operationAdjective = new AtomicReference<>("pause".equals(operation) ? "suspended" : "recover".equals(operation) ? "normal" : "terminated");
+            AtomicReference<String> operationAdjective = new AtomicReference<>("pause".equals(operation) ? "paused" : "recover".equals(operation) ? "normal" : "terminated");
             txEventList.forEach(event -> {
                 if (SagaEndedEvent.name().equals(event.type())) {
                     globalTxIdList.remove(event.globalTxId());
@@ -275,18 +276,18 @@ public class UIRestApi {
                     eventRepository.save(txEvent);
                     if ("terminate".equals(operation)) {
                         // Do not compensate after terminating.
-                        TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
-                            endedEvent.setSurrogateId(-1L);
-                        eventRepository.save(endedEvent);
+//                        TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
+//                        endedEvent.setSurrogateId(null);
+//                        eventRepository.save(endedEvent);
+                        consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Aborted.toString());
                     }
                     // Set cache for global transaction status.
-                    final String pauseGlobalTxKey = TxleConstants.constructConfigCacheKeyWithGlobalTxId(event.instanceId(), event.category(), ConfigCenterType.PauseGlobalTx.toInteger(), event.globalTxId());
                     if ("pause".equals(operation)) {
-                        txleCache.putDistributedTxSuspendStatusCache(event.globalTxId(), true, 60);
-                        txleEhCache.put(CacheName.CONFIG, pauseGlobalTxKey, true, 300);
-                    } else {
-                        txleCache.removeDistributedTxSuspendStatusCache(event.globalTxId());
-                        txleEhCache.remove(CacheName.CONFIG, pauseGlobalTxKey);
+                        // do not set expire
+                        consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Paused.toString());
+                    }
+                    if ("recover".equals(operation)) {
+                        consistencyCache.delete(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Paused.toString());
                     }
                     txleMetrics.countTxNumber(event);
                 }
@@ -303,28 +304,23 @@ public class UIRestApi {
     public ResponseEntity<ReturnValue> pauseAllGlobalTransactions() {
         ReturnValue rv = new ReturnValue();
         try {
-            // Check the paused status of global transaction
-            final String pauseAllGlobalTxKey = TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger());
-            if (txleCache.getConfigCache().getOrDefault(pauseAllGlobalTxKey, false)) {
-                return ResponseEntity.ok(rv);
-            }
-
-            List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.PauseGlobalTx.toInteger());
-            if (configCenterList != null && !configCenterList.isEmpty()) {
+            if (consistencyCache.getBooleanValue(null, null, ConfigCenterType.PauseGlobalTx)) {
                 return ResponseEntity.ok(rv);
             }
 
             // 1.Construct a global config for paused status.
             String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
-            configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, "enabled", ipPort + " - pauseAllTransaction"));
-            txleCache.putDistributedConfigCache(pauseAllGlobalTxKey, true);
-            txleEhCache.put(CacheName.CONFIG, pauseAllGlobalTxKey, true);
+            configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.PauseGlobalTx, TxleConstants.ENABLED, ipPort + " - pauseAllTransaction"));
 
             // 2.Construct a paused event for every global transaction as long as it is not paused and done.
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
             if (unendedTxEventList != null && !unendedTxEventList.isEmpty()) {
                 List<String> globalTxIdList = new ArrayList<>();
-                unendedTxEventList.forEach(event -> globalTxIdList.add(event.globalTxId()));
+                unendedTxEventList.forEach(event -> {
+                    if (!globalTxIdList.contains(event.globalTxId())) {
+                        globalTxIdList.add(event.globalTxId());
+                    }
+                });
 
                 unendedTxEventList.forEach(event -> {
                     List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
@@ -341,6 +337,7 @@ public class UIRestApi {
 
                 unendedTxEventList.forEach(event -> {
                     if (globalTxIdList.contains(event.globalTxId())) {
+                        globalTxIdList.remove(event.globalTxId());
                         TxEvent pausedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaPausedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(pausedEvent);
                         txleMetrics.countTxNumber(event);
@@ -371,7 +368,11 @@ public class UIRestApi {
             List<TxEvent> unendedTxEventList = eventRepository.selectUnendedTxEvents(EventScanner.getUnendedMinEventId());
             if (unendedTxEventList != null && !unendedTxEventList.isEmpty()) {
                 List<String> globalTxIdList = new ArrayList<>();
-                unendedTxEventList.forEach(event -> globalTxIdList.add(event.globalTxId()));
+                unendedTxEventList.forEach(event -> {
+                    if (!globalTxIdList.contains(event.globalTxId())) {
+                        globalTxIdList.add(event.globalTxId());
+                    }
+                });
 
                 unendedTxEventList.forEach(event -> {
                     List<TxEvent> pauseContinueEventList = eventRepository.selectPausedAndContinueEvent(event.globalTxId());
@@ -388,6 +389,7 @@ public class UIRestApi {
                 String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
                 unendedTxEventList.forEach(event -> {
                     if (globalTxIdList.contains(event.globalTxId())) {
+                        globalTxIdList.remove(event.globalTxId());
                         TxEvent continuedEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), AdditionalEventType.SagaContinuedEvent.name(), "", 0, "", 0, event.category(), null);
                         eventRepository.save(continuedEvent);
                         txleMetrics.countTxNumber(event);
@@ -399,9 +401,12 @@ public class UIRestApi {
             LOG.error(rv.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
         } finally {
-            txleCache.removeDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
-            txleCache.getTxSuspendStatusCache().clear();
-            txleEhCache.remove(CacheName.CONFIG, TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.PauseGlobalTx.toInteger()));
+            consistencyCache.delete(TxleConstants.constructGlobalConfigValueKey(null, null, ConfigCenterType.PauseGlobalTx));
+            // 清除所有事务的暂停缓存 tx/{globalTxId}/status
+            Map<String, String> kvMap = consistencyCache.getValueListByCacheKey(TxleConstants.TXLE_TX_KEY);
+            if (kvMap != null && !kvMap.isEmpty()) {
+                kvMap.keySet().forEach(key -> consistencyCache.delete(key + "/status", GlobalTxStatus.Paused.toString()));
+            }
         }
         return ResponseEntity.ok(rv);
     }
@@ -411,18 +416,18 @@ public class UIRestApi {
         ReturnValue rv = new ReturnValue();
         try {
             // Business program will only run without global transaction in case of degrading, even though business program is running. As we all know, downgrading is meant to keep business running.
-            boolean enabledTx = configCenterService.isEnabledConfig(null, null, ConfigCenterType.GlobalTx);
-            if (!enabledTx) {
+            if (!consistencyCache.getBooleanValue(null, null, ConfigCenterType.GlobalTx)) {
                 rv.setMessage("Sever has been degraded for the Global Transaction.");
                 return ResponseEntity.ok(rv);
             }
+
             String ipPort = request.getRemoteAddr() + ":" + request.getRemotePort();
-            boolean enabled = configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTx, "disabled", ipPort + " - degradeGlobalTransaction"));
+            boolean enabled = configCenterService.createConfigCenter(new ConfigCenter(null, null, null, ConfigCenterStatus.Normal, 1, ConfigCenterType.GlobalTx, TxleConstants.DISABLED, ipPort + " - degradeGlobalTransaction"));
             if (!enabled) {
                 rv.setMessage("Failed to save the degradation configuration of global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                txleCache.putDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()), false);
+                consistencyCache.setKeyValueCache(TxleConstants.constructGlobalConfigValueKey(null, null, ConfigCenterType.GlobalTx), "false");
             }
         } catch (Exception e) {
             rv.setMessage("Failed to degrade global transaction.");
@@ -439,7 +444,7 @@ public class UIRestApi {
             List<ConfigCenter> configCenterList = configCenterService.selectConfigCenterByType(null, null, ConfigCenterStatus.Normal.toInteger(), ConfigCenterType.GlobalTx.toInteger());
             if (configCenterList == null || configCenterList.isEmpty()) {
                 rv.setMessage("Sever has been started for the Global Transaction.");
-                txleCache.removeDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
+                consistencyCache.delete(TxleConstants.constructGlobalConfigValueKey(null, null, ConfigCenterType.GlobalTx));
                 return ResponseEntity.ok(rv);
             }
 
@@ -449,7 +454,7 @@ public class UIRestApi {
                 rv.setMessage("Failed to start global transaction.");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(rv);
             } else {
-                txleCache.removeDistributedConfigCache(TxleConstants.constructConfigCacheKey(null, null, ConfigCenterType.GlobalTx.toInteger()));
+                consistencyCache.setKeyValueCache(TxleConstants.constructGlobalConfigValueKey(null, null, ConfigCenterType.GlobalTx), "true");
             }
         } catch (Exception e) {
             rv.setMessage("Failed to start global transaction.");

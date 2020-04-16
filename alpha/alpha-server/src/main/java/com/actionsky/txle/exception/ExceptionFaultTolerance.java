@@ -4,12 +4,16 @@
  */
 package com.actionsky.txle.exception;
 
-import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import com.actionsky.txle.grpc.TxleTxEndAck;
 import com.actionsky.txle.grpc.TxleTxStartAck;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.actionsky.txle.enums.GlobalTxStatus.Aborted;
+import static com.actionsky.txle.enums.GlobalTxStatus.FaultTolerant;
 
 /**
  * @author Gannalyo
@@ -26,13 +30,14 @@ public class ExceptionFaultTolerance extends RuntimeException {
         super(cause, throwable);
     }
 
-    public static void handleErrorWithFaultTolerantCheck(ITxleEhCache txleEhCache, String cause, String instanceId, String category, TxleTxStartAck.Builder txStartAck, TxleTxEndAck.Builder txEndAck) {
-        if (txleEhCache.readConfigCache(instanceId, category, ConfigCenterType.GlobalTxFaultTolerant)) {
+    public static void handleErrorWithFaultTolerantCheck(ITxleConsistencyCache consistencyCache, String globalTxId, String cause, String instanceId, String category, TxleTxStartAck.Builder txStartAck, TxleTxEndAck.Builder txEndAck) {
+        if (consistencyCache.getBooleanValue(instanceId, category, ConfigCenterType.GlobalTxFaultTolerant)) {
             if (txStartAck != null) {
                 txStartAck.setStatus(TxleTxStartAck.TransactionStatus.FAULTTOLERANT).setMessage(cause);
             } else if (txEndAck != null) {
                 txEndAck.setStatus(TxleTxEndAck.TransactionStatus.FAULTTOLERANT).setMessage(cause);
             }
+            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(globalTxId), FaultTolerant.toString());
             LOG.error(cause);
         } else {
             if (txStartAck != null) {
@@ -40,6 +45,7 @@ public class ExceptionFaultTolerance extends RuntimeException {
             } else if (txEndAck != null) {
                 txEndAck.setStatus(TxleTxEndAck.TransactionStatus.ABORTED).setMessage(cause);
             }
+            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(globalTxId), Aborted.toString());
             throw new RuntimeException(cause);
         }
     }

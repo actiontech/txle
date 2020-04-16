@@ -4,8 +4,8 @@
  */
 package com.actionsky.txle.grpc.interfaces;
 
-import com.actionsky.txle.cache.CacheName;
 import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.cache.TxleCacheType;
 import com.actionsky.txle.grpc.TxleSubTransactionStart;
 import com.actionsky.txle.grpc.TxleSubTxSql;
 import com.actionsky.txle.grpc.TxleTransactionStart;
@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +68,7 @@ public class CompensateService {
                     // the formal business sql
                     subTxSql.addSubTxSql(subTx.getSql());
                     // the backup new data sql
-                    Object primaryKey = this.txleEhCache.get(CacheName.INIT, subTx.getDbNodeId() + "." + tableNameWithSchema);
+                    Object primaryKey = this.txleEhCache.get(TxleCacheType.INIT, subTx.getDbNodeId() + "." + tableNameWithSchema);
                     if (primaryKey == null) {
                         primaryKey = "id";
                     }
@@ -125,49 +124,35 @@ public class CompensateService {
         String serviceInstanceId = TxleConstants.getServiceInstanceId(tx.getServiceName(), tx.getServiceIP());
         if (!isExistsGlobalTx) {
             // record the information of backup table to db after ending global transaction
-            if (!this.checkIsExistsBackupTable(tx.getServiceName(), serviceInstanceId, subTx.getDbNodeId(), subTx.getDbSchema(), txleOldBackupTableName)) {
-                subTxSql.addSubTxSql("CREATE DATABASE IF NOT EXISTS " + this.schema + " DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_general_ci");
-                subTxSql.addSubTxSql("CREATE TABLE IF NOT EXISTS " + txleOldBackupTableNameWithSchema + " AS SELECT * FROM " + tableNameWithSchema + " LIMIT 0");
-                subTxSql.addSubTxSql("DROP PROCEDURE IF EXISTS alter_txle_backup_table;\n" +
-                        "DELIMITER $$\n" +
-                        "create procedure alter_txle_backup_table()\n" +
-                        "         begin\n" +
-                        "             if not exists (SELECT 1 FROM information_schema.COLUMNS WHERE COLUMN_NAME = 'globalTxId' AND TABLE_NAME = " + txleOldBackupTableName + " AND TABLE_SCHEMA = '" + this.schema + "') then\n" +
-                        "\t\t\t\t\t\t\t\t\tALTER TABLE " + this.schema + "." + txleOldBackupTableName + " ADD globalTxId VARCHAR(36);\n" +
-                        "\t\t\t\t\t\t\t\t\tALTER TABLE " + this.schema + "." + txleOldBackupTableName + " ADD localTxId VARCHAR(36);\n" +
-                        "\t\t\t\t\t\t\tend if;\n" +
-                        "         end$$\n" +
-                        "DELIMITER;\n" +
-                        "CALL alter_txle_backup_table();\n" +
-                        "DROP PROCEDURE IF EXISTS alter_txle_backup_table;");
-                // it's convenient to handler the procedure for client
-                subTxSql.setProcedureNumber(1);
-                subTxSql.addSubTxSql("CREATE TABLE IF NOT EXISTS " + txleNewBackupTableNameWithSchema + " AS SELECT * FROM " + txleOldBackupTableNameWithSchema + " LIMIT 0");
-
-                Object cacheValue = txleEhCache.get(CacheName.GLOBALTX, "backup-table-check");
-                Map<String, List<String[]>> values;
-                if (cacheValue != null) {
-                    values = (Map<String, List<String[]>>) cacheValue;
-                } else {
-                    values = new HashMap<>();
-                }
-                /**
-                 * 此处写入全局事务标识和备份表信息，如A —> dbNodeId, dbSchema, oldBackupTable， newBackupTable
-                 * 若当前全局事务执行结束前，还有其它全局事务（如 B）也涉及此备份表，那么会执行相同的备份操作与记录缓存，
-                 * 备份操作会带着判断，所以不用担心重复或报错，缓存中不但有A，还有B —> dbNodeId, dbSchema, oldBackupTable， newBackupTable
-                 * 后续在A或B正常结束(备份肯定执行成功了)后，会将缓存中的备份表信息记录到数据库，同时移除备份表关联的所有缓存信息，即A和B都会被移除掉
-                 *
-                 * 当然，如果A或B正常结束后，如果再有C也涉及此备份表，那么依据上面的判断后从而不再触发备份操作
-                 * 如果在server1节点记录，但是在server2节点结束，那么server1中的缓存将不会被清除，若后续其它全局事务有相同的数据表操作，保守的是达到缓存到期时间自动清除
-                 */
-                List<String[]> txValues = values.get(tx.getGlobalTxId());
-                if (txValues == null) {
-                    txValues = new ArrayList<>();
-                }
-                txValues.add(new String[]{subTx.getDbNodeId(), subTx.getDbSchema(), txleOldBackupTableName, txleNewBackupTableName});
-                values.put(tx.getGlobalTxId(), txValues);
-                txleEhCache.put(CacheName.GLOBALTX, "backup-table-check", values, 300);
+            String backupTableKey = subTx.getDbNodeId() + "_" + subTx.getDbSchema() + "_" + txleOldBackupTableName;
+            Boolean isExecutedBackupTable = txleEhCache.getBooleanValue(TxleCacheType.OTHER, backupTableKey);
+            if ((isExecutedBackupTable != null && isExecutedBackupTable) || this.checkIsExistsBackupTable(tx.getServiceName(), serviceInstanceId, subTx.getDbNodeId(), subTx.getDbSchema(), txleOldBackupTableName)) {
+                return;
             }
+
+            subTxSql.addSubTxSql("CREATE DATABASE IF NOT EXISTS " + this.schema + " DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_general_ci");
+            subTxSql.addSubTxSql("CREATE TABLE IF NOT EXISTS " + txleOldBackupTableNameWithSchema + " AS SELECT * FROM " + tableNameWithSchema + " LIMIT 0");
+            subTxSql.addSubTxSql("DROP PROCEDURE IF EXISTS alter_txle_backup_table;\n" +
+                    "DELIMITER $$\n" +
+                    "create procedure alter_txle_backup_table()\n" +
+                    "         begin\n" +
+                    "             if not exists (SELECT 1 FROM information_schema.COLUMNS WHERE COLUMN_NAME = 'globalTxId' AND TABLE_NAME = " + txleOldBackupTableName + " AND TABLE_SCHEMA = '" + this.schema + "') then\n" +
+                    "\t\t\t\t\t\t\t\t\tALTER TABLE " + this.schema + "." + txleOldBackupTableName + " ADD globalTxId VARCHAR(36);\n" +
+                    "\t\t\t\t\t\t\t\t\tALTER TABLE " + this.schema + "." + txleOldBackupTableName + " ADD localTxId VARCHAR(36);\n" +
+                    "\t\t\t\t\t\t\tend if;\n" +
+                    "         end$$\n" +
+                    "DELIMITER;\n" +
+                    "CALL alter_txle_backup_table();\n" +
+                    "DROP PROCEDURE IF EXISTS alter_txle_backup_table;");
+            // it's convenient to handler the procedure for client
+            subTxSql.setProcedureNumber(1);
+            subTxSql.addSubTxSql("CREATE TABLE IF NOT EXISTS " + txleNewBackupTableNameWithSchema + " AS SELECT * FROM " + txleOldBackupTableNameWithSchema + " LIMIT 0");
+
+            // 此处先设置这个缓存，待此全局事务结束后，会清除次缓存，并设置backupTableKey缓存，后续其它事务请求以backupTableKey缓存判断
+            Object cacheValue = txleEhCache.get(TxleCacheType.OTHER, "is-executed-backup-table-" + tx.getGlobalTxId());
+            List<String[]> cacheList = cacheValue == null ? new ArrayList<>() : (List<String[]>) cacheValue;
+            cacheList.add(new String[]{subTx.getDbNodeId(), subTx.getDbSchema(), txleOldBackupTableName, txleNewBackupTableName});
+            txleEhCache.put(TxleCacheType.OTHER, "is-executed-backup-table-" + tx.getGlobalTxId(), cacheList, 300);
         }
     }
 
@@ -193,7 +178,16 @@ public class CompensateService {
                             + TxleConstants.ACTION_SQL, this.readColumnNames(subTx.getDbSchema(), tableName), tx.getGlobalTxId(), subTx.getLocalTxId());
                 } else if (sqlStatement instanceof MySqlUpdateStatement) {
                     String setColumns = this.constructSetColumnsForUpdate(subTx.getDbSchema(), tableName);
-                    Object primaryKey = this.txleEhCache.get(CacheName.INIT, subTx.getDbNodeId() + "." + tableNameWithSchema);
+                    Object primaryKey = this.txleEhCache.get(TxleCacheType.INIT, subTx.getDbNodeId() + "." + tableNameWithSchema);
+                    if (primaryKey == null) {
+                        List list = customRepository.executeQuery("SELECT T.field FROM BusinessDBLatestDetail T WHERE T.isprimarykey = 1 AND T.node = ? AND T.dbschema = ? AND T.tablename = ?", subTx.getDbNodeId(), subTx.getDbSchema(), tableName);
+                        if (list != null && !list.isEmpty()) {
+                            primaryKey = list.get(0);
+                            if (primaryKey != null) {
+                                txleEhCache.put(TxleCacheType.INIT, subTx.getDbNodeId() + "." + subTx.getDbSchema() + "." + tableName, primaryKey);
+                            }
+                        }
+                    }
                     if (primaryKey == null) {
                         primaryKey = "id";
                     }

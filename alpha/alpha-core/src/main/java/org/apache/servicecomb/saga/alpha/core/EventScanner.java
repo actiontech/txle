@@ -19,7 +19,8 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
-import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
+import com.actionsky.txle.cache.ITxleConsistencyCache;
+import com.actionsky.txle.enums.GlobalTxStatus;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +54,8 @@ public class EventScanner implements Runnable {
 
   public static final String SCANNER_SQL = " /**scanner_sql**/";
 
-  private ITxleCache txleCache;
-  private TxleConsulClient txleConsulClient;
+  private TxleConsulClient consulClient;
+  private ITxleConsistencyCache consistencyCache;
 
   public EventScanner(ScheduledExecutorService scheduler,
                       TxEventRepository eventRepository,
@@ -62,16 +63,16 @@ public class EventScanner implements Runnable {
                       TxTimeoutRepository timeoutRepository,
                       OmegaCallback omegaCallback,
                       int eventPollingInterval,
-                      ITxleCache txleCache,
-                      TxleConsulClient txleConsulClient) {
+                      TxleConsulClient consulClient,
+                      ITxleConsistencyCache consistencyCache) {
     this.scheduler = scheduler;
     this.eventRepository = eventRepository;
     this.commandRepository = commandRepository;
     this.timeoutRepository = timeoutRepository;
     this.omegaCallback = omegaCallback;
     this.eventPollingInterval = eventPollingInterval;
-    this.txleCache = txleCache;
-    this.txleConsulClient = txleConsulClient;
+    this.consulClient = consulClient;
+    this.consistencyCache = consistencyCache;
   }
 
   @Override
@@ -90,7 +91,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
             () -> {
               try {
-                if (txleConsulClient.isMaster()) {
+                if (consulClient.isMaster()) {
                   // Use a new scheduler for lessening the latency of checking timeout.
                   updateTimeoutStatus();
                   findTimeoutEvents();
@@ -108,7 +109,7 @@ public class EventScanner implements Runnable {
     scheduler.scheduleWithFixedDelay(
             () -> {
               try {
-                if (txleConsulClient.isMaster()) {
+                if (consulClient.isMaster()) {
                   compensate();
                   updateCompensatedCommands();
                   getMinUnendedEventId();
@@ -154,7 +155,7 @@ public class EventScanner implements Runnable {
       txTimeoutList.forEach(timeout -> {
         log.info("Found timeout event {} to abort", timeout);
         // set cache for aborted tx as soon as possible so that next sub-transaction can get the aborted status when it verifies the aborted status.
-        txleCache.putDistributedTxAbortStatusCache(timeout.globalTxId(), true, 2);
+        consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(timeout.globalTxId()), GlobalTxStatus.Aborted.toString());
       });
 
       txTimeoutList.forEach(timeout -> {

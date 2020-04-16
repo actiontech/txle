@@ -11,7 +11,6 @@ import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.health.model.Check;
 import com.ecwid.consul.v1.session.model.NewSession;
 import com.ecwid.consul.v1.session.model.Session;
-import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.common.CrossSystemInetAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,9 +46,6 @@ public class TxleConsulClient implements ApplicationRunner {
     @Autowired(required = false)
     private ConsulProperties consulProperties;
     private ConsulClient consulClient;
-
-    @Autowired
-    private ITxleCache txleCache;
 
     @Value("${spring.application.name:\"\"}")
     private String serverName;
@@ -201,15 +197,6 @@ public class TxleConsulClient implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments applicationArguments) throws Exception {
-        if (enabled) {
-            // To execute refresh method after starting server rather than after initializing.
-            txleCache.refreshServiceListCache(true);
-            txleCache.synchronizeCacheFromLeader(this.consulInstanceId);
-//        scheduler.scheduleWithFixedDelay(() -> {
-//            removeExpiredCache(txSuspendStatusCache);
-//            removeExpiredCache(txAbortStatusCache);
-//        }, 1, 1, TimeUnit.MINUTES);
-        }
     }
 
     @PreDestroy

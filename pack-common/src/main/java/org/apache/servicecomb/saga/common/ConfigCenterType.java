@@ -21,6 +21,7 @@ public enum ConfigCenterType {
     CompensationFaultTolerant,
     AutoCompensationFaultTolerant,
     PauseGlobalTx,
+    TerminateGlobalTx,
     HistoryTableIntervalRule,
     AccidentReport,
     SqlMonitor,
@@ -52,6 +53,8 @@ public enum ConfigCenterType {
                 return 11;
             case HistoryTableIntervalRule:
                 return 12;
+            case TerminateGlobalTx:
+                return 13;
             case AccidentReport:
                 return 50;
             case SqlMonitor:
@@ -89,6 +92,8 @@ public enum ConfigCenterType {
                 return "暂停全局事务";
             case HistoryTableIntervalRule:
                 return "历史表间隔规则";
+            case TerminateGlobalTx:
+                return "终止全局事务";
             case AccidentReport:
                 return "差错上报";
             case SqlMonitor:
@@ -126,6 +131,8 @@ public enum ConfigCenterType {
                 return PauseGlobalTx;
             case 12:
                 return HistoryTableIntervalRule;
+            case 13:
+                return TerminateGlobalTx;
             case 50:
                 return AccidentReport;
             case 51:
@@ -163,6 +170,8 @@ public enum ConfigCenterType {
                 return false;
             case AccidentReport:
                 return true;
+            case TerminateGlobalTx:
+                return false;
             case SqlMonitor:
                 return true;
             case ClientCompensate:

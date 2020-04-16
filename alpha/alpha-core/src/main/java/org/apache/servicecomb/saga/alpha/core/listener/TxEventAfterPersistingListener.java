@@ -5,28 +5,28 @@
 
 package org.apache.servicecomb.saga.alpha.core.listener;
 
-import com.actionsky.txle.cache.CacheName;
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.cache.TxleCacheType;
 import com.actionsky.txle.grpc.interfaces.ICustomRepository;
 import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxleMetrics;
-import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
-import org.apache.servicecomb.saga.common.EventType;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.annotation.Resource;
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.apache.servicecomb.saga.common.EventType.SagaStartedEvent;
-import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
+import static org.apache.servicecomb.saga.common.EventType.*;
 
 /**
  * @author Gannalyo
@@ -34,9 +34,6 @@ import static org.apache.servicecomb.saga.common.EventType.TxStartedEvent;
  */
 public class TxEventAfterPersistingListener implements Observer {
     private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
-    @Autowired
-    private ITxleCache txleCache;
 
     @Autowired
     private IKafkaMessageProducer kafkaMessageProducer;
@@ -49,6 +46,10 @@ public class TxEventAfterPersistingListener implements Observer {
 
     @Autowired
     private ITxleEhCache txleEhCache;
+
+    @Resource(name = "txleMysqlCache")
+    @Autowired
+    private ITxleConsistencyCache consistencyCache;
 
     @Autowired
     private TxleMetrics txleMetrics;
@@ -65,35 +66,34 @@ public class TxEventAfterPersistingListener implements Observer {
             TxEvent event = ((GlobalTxListener) arg0).getEvent();
             try {
                 if (event != null) {
-                    if (event.id() == -1) {
+                    if (event.id() == null || event.id() == -1) {
                         txleMetrics.startMarkTxDuration(event);
                         txleMetrics.countTxNumber(event);
                     } else {
                         txleMetrics.endMarkTxDuration(event);
 
                         log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
-                        switch (EventType.valueOf(event.type())) {
-                            case SagaStartedEvent:
-                                // increase 1 for the minimum identify of undone event when some global transaction starts.
-                                EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
-                                this.putServerNameIdCategory(event);
-                                break;
-                            case TxStartedEvent:
-                                this.putServerNameIdCategory(event);
-                                break;
-                            case SagaEndedEvent:
-                                globalTxIdSet.add(event.globalTxId());
-                                kafkaMessageProducer.send(event);
+                        if (SagaStartedEvent.name().equals(event.type())) {
+                            // increase 1 for the minimum identify of undone event when some global transaction starts.
+                            EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
+                            this.putServerNameIdCategory(event);
+                        } else if (TxStartedEvent.name().equals(event.type())) {
+                            this.putServerNameIdCategory(event);
+                        } else if (SagaEndedEvent.name().equals(event.type())) {
+                            // remove local cache for current global tx
+                            txleEhCache.removeGlobalTxCache(event.globalTxId());
+                            // remove distribution cache for current global tx
+                            consistencyCache.deleteByKeyPrefix(TxleConstants.constructTxCacheKey(event.globalTxId()));
 
-                                // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
-                                if (globalTxIdSet.size() > 20000) {
-                                    removeDistributedTxStatusCache(globalTxIdSet);
-                                }
+                            globalTxIdSet.add(event.globalTxId());
+                            kafkaMessageProducer.send(event);
 
-                                this.saveBusinessDBBackupInfo(event);
-                                break;
-                            default:
-                                break;
+                            // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
+                            if (globalTxIdSet.size() > 20000) {
+                                removeDistributedTxStatusCache(globalTxIdSet);
+                            }
+
+                            this.saveBusinessDBBackupInfo(event);
                         }
                     }
                 }
@@ -104,36 +104,21 @@ public class TxEventAfterPersistingListener implements Observer {
     }
 
     private void saveBusinessDBBackupInfo(TxEvent event) {
-        Object cacheValue = txleEhCache.get(CacheName.GLOBALTX, "backup-table-check");
+        Object cacheValue = txleEhCache.get(TxleCacheType.OTHER, "is-executed-backup-table-" + event.globalTxId());
         if (cacheValue != null) {
-            Map<String, List<String[]>> values = (Map<String, List<String[]>>) cacheValue;
-            if (values != null && !values.isEmpty()) {
-                List<String[]> backupInfoList = values.get(event.globalTxId());
-                if (backupInfoList != null) {
-                    Set<String> backupTables = new HashSet<>();
-                    backupInfoList.forEach(backupInfo -> {
-                        if (!backupTables.contains(backupInfo[2])) {
-                            if (!this.checkIsExistsBackupTable(event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[2])) {
-                                if (this.customRepository.executeUpdate("INSERT INTO BusinessDBBackupInfo (servicename, instanceid, dbnodeid, dbschema, backuptablename) VALUES (?, ?, ?, ?, ?)", event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[2]) > 0) {
-                                    backupTables.add(backupInfo[2]);
-                                }
-                            } else {
-                                backupTables.add(backupInfo[2]);
-                            }
+            List<String[]> cacheList = (List<String[]>) cacheValue;
+            if (cacheList != null && !cacheList.isEmpty()) {
+                cacheList.forEach(backupInfo -> {
+                    String backupTableKey = backupInfo[0] + "_" + backupInfo[1] + "_" + backupInfo[2];
+                    Boolean isExecutedBackupTable = txleEhCache.getBooleanValue(TxleCacheType.OTHER, backupTableKey);
+                    if (isExecutedBackupTable == null || !isExecutedBackupTable) {
+                        if (!this.checkIsExistsBackupTable(event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[2])) {
+                            this.customRepository.executeUpdate("INSERT INTO BusinessDBBackupInfo (servicename, instanceid, dbnodeid, dbschema, backuptablename) VALUES (?, ?, ?, ?, ?)", event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[2]);
+                            this.customRepository.executeUpdate("INSERT INTO BusinessDBBackupInfo (servicename, instanceid, dbnodeid, dbschema, backuptablename) VALUES (?, ?, ?, ?, ?)", event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[3]);
                         }
-                        if (!backupTables.contains(backupInfo[3])) {
-                            if (!this.checkIsExistsBackupTable(event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[3])) {
-                                if (this.customRepository.executeUpdate("INSERT INTO BusinessDBBackupInfo (servicename, instanceid, dbnodeid, dbschema, backuptablename) VALUES (?, ?, ?, ?, ?)", event.serviceName(), event.instanceId(), backupInfo[0], backupInfo[1], backupInfo[3]) > 0) {
-                                    backupTables.add(backupInfo[3]);
-                                }
-                            } else {
-                                backupTables.add(backupInfo[3]);
-                            }
-                        }
-                    });
-                    values.remove(event.globalTxId());
-                    txleEhCache.put(CacheName.GLOBALTX, "backup-table-check", values, 300);
-                }
+                        txleEhCache.put(TxleCacheType.OTHER, backupTableKey, true);
+                    }
+                });
             }
         }
     }
@@ -146,7 +131,6 @@ public class TxEventAfterPersistingListener implements Observer {
     private void removeDistributedTxStatusCache(Set<String> globalTxIdSet) {
         // replace a new thread with a thread pool so that avoid to create too many new threads
         executorService.execute(() -> {
-            txleCache.removeDistributedTxStatusCache(globalTxIdSet);
             globalTxIdSet.clear();
         });
     }

@@ -4,15 +4,16 @@
  */
 package com.actionsky.txle.grpc.interfaces;
 
-import com.actionsky.txle.cache.CacheName;
-import com.actionsky.txle.cache.CurrentGlobalTxCache;
+import com.actionsky.txle.cache.ClientGlobalTxCache;
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.cache.TxleCacheType;
+import com.actionsky.txle.enums.GlobalTxStatus;
 import com.actionsky.txle.exception.ExceptionFaultTolerance;
 import com.actionsky.txle.grpc.*;
 import com.actionsky.txle.grpc.interfaces.eventaddition.ITxEventAdditionService;
 import com.actionsky.txle.grpc.interfaces.eventaddition.TxEventAddition;
 import io.grpc.stub.StreamObserver;
-import org.apache.servicecomb.saga.alpha.core.AdditionalEventType;
 import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
@@ -26,10 +27,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.actionsky.txle.enums.GlobalTxStatus.*;
 import static org.apache.servicecomb.saga.common.EventType.*;
 
 /**
@@ -54,19 +57,19 @@ public class GlobalTxHandler {
     @Autowired
     private ITxleEhCache txleEhCache;
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
+    @Resource(name = "txleMysqlCache")
+    @Autowired
+    private ITxleConsistencyCache consistencyCache;
+
+    private final ExecutorService executorService = Executors.newFixedThreadPool(3);
 
     public boolean checkIsExistsGlobalTx(String globalTxId) {
-        CurrentGlobalTxCache txCache = (CurrentGlobalTxCache) txleEhCache.get(CacheName.GLOBALTX, globalTxId);
-        if (txCache != null) {
-            return true;
-        }
-        return txConsistentService.checkIsExistsEventType(globalTxId, globalTxId, SagaStartedEvent.name());
+        return this.getGlobalTxCache(globalTxId) != null;
     }
 
     public void checkTimeout(StreamObserver<TxleGrpcServerStream> serverStreamObserver) {
 //        try {
-//            List<String> unendedGlobalTxIds = txleEhCache.getKeys(CacheName.GLOBALTX);
+//            List<String> unendedGlobalTxIds = txleEhCache.getKeys(TxleCacheType.GLOBALTX);
 //            if (unendedGlobalTxIds != null && !unendedGlobalTxIds.isEmpty()) {
 //                // 检测超时，及时通知第三方客户端，通知后如何处理交给第三方自行决定，但无论如何处理都会保证数据的最终一致性
 //                List<TxEvent> timeoutEvents = eventRepository.findTimeoutEvents(unendedGlobalTxIds);
@@ -95,7 +98,7 @@ public class GlobalTxHandler {
             boolean registerResult = txConsistentService.registerGlobalTx(startTxEvent);
             if (!registerResult) {
                 String cause = "Failed to end global transaction, [" + startTxEvent.toString() + "].";
-                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, instanceId, tx.getServiceCategory(), txStartAck, null);
+                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, tx.getGlobalTxId(), cause, instanceId, tx.getServiceCategory(), txStartAck, null);
             }
         }
 
@@ -108,7 +111,7 @@ public class GlobalTxHandler {
             if (!txConsistentService.registerSubTx(subTxEvent, subTxEventAddition)) {
                 // verify the fault-tolerance for global transaction
                 String cause = "Failed to register sub-transaction, [" + subTxEventAddition.toString() + "].";
-                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, instanceId, tx.getServiceCategory(), txStartAck, null);
+                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, tx.getGlobalTxId(), cause, instanceId, tx.getServiceCategory(), txStartAck, null);
             }
         });
         return true;
@@ -126,13 +129,15 @@ public class GlobalTxHandler {
 
         tx.getSubTxInfoList().forEach(subTx -> {
             String localTxId = subTx.getLocalTxId();
-            TxEvent subEvent = subTxEventMap.get(localTxId);
-            String type = subTx.getIsSuccessful() ? TxEndedEvent.name() : TxAbortedEvent.name();
-            TxEvent subTxEvent = new TxEvent(subEvent.serviceName(), subEvent.instanceId(), tx.getGlobalTxId(), localTxId, "", type, null, 0, null, 0, subEvent.category(), null);
-            if (!txConsistentService.registerSubTx(subTxEvent, null)) {
-                // verify the fault-tolerance for global transaction
-                String cause = "Failed to register sub-transaction, [" + subTxEvent.toString() + "].";
-                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, subEvent.instanceId(), subTxEvent.category(), null, txEndAck);
+            TxEvent subStartedEvent = subTxEventMap.get(localTxId);
+            if (subStartedEvent != null) {
+                String type = subTx.getIsSuccessful() ? TxEndedEvent.name() : TxAbortedEvent.name();
+                TxEvent subTxEvent = new TxEvent(subStartedEvent.serviceName(), subStartedEvent.instanceId(), tx.getGlobalTxId(), localTxId, "", type, null, 0, null, 0, subStartedEvent.category(), null);
+                if (!txConsistentService.registerSubTx(subTxEvent, null)) {
+                    // verify the fault-tolerance for global transaction
+                    String cause = "Failed to register sub-transaction, [" + subTxEvent.toString() + "].";
+                    ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, tx.getGlobalTxId(), cause, subStartedEvent.instanceId(), subTxEvent.category(), null, txEndAck);
+                }
             }
         });
         return true;
@@ -142,15 +147,18 @@ public class GlobalTxHandler {
     public boolean checkIsNeedCompensate(TxleTransactionEnd tx, TxleTxEndAck.Builder endAck, List<TxleSubTransactionEnd> abnormalSubTxList) {
         boolean isNeedCompensate = false;
         try {
+            if (GlobalTxStatus.Aborted.toString().equals(consistencyCache.getValueByCacheKey(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()))) || endAck.getStatus().ordinal() == TxleTxEndAck.TransactionStatus.ABORTED.ordinal()) {
+                return true;
+            }
             List<TxEvent> eventList = eventRepository.selectTxEventByGlobalTxIds(Arrays.asList(tx.getGlobalTxId()));
             if (eventList == null || eventList.isEmpty()) {
                 String cause = "Empty transaction for global transaction [" + tx.getGlobalTxId() + "].";
-                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, null, null, null, endAck);
+                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, tx.getGlobalTxId(), cause, null, null, null, endAck);
             } else {
                 for (TxEvent subEvent : eventList) {
                     if (TxStartedEvent.name().equals(subEvent.type())) {
                         // check timeout
-                        timeoutChecking(tx.getGlobalTxId(), tx.getIsCanOver(), subEvent.expiryTime());
+                        timeoutChecking(tx.getIsCanOver(), subEvent);
                     }
 
                     for (TxleSubTransactionEnd subTx : abnormalSubTxList) {
@@ -163,8 +171,8 @@ public class GlobalTxHandler {
                 }
 
                 // global tx aborted
-                TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(eventList, tx.getGlobalTxId(), tx.getIsCanOver());
-                if (txStatus.ordinal() == TxleTxStartAck.TransactionStatus.ABORTED.ordinal()) {
+                String value = consistencyCache.getValueByCacheKey(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()));
+                if (value != null && TxleTxStartAck.TransactionStatus.valueOf(value.toUpperCase()).ordinal() == TxleTxStartAck.TransactionStatus.ABORTED.ordinal()) {
                     isNeedCompensate = true;
                 }
             }
@@ -177,6 +185,7 @@ public class GlobalTxHandler {
 
     public void compensateInStartingTx(TxleTransactionStart tx, TxleTxStartAck.Builder startAck, StreamObserver<TxleGrpcServerStream> serverStreamObserver) {
         try {
+            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), Aborted.toString());
             startAck.setStatus(TxleTxStartAck.TransactionStatus.ABORTED);
             // search ended sub-txs in reverse order
             List<TxEventAddition> eventAdditions = eventAdditionService.selectDescEventByGlobalTxId(tx.getGlobalTxId());
@@ -190,20 +199,18 @@ public class GlobalTxHandler {
             LOG.error("Failed to compensate for global transaction. id = {}", tx.getGlobalTxId(), e);
             this.reportMsgToAccidentPlatform(tx.getGlobalTxId());
         } finally {
-            this.endGlobalTx(tx.getGlobalTxId(), true, startAck, null, true);
+            this.endGlobalTx(tx.getGlobalTxId(), true, startAck, null);
         }
     }
 
     // compensation conditions: timeout, or abnormal sub-txs which have no more retry times.
-    public void compensateInEndingTx(TxleTransactionEnd tx, TxleTxEndAck.Builder endAck, StreamObserver<TxleGrpcServerStream> serverStreamObserver, List<TxleSubTransactionEnd> abnormalSubTxList) {
+    public void compensateInEndingTx(TxleTransactionEnd tx, StreamObserver<TxleGrpcServerStream> serverStreamObserver, List<TxleSubTransactionEnd> abnormalSubTxList) {
         Set<String> abnormalLocalTxIdSet = new HashSet<>();
         try {
-            endAck.setStatus(TxleTxEndAck.TransactionStatus.ABORTED);
             abnormalSubTxList.forEach(subTx -> abnormalLocalTxIdSet.add(subTx.getLocalTxId()));
-            CurrentGlobalTxCache txCache = (CurrentGlobalTxCache) txleEhCache.get(CacheName.GLOBALTX, tx.getGlobalTxId());
 
             // search ended sub-txs in reverse order
-            List<TxEventAddition> eventAdditions = eventAdditionService.selectDescEventByGlobalTxId(txCache.getInstanceId(), txCache.getGlobalTxId());
+            List<TxEventAddition> eventAdditions = eventAdditionService.selectDescEventByGlobalTxId(tx.getGlobalTxId());
             if (eventAdditions != null && !eventAdditions.isEmpty()) {
                 TxleGrpcServerStream.Builder serverStream = TxleGrpcServerStream.newBuilder();
                 // send compensation sqls to client and will be executed in order by client
@@ -265,15 +272,16 @@ public class GlobalTxHandler {
 
     public boolean retry(TxleTransactionEnd tx, TxleTxEndAck.Builder endAck, StreamObserver<TxleGrpcServerStream> serverStreamObserver) {
         try {
+            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), Paused.toString());
             endAck.setStatus(TxleTxEndAck.TransactionStatus.PAUSED);
-            CurrentGlobalTxCache txCache = (CurrentGlobalTxCache) txleEhCache.get(CacheName.GLOBALTX, tx.getGlobalTxId());
+            ClientGlobalTxCache txCache = this.getGlobalTxCache(tx.getGlobalTxId());
 
             List<TxEvent> eventList = eventRepository.selectTxEventByGlobalTxIds(Arrays.asList(tx.getGlobalTxId()));
             if (eventList == null || eventList.isEmpty()) {
                 String cause = "Empty transaction for global transaction [" + tx.getGlobalTxId() + "].";
-                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, txCache.getInstanceId(), txCache.getServiceCategory(), null, endAck);
+                ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, tx.getGlobalTxId(), cause, txCache.getInstanceId(), txCache.getServiceCategory(), null, endAck);
             } else {
-                List<TxEventAddition> eventAdditions = eventAdditionService.selectDescEventByGlobalTxId(txCache.getInstanceId(), tx.getGlobalTxId());
+                List<TxEventAddition> eventAdditions = eventAdditionService.selectDescEventByGlobalTxId(tx.getGlobalTxId());
                 if (eventAdditions != null && !eventAdditions.isEmpty()) {
                     LinkedHashMap<String, TxEvent> subStartedEventList = new LinkedHashMap<>();
                     eventList.forEach(subTx -> {
@@ -306,20 +314,23 @@ public class GlobalTxHandler {
                                         .setMethod("retry");
                                 serverStream.addExecuteSql(executeSqlInfo.build()).build();
 
-                                if (!tryAgainUntilSuccessOrOvertime(tx.getIsCanOver(), eventAddition.getLocalTxId(), subStartedEvent, serverStreamObserver, serverStream)) {
+                                if (!tryAgainUntilSuccessOrOvertime(eventAddition.getLocalTxId(), subStartedEvent, serverStreamObserver, serverStream)) {
                                     endAck.setStatus(TxleTxEndAck.TransactionStatus.ABORTED);
+                                    consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), Aborted.toString());
                                     return false;
                                 }
                             }
                         }
                     }
-                    // reset to NORMAL status after retrying successfully
-                    endAck.setStatus(TxleTxEndAck.TransactionStatus.NORMAL);
+                    // reset to RUNNING status after retrying successfully
+                    endAck.setStatus(TxleTxEndAck.TransactionStatus.RUNNING);
+                    consistencyCache.delete(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()));
                     return true;
                 }
             }
         } catch (Exception e) {
             endAck.setStatus(TxleTxEndAck.TransactionStatus.ABORTED);
+            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), Aborted.toString());
             LOG.error("Failed to retry for global transaction. id = {}", tx.getGlobalTxId(), e);
         }
         return false;
@@ -329,7 +340,7 @@ public class GlobalTxHandler {
     // retries > 0, retry for retries times until success or timeout
     // retry logic: listen retry result continually, once failure and no more retries, or timeout, then terminate retry immediately for all sub-txs, and compensate
     // if the last retry result exists and it's failed, then execute the next retry, so that guarantee idempotence
-    private boolean tryAgainUntilSuccessOrOvertime(boolean isCanOver, String localTxId, TxEvent subStartedEvent, StreamObserver<TxleGrpcServerStream> serverStreamObserver, TxleGrpcServerStream.Builder serverStream) {
+    private boolean tryAgainUntilSuccessOrOvertime(String localTxId, TxEvent subStartedEvent, StreamObserver<TxleGrpcServerStream> serverStreamObserver, TxleGrpcServerStream.Builder serverStream) {
         if (subStartedEvent.retries() == -1) {
             while (true) {
                 if (doRetry(localTxId, subStartedEvent, serverStreamObserver, serverStream)) {
@@ -384,163 +395,118 @@ public class GlobalTxHandler {
         return eventRepository.checkIsExistsEventType(subStartedEvent.globalTxId(), localTxId, TxEndedEvent.name());
     }
 
-    private void timeoutChecking(String globalTxId, boolean isCanOver, Date expiryTime) {
+    private void timeoutChecking(boolean isCanOver, TxEvent subStartedEvent) {
         // if global transaction can over(there're no more txs), even timeout occurs, still end tx normally
-        if (new Date().compareTo(expiryTime) > 0 && !isCanOver) {
-            throw new RuntimeException("Current global transaction was overtime. globalTxId = " + globalTxId);
+        if (new Date().compareTo(subStartedEvent.expiryTime()) > 0 && !isCanOver) {
+            TxEvent endTxEvent = new TxEvent(subStartedEvent.serviceName(), subStartedEvent.instanceId(), subStartedEvent.globalTxId(), subStartedEvent.localTxId(), "", TxAbortedEvent.name(), "", 0, null, 0, subStartedEvent.category(), null);
+            txConsistentService.registerGlobalTx(endTxEvent);
+            this.consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(endTxEvent.globalTxId()), GlobalTxStatus.Aborted.toString());
+            throw new RuntimeException("Current global transaction was overtime. globalTxId = " + subStartedEvent.globalTxId());
         }
     }
 
-    public void endGlobalTx(String globalTxId, boolean isCanOver, TxleTxStartAck.Builder startAck, TxleTxEndAck.Builder endAck, boolean isNeedCompensate) {
+    public void endGlobalTx(String globalTxId, boolean isCanOver, TxleTxStartAck.Builder startAck, TxleTxEndAck.Builder endAck) {
         try {
-            CurrentGlobalTxCache txCache = (CurrentGlobalTxCache) txleEhCache.get(CacheName.GLOBALTX, globalTxId);
-            TxEvent endTxEvent = new TxEvent(txCache.getServiceName(), txCache.getInstanceId(), globalTxId, globalTxId, "", TxAbortedEvent.name(), "", 0, null, 0, txCache.getServiceCategory(), null);
-
-            if (isNeedCompensate) {
-                txConsistentService.registerGlobalTx(endTxEvent);
-            }
-
             if (isCanOver) {
+                ClientGlobalTxCache txCache = this.getGlobalTxCache(globalTxId);
+                TxEvent endTxEvent = new TxEvent(txCache.getServiceName(), txCache.getInstanceId(), globalTxId, globalTxId, "", SagaEndedEvent.name(), "", 0, null, 0, txCache.getServiceCategory(), null);
                 endTxEvent.setSurrogateId(-1L);
-                endTxEvent.setType(SagaEndedEvent.name());
                 boolean registerResult = txConsistentService.registerGlobalTx(endTxEvent);
                 if (!registerResult) {
                     String cause = "Failed to end global transaction, [" + endTxEvent.toString() + "].";
-                    ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, txCache.getInstanceId(), txCache.getServiceCategory(), startAck, endAck);
+                    ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, globalTxId, cause, txCache.getInstanceId(), txCache.getServiceCategory(), startAck, endAck);
                 }
-                txleEhCache.remove(CacheName.GLOBALTX, globalTxId);
+                txleEhCache.remove(TxleCacheType.GLOBALTX, globalTxId);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Failed to end global transaction. id = {}", globalTxId, e);
         }
     }
 
     // verifications: downgraded, paused, (overtime)aborted and exists, verify by cache as much as possible
-    public boolean verifyGlobalTxBeforeStarting(TxleTransactionStart tx, TxleTxStartAck.Builder startAck, boolean isExistsGlobalTx) {
-        String instanceId = "";
+    public boolean verifyGlobalTxBeforeStarting(TxleTransactionStart tx, TxleTxStartAck.Builder startAck) {
+        ClientGlobalTxCache txCache = this.getGlobalTxCache(tx.getGlobalTxId());
         try {
-            if (!isExistsGlobalTx) {
-                return true;
-            }
-
-            instanceId = TxleConstants.getServiceInstanceId(tx.getServiceName(), tx.getServiceIP());
-            boolean enabledTx = this.txleEhCache.readConfigCache(instanceId, tx.getServiceCategory(), ConfigCenterType.GlobalTx);
-            if (!enabledTx) {
+            if (!consistencyCache.getBooleanValue(txCache.getInstanceId(), txCache.getServiceCategory(), ConfigCenterType.GlobalTx)) {
                 startAck.setStatus(TxleTxStartAck.TransactionStatus.DEGRADED);
+                // return business sql immediately in case of degradation
+                for (TxleSubTransactionStart subTx : tx.getSubTxInfoList()) {
+                    TxleSubTxSql.Builder subTxSql = TxleSubTxSql.newBuilder().setLocalTxId(subTx.getLocalTxId()).setDbNodeId(subTx.getDbNodeId()).setDbSchema(subTx.getDbSchema()).setOrder(subTx.getOrder());
+                    subTxSql.addSubTxSql(subTx.getSql());
+                    startAck.addSubTxSql(subTxSql.build());
+                }
                 return false;
             }
 
-            boolean pausedTx = this.txleEhCache.readConfigCache(instanceId, tx.getServiceCategory(), ConfigCenterType.PauseGlobalTx, tx.getGlobalTxId());
-            while (pausedTx) {
-//                Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60)  * 1000);
-                Thread.sleep(60 * 1000);
-                pausedTx = this.txleEhCache.readConfigCache(instanceId, tx.getServiceCategory(), ConfigCenterType.PauseGlobalTx);
-            }
-
-            TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(null, tx.getGlobalTxId(), false);
-            if (TxleTxStartAck.TransactionStatus.NORMAL.ordinal() != txStatus.ordinal()) {
+            // 检测当前全局事务是否暂停：如果暂停则进入循环，等待一定时间，再检测暂停，如果未获取到值/异常/终止均跳出循环，若暂停则不设置继续执行循环
+            TxleTxStartAck.TransactionStatus txStatus = checkTxStatus(txCache.getInstanceId(), tx.getServiceCategory(), tx.getGlobalTxId());
+            if (TxleTxStartAck.TransactionStatus.RUNNING.ordinal() != txStatus.ordinal()) {
                 startAck.setStatus(txStatus);
                 return false;
             }
         } catch (Exception e) {
             String cause = "Failed to verify before starting. globalTxId = " + tx.getGlobalTxId();
-            ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, instanceId, tx.getServiceCategory(), startAck, null);
+            ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, tx.getGlobalTxId(), cause, txCache.getInstanceId(), txCache.getServiceCategory(), startAck, null);
         }
         return true;
     }
 
-    public void setCurrentGlobalTxCache(TxleTransactionEnd tx, TxleTxEndAck.Builder endAck) {
-        String globalTxId = tx.getGlobalTxId();
-        Object cache = txleEhCache.get(CacheName.GLOBALTX, globalTxId);
-        if (cache == null) {
-            TxEvent event = eventRepository.selectEventByGlobalTxIdType(globalTxId, SagaStartedEvent.name());
-            if (event == null) {
-                endAck.setStatus(TxleTxEndAck.TransactionStatus.ABORTED).setMessage("No global transaction [" + globalTxId + "].");
-                throw new RuntimeException(endAck.getMessage());
+    private TxleTxStartAck.TransactionStatus checkTxStatus(String instanceId, String category, String globalTxId) throws Exception {
+        // 是否暂停所有
+        boolean paused = this.consistencyCache.getBooleanValue(instanceId, category, ConfigCenterType.PauseGlobalTx);
+        // 当前全局事务是否暂停
+        String statusCacheValue = this.consistencyCache.getValueByCacheKey(TxleConstants.constructTxStatusCacheKey(globalTxId));
+        while (paused || (statusCacheValue != null && Paused.toString().equals(statusCacheValue))) {
+//                Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60)  * 1000);
+            Thread.sleep(60 * 1000);
+            paused = this.consistencyCache.getBooleanValue(instanceId, category, ConfigCenterType.PauseGlobalTx);
+            statusCacheValue = this.consistencyCache.getValueByCacheKey(TxleConstants.constructTxStatusCacheKey(globalTxId));
+            if (statusCacheValue != null) {
+                if (GlobalTxStatus.valueOf(statusCacheValue.toUpperCase()).ordinal() == Aborted.ordinal()) {
+                    break;
+                }
             }
-            txleEhCache.put(CacheName.GLOBALTX, globalTxId, new CurrentGlobalTxCache(event));
         }
+        TxleTxStartAck.TransactionStatus status = TxleTxStartAck.TransactionStatus.RUNNING;
+        if (statusCacheValue != null) {
+            status = TxleTxStartAck.TransactionStatus.valueOf(statusCacheValue.toUpperCase());
+        }
+        return status;
     }
 
     // verifications: downgraded and paused
     public boolean verifyGlobalTxBeforeEnding(TxleTransactionEnd tx, TxleTxEndAck.Builder endAck) {
-        CurrentGlobalTxCache txCache = (CurrentGlobalTxCache) txleEhCache.get(CacheName.GLOBALTX, tx.getGlobalTxId());
+        ClientGlobalTxCache txCache = this.getGlobalTxCache(tx.getGlobalTxId());
 
         try {
-            boolean enabledTx = this.txleEhCache.readConfigCache(txCache.getInstanceId(), txCache.getServiceCategory(), ConfigCenterType.GlobalTx);
-            if (!enabledTx) {
+            String instanceId = txCache == null ? null : txCache.getInstanceId();
+            String category = txCache == null ? null : txCache.getServiceCategory();
+            if (!consistencyCache.getBooleanValue(instanceId, category, ConfigCenterType.GlobalTx)) {
                 endAck.setStatus(TxleTxEndAck.TransactionStatus.DEGRADED);
                 return false;
             }
 
-            boolean pausedTx = this.txleEhCache.readConfigCache(txCache.getInstanceId(), txCache.getServiceCategory(), ConfigCenterType.PauseGlobalTx, tx.getGlobalTxId());
-            while (pausedTx) {
-//                Thread.sleep(TxleStaticConfig.getIntegerConfig("txle.transaction.pause-check-interval", 60)  * 1000);
-                Thread.sleep(60 * 1000);
-                pausedTx = this.txleEhCache.readConfigCache(txCache.getInstanceId(), txCache.getServiceCategory(), ConfigCenterType.PauseGlobalTx);
-            }
+            // 检测当前全局事务是否暂停：如果暂停则进入循环，等待一定时间，再检测暂停，如果未获取到值/异常/终止均跳出循环，若暂停则不设置继续执行循环
+            checkTxStatus(instanceId, category, tx.getGlobalTxId());
 
-            // in end tx interface, need to compensate/retry/end if an abort occurs
-//            TxleTxStartAck.TransactionStatus txStatus = computeGlobalTxStatus(tx.getGlobalTxId());
-//            if (TxleTxStartAck.TransactionStatus.NORMAL.ordinal() != txStatus.ordinal()) {
-//                endAck.setStatus(TxleTxEndAck.TransactionStatus.forNumber(txStatus.getNumber()));
-//                return false;
-//            }
+            // in end tx interface, need to compensate/retry/end if an abort occurs, so do not return false
         } catch (Exception e) {
             String cause = "Failed to verify before ending. globalTxId = " + tx.getGlobalTxId();
-            ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(txleEhCache, cause, txCache.getInstanceId(), txCache.getServiceCategory(), null, endAck);
-        } finally {
-            txCache.setStatus(TxleTxStartAck.TransactionStatus.forNumber(endAck.getStatus().getNumber()));
+            ExceptionFaultTolerance.handleErrorWithFaultTolerantCheck(consistencyCache, tx.getGlobalTxId(), cause, txCache.getInstanceId(), txCache.getServiceCategory(), null, endAck);
         }
 
         return true;
     }
 
-    // compute status for global transaction
-    private TxleTxStartAck.TransactionStatus computeGlobalTxStatus(List<TxEvent> txEvents, String globalTxId, boolean isCanOver) {
-        TxleTxStartAck.TransactionStatus txStatus = TxleTxStartAck.TransactionStatus.NORMAL;
-        try {
-            if (txEvents == null) {
-                txEvents = eventRepository.selectTxEventByGlobalTxIds(Arrays.asList(globalTxId));
-                if (txEvents == null || txEvents.isEmpty()) {
-                    return TxleTxStartAck.TransactionStatus.ABORTED;
-                }
+    private ClientGlobalTxCache getGlobalTxCache(String globalTxId) {
+        ClientGlobalTxCache globalCache = (ClientGlobalTxCache) txleEhCache.get(TxleCacheType.GLOBALTX, globalTxId);
+        if (globalCache == null) {
+            TxEvent event = this.eventRepository.selectEventByGlobalTxIdType(globalTxId, EventType.SagaStartedEvent.name());
+            if (event != null) {
+                globalCache = new ClientGlobalTxCache(event);
             }
-
-            Set<String> zeroRetriesLocalTxIds = new HashSet<>();
-            int pausedNumber = 0, recoveredNumber = 0;
-            for (TxEvent event : txEvents) {
-                if (TxStartedEvent.name().equals(event.type())) {
-                    // timeout logic: return immediately in case of timeout in the start tx interface; for timeout, need to compensate in the end tx interface;
-                    timeoutChecking(globalTxId, isCanOver, event.expiryTime());
-
-                    if (event.retries() == 0) {
-                        zeroRetriesLocalTxIds.add(event.localTxId());
-                    }
-                } else if (AdditionalEventType.SagaPausedEvent.name().equals(event.type()) || AdditionalEventType.SagaAutoContinuedEvent.name().equals(event.type())) {
-                    pausedNumber++;
-                } else if (AdditionalEventType.SagaContinuedEvent.name().equals(event.type())) {
-                    recoveredNumber++;
-                }
-            }
-
-            for (TxEvent event : txEvents) {
-                if (TxAbortedEvent.name().equals(event.type())) {
-                    // sub-tx aborted & global tx aborted
-                    if (zeroRetriesLocalTxIds.contains(event.globalTxId()) || event.globalTxId().equals(event.localTxId())) {
-                        return TxleTxStartAck.TransactionStatus.ABORTED;
-                    }
-                }
-                // paused: paused number is more than recovered number
-                if (pausedNumber > recoveredNumber) {
-                    return TxleTxStartAck.TransactionStatus.PAUSED;
-                }
-            }
-        } catch (Exception e) {
-            LOG.error("Failed to compute status for global transaction.", e);
-            txStatus = TxleTxStartAck.TransactionStatus.ABORTED;
         }
-        return txStatus;
+        return globalCache;
     }
 
 }

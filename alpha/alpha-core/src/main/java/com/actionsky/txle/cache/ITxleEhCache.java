@@ -15,19 +15,23 @@ import java.util.List;
  */
 public interface ITxleEhCache {
 
-    void put(CacheName cacheName, String key, Object value);
+    void put(TxleCacheType txleCacheType, String key, Object value);
 
-    void putIfAbsent(CacheName cacheName, String key, Object value);
+    void putIfAbsent(TxleCacheType txleCacheType, String key, Object value);
 
-    void put(CacheName cacheName, String key, Object value, int timeout);
+    void put(TxleCacheType txleCacheType, String key, Object value, int timeout);
 
-    void putIfAbsent(CacheName cacheName, String key, Object value, int timeout);
+    void putIfAbsent(TxleCacheType txleCacheType, String key, Object value, int timeout);
 
-    Object get(CacheName cacheName, String key);
+    Object get(TxleCacheType txleCacheType, String key);
 
-    List<String> getKeys(CacheName cacheName);
+    Boolean getBooleanValue(TxleCacheType txleCacheType, String key);
 
-    void remove(CacheName cacheName, String key);
+    List<String> getKeys(TxleCacheType txleCacheType);
+
+    void remove(TxleCacheType txleCacheType, String key);
+
+    void removeGlobalTxCache(String globalTxId);
 
     boolean readConfigCache(String serviceInstanceId, String category, ConfigCenterType type);
 

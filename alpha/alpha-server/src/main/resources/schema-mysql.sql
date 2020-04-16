@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS Config (
   instanceid varchar(100),
   category varchar(100),
   type int(2) NOT NULL DEFAULT 0 COMMENT '1-globaltx, 2-compensation, 3-autocompensation, 4-bizinfotokafka, 5-txmonitor, 6-alert, 7-schedule, 8-globaltxfaulttolerant, 9-compensationfaulttolerant, 10-autocompensationfaulttolerant, 11-pauseglobaltx, 50-accidentreport, 51-sqlmonitor  if values are less than 50, then configs for server, otherwise configs for client.',
+  description varchar(100),
   status int(1) NOT NULL DEFAULT 0 COMMENT '0-normal, 1-historical, 2-dumped',
   ability int(1) NOT NULL DEFAULT 1 COMMENT '0-do not provide ability, 1-provide ability     ps: the client''s ability inherits the global ability.',
   value varchar(100) NOT NULL,
@@ -212,4 +213,11 @@ CREATE TABLE IF NOT EXISTS BusinessDBBackupInfo (
   status int(1) NOT NULL DEFAULT 1 COMMENT '1-正常，2-异常',
   createtime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
+) DEFAULT CHARSET=utf8mb4 $$
+
+CREATE TABLE IF NOT EXISTS KeyValueCache (
+  cachekey varchar(255) NOT NULL,
+  cachevalue varchar(255) NOT NULL,
+  expire datetime,
+  PRIMARY KEY (cachekey)
 ) DEFAULT CHARSET=utf8mb4 $$

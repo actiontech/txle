@@ -6,8 +6,8 @@
 package org.apache.servicecomb.saga.alpha.server.configcenter;
 
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
-import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 
 import java.util.List;
 import java.util.Map;
@@ -17,6 +17,10 @@ import java.util.Map;
  * @since 2019/2/21
  */
 public class ZkDegradationConfigService implements IConfigCenterService {
+
+    public ZkDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
+    }
+
     @Override
     public List<ConfigCenter> selectConfigCenterList() {
         return null;

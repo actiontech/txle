@@ -5,6 +5,7 @@
 
 package org.apache.servicecomb.saga.alpha.server.kafka;
 
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -13,7 +14,6 @@ import org.apache.kafka.common.errors.RetriableException;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
-import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageRepository;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.annotation.Resource;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,8 +47,9 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     @Autowired
     private IAccidentHandlingService accidentHandlingService;
 
+    @Resource(name = "txleMysqlCache")
     @Autowired
-    private IConfigCenterService dbDegradationConfigService;
+    private ITxleConsistencyCache consistencyCache;
 
     private String topic;
 
@@ -60,7 +62,7 @@ public class KafkaMessageProducer implements IKafkaMessageProducer {
     public void send(TxEvent event) {
         long a = System.currentTimeMillis();
         try {
-            boolean enabled = dbDegradationConfigService.isEnabledConfig(event.instanceId(), event.category(), ConfigCenterType.BizInfoToKafka);
+            boolean enabled = consistencyCache.getBooleanValue(event.instanceId(), event.category(), ConfigCenterType.BizInfoToKafka);
             if (enabled && EventType.SagaEndedEvent.name().equals(event.type())) {
                 List<KafkaMessage> messageList = kafkaMessageRepository.findMessageListByGlobalTxId(event.globalTxId(), KafkaMessageStatus.INIT.toInteger());
                 if (messageList != null && !messageList.isEmpty()) {

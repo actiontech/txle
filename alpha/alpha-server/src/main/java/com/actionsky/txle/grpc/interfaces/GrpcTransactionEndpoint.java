@@ -5,9 +5,11 @@
 
 package com.actionsky.txle.grpc.interfaces;
 
-import com.actionsky.txle.cache.CacheName;
-import com.actionsky.txle.cache.CurrentGlobalTxCache;
+import com.actionsky.txle.cache.ClientGlobalTxCache;
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.cache.TxleCacheType;
+import com.actionsky.txle.enums.GlobalTxStatus;
 import com.actionsky.txle.grpc.*;
 import com.actionsky.txle.grpc.interfaces.bizdbinfo.BusinessDBLatestDetail;
 import com.actionsky.txle.grpc.interfaces.bizdbinfo.IBusinessDBLatestDetailService;
@@ -15,6 +17,7 @@ import io.grpc.stub.StreamObserver;
 import org.apache.servicecomb.saga.alpha.core.TxConsistentService;
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
+import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,16 +35,18 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
     private GlobalTxHandler globalTxHandler;
     private CompensateService compensateService;
     private ITxleEhCache txleEhCache;
+    private ITxleConsistencyCache consistencyCache;
     private IAccidentHandlingService accidentHandlingService;
     private TxEventRepository eventRepository;
     private TxConsistentService txConsistentService;
     private IBusinessDBLatestDetailService businessDBLatestDetailService;
 
-    public GrpcTransactionEndpoint(GlobalTxHandler globalTxHandler, CompensateService compensateService, ITxleEhCache txleEhCache, IAccidentHandlingService accidentHandlingService, TxEventRepository eventRepository,
+    public GrpcTransactionEndpoint(GlobalTxHandler globalTxHandler, CompensateService compensateService, ITxleEhCache txleEhCache, ITxleConsistencyCache consistencyCache, IAccidentHandlingService accidentHandlingService, TxEventRepository eventRepository,
                                    TxConsistentService txConsistentService, IBusinessDBLatestDetailService businessDBLatestDetailService) {
         this.globalTxHandler = globalTxHandler;
         this.compensateService = compensateService;
         this.txleEhCache = txleEhCache;
+        this.consistencyCache = consistencyCache;
         this.accidentHandlingService = accidentHandlingService;
         this.eventRepository = eventRepository;
         this.txConsistentService = txConsistentService;
@@ -76,8 +81,7 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
 
     @Override
     public void onStartTransaction(TxleTransactionStart tx, StreamObserver<TxleTxStartAck> startAckStreamObserver) {
-        TxleTxStartAck.Builder startAck = TxleTxStartAck.newBuilder().setStatus(TxleTxStartAck.TransactionStatus.NORMAL);
-        boolean isExistsGlobalTx = false;
+        TxleTxStartAck.Builder startAck = TxleTxStartAck.newBuilder().setStatus(TxleTxStartAck.TransactionStatus.RUNNING);
         try {
             if (tx == null) {
                 LOG.info("TXLE start tx interface received the client request, parameter 1 is empty.");
@@ -87,10 +91,12 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
             LOG.info("TXLE start tx interface received the client request, globalTxId = {}.", tx.getGlobalTxId());
 
             // check if current tx exists
-            isExistsGlobalTx = globalTxHandler.checkIsExistsGlobalTx(tx.getGlobalTxId());
+            boolean isExistsGlobalTx = globalTxHandler.checkIsExistsGlobalTx(tx.getGlobalTxId());
+
+            txleEhCache.put(TxleCacheType.GLOBALTX, tx.getGlobalTxId(), new ClientGlobalTxCache(tx));
 
             // verifications: downgraded, paused, (overtime)aborted and exists, verify by cache as much as possible
-            if (!globalTxHandler.verifyGlobalTxBeforeStarting(tx, startAck, isExistsGlobalTx)) {
+            if (!globalTxHandler.verifyGlobalTxBeforeStarting(tx, startAck)) {
                 return;
             }
 
@@ -111,17 +117,22 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
         } catch (Exception e) {
             startAck = TxleTxStartAck.newBuilder().setStatus(TxleTxStartAck.TransactionStatus.ABORTED).setMessage("Failed to start global transaction [" + tx.getGlobalTxId() + "].");
             LOG.error("Failed to start global transaction [{}].", tx.getGlobalTxId(), e);
-            if (isExistsGlobalTx) {
-                // start and end the first sub-tx were all successful, however, it's failed to start current sub-tx, so the first sub-tx should be compensated.
-                globalTxHandler.compensateInStartingTx(tx, startAck, serverStreamObserver);
-            }
         } finally {
             try {
-                CurrentGlobalTxCache currentGlobalTxCache = new CurrentGlobalTxCache(tx);
-                currentGlobalTxCache.setStatus(startAck.getStatus());
-                txleEhCache.put(CacheName.GLOBALTX, tx.getGlobalTxId(), currentGlobalTxCache);
+                if (startAck.getStatus().ordinal() != TxleTxStartAck.TransactionStatus.RUNNING.ordinal()) {
+                    consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), GlobalTxStatus.convertStatusFromValue(startAck.getStatus().getNumber()).toString());
+                }
             } catch (Exception e) {
-                LOG.error("Failed to cache global transaction after starting.", e);
+                LOG.error("Failed to set cache, globalTxId = " + tx.getGlobalTxId());
+            }
+
+            if (startAck.getStatus().ordinal() == TxleTxStartAck.TransactionStatus.ABORTED.ordinal()) {
+                try {
+                    // start and end the first sub-tx were all successful, however, it's failed to start current sub-tx, so the first sub-tx should be compensated.
+                    globalTxHandler.compensateInStartingTx(tx, startAck, serverStreamObserver);
+                } catch (Exception e) {
+                    LOG.error("Failed to compensate sub-tx when starting.", e);
+                }
             }
 
             startAckStreamObserver.onNext(startAck.build());
@@ -131,7 +142,7 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
 
     @Override
     public void onEndTransaction(TxleTransactionEnd tx, StreamObserver<TxleTxEndAck> endAckStreamObserver) {
-        TxleTxEndAck.Builder endAck = TxleTxEndAck.newBuilder().setStatus(TxleTxEndAck.TransactionStatus.NORMAL);
+        TxleTxEndAck.Builder endAck = TxleTxEndAck.newBuilder().setStatus(TxleTxEndAck.TransactionStatus.RUNNING);
         try {
             if (tx == null) {
                 LOG.info("TXLE end tx interface received the client request, parameter 1 is empty.");
@@ -139,9 +150,6 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
                 return;
             }
             LOG.info("TXLE end tx interface received the client request, globalTxId = {}.", tx.getGlobalTxId());
-
-            // cache works for this call only
-            globalTxHandler.setCurrentGlobalTxCache(tx, endAck);
 
             // verifications: downgraded and paused
             if (!globalTxHandler.verifyGlobalTxBeforeEnding(tx, endAck)) {
@@ -165,15 +173,21 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
                 retryResult = globalTxHandler.retry(tx, endAck, serverStreamObserver);
             }
             if (isNeedCompensate || !retryResult) {
-                isNeedCompensate = true;
-                globalTxHandler.compensateInEndingTx(tx, endAck, serverStreamObserver, abnormalSubTxList);
+                globalTxHandler.compensateInEndingTx(tx, serverStreamObserver, abnormalSubTxList);
             }
 
-            globalTxHandler.endGlobalTx(tx.getGlobalTxId(), tx.getIsCanOver(), null, endAck, isNeedCompensate);
+            globalTxHandler.endGlobalTx(tx.getGlobalTxId(), tx.getIsCanOver(), null, endAck);
         } catch (Exception e) {
             endAck = TxleTxEndAck.newBuilder().setStatus(TxleTxEndAck.TransactionStatus.ABORTED).setMessage("Failed to end global transaction [" + tx.getGlobalTxId() + "].");
             LOG.error("Failed to end global transaction [{}].", tx.getGlobalTxId(), e);
         } finally {
+            try {
+                if (!tx.getIsCanOver() && endAck.getStatus().ordinal() != TxleTxStartAck.TransactionStatus.RUNNING.ordinal()) {
+                    consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), GlobalTxStatus.convertStatusFromValue(endAck.getStatus().getNumber()).toString());
+                }
+            } catch (Exception e) {
+                LOG.error("Failed to set cache, globalTxId = " + tx.getGlobalTxId());
+            }
             endAckStreamObserver.onNext(endAck.build());
             endAckStreamObserver.onCompleted();
         }

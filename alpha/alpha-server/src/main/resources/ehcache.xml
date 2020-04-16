@@ -88,4 +88,15 @@
         <!--<cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory"/>-->
     </cache>
 
+    <cache
+            name="other"
+            maxElementsInMemory="100"
+            overflowToDisk="true"
+            diskPersistent="true"
+            timeToIdleSeconds="0"
+            memoryStoreEvictionPolicy="LRU">
+        <!--timeToLiveSeconds="300"-->
+        <!--<cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory"/>-->
+    </cache>
+
 </ehcache>

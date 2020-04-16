@@ -16,6 +16,8 @@
 package org.apache.servicecomb.saga.alpha.server;
 
 import brave.Tracing;
+import com.actionsky.txle.cache.ITxleEhCache;
+import com.actionsky.txle.cache.TxleMysqlCache;
 import com.actionsky.txle.configuration.TxleConfig;
 import com.actionsky.txle.grpc.interfaces.CompensateService;
 import com.actionsky.txle.grpc.interfaces.GlobalTxHandler;
@@ -23,18 +25,16 @@ import com.actionsky.txle.grpc.interfaces.GrpcTransactionEndpoint;
 import com.actionsky.txle.grpc.interfaces.bizdbinfo.IBusinessDBLatestDetailService;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
-import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
-import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.core.datatransfer.IDataTransferService;
 import org.apache.servicecomb.saga.alpha.core.listener.GlobalTxListener;
 import org.apache.servicecomb.saga.alpha.core.listener.TxEventAfterPersistingListener;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.accidenthandling.AccidentHandlingService;
-import org.apache.servicecomb.saga.alpha.server.cache.TxleCache;
 import org.apache.servicecomb.saga.alpha.server.configcenter.ConfigCenterEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.configcenter.DBDegradationConfigService;
+import org.apache.servicecomb.saga.alpha.server.configcenter.ZkDegradationConfigService;
 import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionaryEntityRepository;
 import org.apache.servicecomb.saga.alpha.server.datadictionary.DataDictionaryService;
 import org.apache.servicecomb.saga.alpha.server.datatransfer.DataTransferRepository;
@@ -133,8 +133,13 @@ class AlphaConfig {
   }
 
   @Bean
-  IConfigCenterService dbDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
+  DBDegradationConfigService dbDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
     return new DBDegradationConfigService(configCenterEntityRepository);
+  }
+
+  @Bean
+  ZkDegradationConfigService zkDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
+    return new ZkDegradationConfigService(configCenterEntityRepository);
   }
 
   @Bean
@@ -150,11 +155,6 @@ class AlphaConfig {
   @Bean
   IAccidentHandlingService accidentHandlingRepository(AccidentHandlingEntityRepository accidentHandlingEntityRepository, RestTemplate restTemplate) {
     return new AccidentHandlingService(accidentHandlingEntityRepository, accidentPlatformAddress, retries, interval, restTemplate);
-  }
-
-  @Bean
-  ITxleCache txleCache() {
-    return new TxleCache();
   }
 
   @Bean
@@ -181,9 +181,9 @@ class AlphaConfig {
 
   @Bean
   EventScanner eventScanner(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository,
-                                   OmegaCallback omegaCallback, ITxleCache txleCache, TxleConsulClient txleConsulClient) {
+                            OmegaCallback omegaCallback, TxleConsulClient txleConsulClient, TxleMysqlCache mysqlCache) {
     EventScanner eventScanner = new EventScanner(scheduler, eventRepository, commandRepository,
-            timeoutRepository, omegaCallback, eventPollingInterval, txleCache, txleConsulClient);
+            timeoutRepository, omegaCallback, eventPollingInterval, txleConsulClient, mysqlCache);
     eventScanner.run();
     return eventScanner;
   }
@@ -191,23 +191,21 @@ class AlphaConfig {
   @Bean
   public ServerStartable serverStartable(TxConsistentService txConsistentService, GrpcServerConfig serverConfig,
                                          Map<String, Map<String, OmegaCallback>> omegaCallbacks,
-                                         IConfigCenterService dbDegradationConfigService,
                                          Tracing tracing, IAccidentHandlingService accidentHandlingService,
-                                         GlobalTxHandler globalTxHandler, CompensateService compensateService, com.actionsky.txle.cache.ITxleEhCache txleEhCache,
+                                         GlobalTxHandler globalTxHandler, CompensateService compensateService, ITxleEhCache txleEhCache, TxleMysqlCache mysqlCache,
                                          TxEventRepository eventRepository, IBusinessDBLatestDetailService businessDBLatestDetailService) {
-    ServerStartable starTable = buildGrpc(serverConfig, txConsistentService, omegaCallbacks, dbDegradationConfigService,
-            tracing, accidentHandlingService, globalTxHandler, compensateService, txleEhCache, eventRepository, businessDBLatestDetailService);
+    ServerStartable starTable = buildGrpc(serverConfig, txConsistentService, omegaCallbacks, tracing, accidentHandlingService, globalTxHandler,
+            compensateService, txleEhCache, mysqlCache, eventRepository, businessDBLatestDetailService);
     new Thread(starTable::start).start();
     return starTable;
   }
 
-  private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService,
-                                    Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService,
-                                    Tracing tracing, IAccidentHandlingService accidentHandlingService, GlobalTxHandler globalTxHandler,
-                                    CompensateService compensateService, com.actionsky.txle.cache.ITxleEhCache txleEhCache, TxEventRepository eventRepository, IBusinessDBLatestDetailService businessDBLatestDetailService) {
+  private ServerStartable buildGrpc(GrpcServerConfig serverConfig, TxConsistentService txConsistentService, Map<String, Map<String, OmegaCallback>> omegaCallbacks,
+                                    Tracing tracing, IAccidentHandlingService accidentHandlingService, GlobalTxHandler globalTxHandler, CompensateService compensateService,
+                                    ITxleEhCache txleEhCache, TxleMysqlCache mysqlCache, TxEventRepository eventRepository, IBusinessDBLatestDetailService businessDBLatestDetailService) {
     return new GrpcStartable(serverConfig, tracing,
-            new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, dbDegradationConfigService, accidentHandlingService),
-            new GrpcTransactionEndpoint(globalTxHandler, compensateService, txleEhCache, accidentHandlingService, eventRepository, txConsistentService, businessDBLatestDetailService));
+            new GrpcTxEventEndpointImpl(txConsistentService, omegaCallbacks, mysqlCache, accidentHandlingService),
+            new GrpcTransactionEndpoint(globalTxHandler, compensateService, txleEhCache, mysqlCache, accidentHandlingService, eventRepository, txConsistentService, businessDBLatestDetailService));
   }
 
   @Bean

@@ -14,7 +14,7 @@ import java.util.List;
 
 public interface ConfigCenterEntityRepository extends CrudRepository<ConfigCenter, Long> {
 
-    @Query("SELECT T FROM ConfigCenter T WHERE T.instanceid IS NULL AND T.status = ?1")
+    @Query("SELECT T FROM ConfigCenter T WHERE T.status = ?1")
     List<ConfigCenter> selectConfigCenterList(int status);
 
     // some client and global config.

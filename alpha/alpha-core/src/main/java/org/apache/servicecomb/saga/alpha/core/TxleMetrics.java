@@ -5,17 +5,18 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import io.prometheus.client.Collector;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.hotspot.DefaultExports;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
-import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.annotation.Resource;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -32,8 +33,9 @@ public class TxleMetrics extends Collector {
 
     private final Logger log = LoggerFactory.getLogger(TxleMetrics.class);
 
+    @Resource(name = "txleMysqlCache")
     @Autowired
-    private IConfigCenterService dbDegradationConfigService;
+    private ITxleConsistencyCache consistencyCache;
 
     // TODO The value of 'Counter' will become zero after restarting current application.
     // ps: Support cluster mode, in the cluster cases, to distinguish every instance by labelNames. Please view the prometheus.yml
@@ -286,7 +288,7 @@ public class TxleMetrics extends Collector {
         if (!isEnableMonitorServer) {
             return false;
         }
-        return dbDegradationConfigService.isEnabledConfig(event.instanceId(), event.category(), ConfigCenterType.TxMonitor);
+        return consistencyCache.getBooleanValue(event.instanceId(), event.category(), ConfigCenterType.TxMonitor);
     }
 
     public void countSuccessfulNumber() {

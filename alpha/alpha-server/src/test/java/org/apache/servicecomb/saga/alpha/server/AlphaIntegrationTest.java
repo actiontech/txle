@@ -15,12 +15,13 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
+import com.actionsky.txle.cache.ITxleConsistencyCache;
+import com.actionsky.txle.cache.ITxleEhCache;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.servicecomb.saga.alpha.core.*;
-import org.apache.servicecomb.saga.alpha.core.cache.ITxleCache;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.pack.contract.grpc.*;
 import org.apache.servicecomb.saga.pack.contract.grpc.TxEventServiceGrpc.TxEventServiceBlockingStub;
@@ -33,6 +34,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -112,8 +114,9 @@ public class AlphaIntegrationTest {
   @Autowired
   private TxleConsulClient txleConsulClient;
 
+  @Resource(name = "txleMysqlCache")
   @Autowired
-  private ITxleCache txleCache;
+  private ITxleConsistencyCache consistencyCache;
 
   private static final Queue<GrpcCompensateCommand> receivedCommands = new ConcurrentLinkedQueue<>();
 
@@ -590,7 +593,7 @@ public class AlphaIntegrationTest {
         timeoutRepository,
         omegaCallback,
         1,
-        txleCache,
-        txleConsulClient).run();
+        txleConsulClient,
+        consistencyCache).run();
   }
 }

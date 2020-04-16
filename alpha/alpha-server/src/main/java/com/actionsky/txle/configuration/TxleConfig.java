@@ -5,9 +5,7 @@
 
 package com.actionsky.txle.configuration;
 
-import com.actionsky.txle.cache.EhCacheConfig;
-import com.actionsky.txle.cache.ITxleEhCache;
-import com.actionsky.txle.cache.TxleEhCache;
+import com.actionsky.txle.cache.*;
 import com.actionsky.txle.grpc.interfaces.CompensateService;
 import com.actionsky.txle.grpc.interfaces.CustomRepository;
 import com.actionsky.txle.grpc.interfaces.GlobalTxHandler;
@@ -31,6 +29,16 @@ public class TxleConfig {
     @Bean
     public ITxleEhCache txleEhCache() {
         return new TxleEhCache();
+    }
+
+    @Bean
+    public TxleMysqlCache txleMysqlCache() {
+        return new TxleMysqlCache();
+    }
+
+    @Bean
+    public TxleRedisCache txleRedisCache() {
+        return new TxleRedisCache();
     }
 
     @Bean

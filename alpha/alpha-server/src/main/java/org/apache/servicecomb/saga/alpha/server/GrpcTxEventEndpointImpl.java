@@ -19,6 +19,7 @@
 
 package org.apache.servicecomb.saga.alpha.server;
 
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
@@ -32,7 +33,6 @@ import org.apache.servicecomb.saga.alpha.core.TxEvent;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandleType;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.AccidentHandling;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
-import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
 import org.apache.servicecomb.saga.alpha.core.kafka.KafkaMessage;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
@@ -58,17 +58,17 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
     private final KryoPool pool = new KryoPool.Builder(() -> new Kryo()).softReferences().build();
 
     private final TxConsistentService txConsistentService;
-    private final IConfigCenterService dbDegradationConfigService;
+    private final ITxleConsistencyCache consistencyCache;
 
     private final Map<String, Map<String, OmegaCallback>> omegaCallbacks;
 
     private final IAccidentHandlingService accidentHandlingService;
 
     GrpcTxEventEndpointImpl(TxConsistentService txConsistentService,
-                            Map<String, Map<String, OmegaCallback>> omegaCallbacks, IConfigCenterService dbDegradationConfigService, IAccidentHandlingService accidentHandlingService) {
+                            Map<String, Map<String, OmegaCallback>> omegaCallbacks, ITxleConsistencyCache consistencyCache, IAccidentHandlingService accidentHandlingService) {
         this.txConsistentService = txConsistentService;
         this.omegaCallbacks = omegaCallbacks;
-        this.dbDegradationConfigService = dbDegradationConfigService;
+        this.consistencyCache = consistencyCache;
         this.accidentHandlingService = accidentHandlingService;
     }
 
@@ -117,15 +117,15 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
         boolean result = true;
         try {
             if (EventType.SagaStartedEvent.name().equals(message.getType())) {
-                result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
+                result = consistencyCache.getBooleanValue(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
             } else if (EventType.TxStartedEvent.name().equals(message.getType())) {
-                result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
+                result = consistencyCache.getBooleanValue(message.getInstanceId(), message.getCategory(), ConfigCenterType.GlobalTx);
                 if (result) {
                     // If the global transaction was not enabled, then two child transactions were regarded as disabled.
                     if (!TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                        result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.Compensation);
+                        result = consistencyCache.getBooleanValue(message.getInstanceId(), message.getCategory(), ConfigCenterType.Compensation);
                     } else if (TxleConstants.AUTO_COMPENSABLE_METHOD.equals(message.getCompensationMethod())) {
-                        result = dbDegradationConfigService.isEnabledConfig(message.getInstanceId(), message.getCategory(), ConfigCenterType.AutoCompensation);
+                        result = consistencyCache.getBooleanValue(message.getInstanceId(), message.getCategory(), ConfigCenterType.AutoCompensation);
                     }
                 }
             }
@@ -281,7 +281,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
                 category = config.getCategory();
             }
 
-            isEnabledConfig = dbDegradationConfigService.isEnabledConfig(instanceId, category, ConfigCenterType.convertTypeFromValue(config.getType()));
+            isEnabledConfig = consistencyCache.getBooleanValue(instanceId, category, ConfigCenterType.convertTypeFromValue(config.getType()));
         } catch (Exception e) {
             LOG.error("Encountered an exception when executing method 'onReadConfig'.", e);
         } finally {
