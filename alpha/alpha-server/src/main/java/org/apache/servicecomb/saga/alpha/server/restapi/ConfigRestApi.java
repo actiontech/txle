@@ -5,6 +5,7 @@
 
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
+import com.actionsky.txle.cache.ITxleConsistencyCache;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.servicecomb.saga.alpha.server.ConfigLoading;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaMessageProducer;
@@ -17,12 +18,18 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
+
 @RestController
 public class ConfigRestApi {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigRestApi.class);
 
     @Autowired
     private ApplicationContext ctx;
+
+    @Resource(name = "txleMysqlCache")
+    @Autowired
+    private ITxleConsistencyCache consistencyCache;
 
     @GetMapping("/health")
     public String consulCheckServerHealth() {
@@ -58,6 +65,17 @@ public class ConfigRestApi {
             LOG.error("Failed to execute method 'reInjectPropertyToBean', beanName - " + beanName + ".", e);
         }
         return Boolean.FALSE.toString();
+    }
+
+    @GetMapping("/resetLocalSystemConfigCache")
+    public boolean resetLocalSystemConfigCache() {
+        try {
+            this.consistencyCache.resetLocalSystemConfigCache();
+        } catch (Exception e) {
+            LOG.error("Failed to execute the method 'resetLocalSystemConfigCache'.", e);
+            return false;
+        }
+        return true;
     }
 
 }
