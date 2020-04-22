@@ -180,10 +180,8 @@ class AlphaConfig {
   }
 
   @Bean
-  EventScanner eventScanner(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository,
-                            OmegaCallback omegaCallback, TxleConsulClient txleConsulClient, TxleMysqlCache mysqlCache) {
-    EventScanner eventScanner = new EventScanner(scheduler, eventRepository, commandRepository,
-            timeoutRepository, omegaCallback, eventPollingInterval, txleConsulClient, mysqlCache);
+  EventScanner eventScanner(TxEventRepository eventRepository, CommandRepository commandRepository, TxTimeoutRepository timeoutRepository, OmegaCallback omegaCallback, TxleConsulClient txleConsulClient) {
+    EventScanner eventScanner = new EventScanner(scheduler, eventRepository, commandRepository, timeoutRepository, omegaCallback, eventPollingInterval, txleConsulClient);
     eventScanner.run();
     return eventScanner;
   }
