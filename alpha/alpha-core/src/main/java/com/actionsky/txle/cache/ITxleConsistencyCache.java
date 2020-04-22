@@ -18,10 +18,17 @@ import java.util.Map;
  */
 @Service
 public interface ITxleConsistencyCache {
+
+    Map<String, String> getSystemConfigCache();
+
+    boolean resetLocalSystemConfigCache();
+
     boolean setKeyValueCache(String key, String value);
 
     // unit is second for field 'expire'
     boolean setKeyValueCache(String key, String value, int expire);
+
+    int getKeyValueCacheCount();
 
     String getValueByCacheKey(String key);
 

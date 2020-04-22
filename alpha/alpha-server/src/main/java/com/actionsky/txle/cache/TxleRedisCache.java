@@ -11,6 +11,16 @@ import java.util.Map;
 public class TxleRedisCache implements ITxleConsistencyCache {
 
     @Override
+    public Map<String, String> getSystemConfigCache() {
+        return null;
+    }
+
+    @Override
+    public boolean resetLocalSystemConfigCache() {
+        return false;
+    }
+
+    @Override
     public boolean setKeyValueCache(String key, String value) {
         return false;
     }
@@ -18,6 +28,11 @@ public class TxleRedisCache implements ITxleConsistencyCache {
     @Override
     public boolean setKeyValueCache(String key, String value, int expire) {
         return false;
+    }
+
+    @Override
+    public int getKeyValueCacheCount() {
+        return 0;
     }
 
     @Override
