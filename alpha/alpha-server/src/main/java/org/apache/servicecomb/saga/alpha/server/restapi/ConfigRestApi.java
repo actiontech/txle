@@ -6,6 +6,8 @@
 package org.apache.servicecomb.saga.alpha.server.restapi;
 
 import com.actionsky.txle.cache.ITxleConsistencyCache;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.servicecomb.saga.alpha.server.ConfigLoading;
 import org.apache.servicecomb.saga.alpha.server.kafka.KafkaMessageProducer;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.Map;
 
 @RestController
 public class ConfigRestApi {
@@ -76,6 +79,18 @@ public class ConfigRestApi {
             return false;
         }
         return true;
+    }
+
+    @GetMapping("/readSystemConfigCache")
+    public String readSystemConfigCache() {
+        JSONArray jsonArray = new JSONArray();
+        Map<String, String> systemConfigCache = this.consistencyCache.getSystemConfigCache();
+        systemConfigCache.keySet().forEach(key -> {
+            JSONObject json = new JSONObject();
+            json.put(key, systemConfigCache.get(key));
+            jsonArray.add(json);
+        });
+        return jsonArray.toJSONString();
     }
 
 }
