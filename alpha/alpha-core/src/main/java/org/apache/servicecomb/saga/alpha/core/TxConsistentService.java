@@ -66,14 +66,6 @@ public class TxConsistentService {
   }
 
   public boolean handle(TxEvent event) {
-	  if (types.contains(event.type()) && isGlobalTxAborted(event)) {
-		  LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted",
-				  event.type(), event.globalTxId());
-		  return false;
-	  }
-
-	  eventRepository.save(event);
-
 	  return true;
   }
 
@@ -86,20 +78,25 @@ public class TxConsistentService {
 	 */
 	public int handleSupportTxPause(TxEvent event) {
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
-		if (!types.contains(type) && isGlobalTxAborted(event)) {
-			LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
-			// Should return wrong result in case of aborted transaction, even though all of businesses were completed.
-			if (SagaEndedEvent.name().equals(type)) {
-				eventRepository.save(event);
+		StringBuilder globalTxStatusCache = new StringBuilder();
+		boolean isAborted = false;
+		if (!types.contains(type)) {
+			isAborted = isGlobalTxAborted(event, globalTxStatusCache);
+			if (isAborted) {
+				LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
+				// Should return wrong result in case of aborted transaction, even though all of businesses were completed.
+				if (SagaEndedEvent.name().equals(type)) {
+					eventRepository.save(event);
+				}
+				return -1;
 			}
-			return -1;
 		}
 
 		/**
 		 * To save event only when the status of the global transaction is not paused.
 		 * If not, return to client immediately, and client will do something, like sending again.
 		 */
-		boolean isPaused = isGlobalTxPaused(event, type);
+		boolean isPaused = isGlobalTxPaused(event, type, globalTxStatusCache.toString());
 		if (!isPaused) {
 			CurrentThreadContext.put(globalTxId, event);
 
@@ -111,8 +108,9 @@ public class TxConsistentService {
 				// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
 				if (TxEndedEvent.name().equals(type)) {
 					// 若定时器检测超时后结束了当前全局事务，但超时子事务的才刚刚完成，此时检测全局事务是否已经终止，如果终止，则补偿当前刚刚完成的子事务
-					if (isGlobalTxAborted(event)) {
+					if (isAborted) {
 						// subA ok, timeout, compensate subA, subB ok without exception(need to save ended even though aborted), compensate subB.
+						// 此处可以非同步操作，其内主要是保存补偿命令和事件，补偿操作不在其内执行而是由扫描器执行，且事务已经处于异常状态，保存的补偿命令和事件对当前事务的后续操作无影响，故额外线程执行
 						commandRepository.saveWillCompensateCmdForCurSubTx(globalTxId, localTxId);
 					} else {
 						// 由于定时扫描器中检测超时会存在一定误差，如定时器中任务需3s完成，但某事务超时设置的是2秒，此时还未等对该事物进行检测，该事务就已经结束了，所以此处在正常结束前需检测是否超时
@@ -138,9 +136,7 @@ public class TxConsistentService {
 							}
 						}
 					}
-				}
-
-				if (TxAbortedEvent.name().equals(type)) {
+				} else if (TxAbortedEvent.name().equals(type)) {
 					// 验证是否最终异常，即排除非最后一次重试时的异常。如果全局事务标识等于子事务标识情况的异常，说明是全局事务异常。否则说明子事务异常，则需验证是否是子事务的最终异常。
 					if (globalTxId.equals(localTxId) || eventRepository.checkTxIsAborted(globalTxId, localTxId)) {
 						if (!globalTxId.equals(localTxId)) {
@@ -170,15 +166,16 @@ public class TxConsistentService {
 		return 0;
 	}
 
-  private boolean isGlobalTxAborted(TxEvent event) {
+  private boolean isGlobalTxAborted(TxEvent event, StringBuilder globalTxStatusCache) {
 	if (SagaStartedEvent.name().equals(event.type())) {
 		return false;
 	}
-      String value = consistencyCache.getValueByCacheKey(TxleConstants.constructTxStatusCacheKey(event.globalTxId()));
-      return value != null && GlobalTxStatus.Aborted.toString().equals(value);
+	String value = consistencyCache.getValueByCacheKey(TxleConstants.constructTxStatusCacheKey(event.globalTxId()));
+	globalTxStatusCache.append(value);
+	return value != null && GlobalTxStatus.Aborted.toString().equals(value);
   }
 
-	public boolean isGlobalTxPaused(TxEvent event, String type) {
+	private boolean isGlobalTxPaused(TxEvent event, String type, String globalTxStatusCache) {
 		if (SagaEndedEvent.name().equals(type)) {
 			return false;
 		}
@@ -189,8 +186,8 @@ public class TxConsistentService {
                 return true;
             }
 
-            // 验证当前全局事务是否暂停
-            return "paused".equals(this.consistencyCache.getValueByCacheKey(TxleConstants.constructTxStatusCacheKey(event.globalTxId())));
+            // 验证当前全局事务是否暂停，globalTxStatusCache与上面验证异常共用同一个查询结果，节省一次查询性能
+            return "paused".equals(globalTxStatusCache);
         } catch (Exception e) {
             LOG.error("Failed to execute the method 'isGlobalTxPaused'.", e);
         }
