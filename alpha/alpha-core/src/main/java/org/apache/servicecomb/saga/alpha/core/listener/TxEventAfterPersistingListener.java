@@ -8,6 +8,7 @@ package org.apache.servicecomb.saga.alpha.core.listener;
 import com.actionsky.txle.cache.ITxleConsistencyCache;
 import com.actionsky.txle.cache.ITxleEhCache;
 import com.actionsky.txle.cache.TxleCacheType;
+import com.actionsky.txle.enums.GlobalTxStatus;
 import com.actionsky.txle.grpc.interfaces.ICustomRepository;
 import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
@@ -79,6 +80,8 @@ public class TxEventAfterPersistingListener implements Observer {
                             this.putServerNameIdCategory(event);
                         } else if (TxStartedEvent.name().equals(event.type())) {
                             this.putServerNameIdCategory(event);
+                        } else if (TxAbortedEvent.name().equals(event.type())) {
+                            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Aborted.toString());
                         } else if (SagaEndedEvent.name().equals(event.type())) {
                             // remove local cache for current global tx
                             txleEhCache.removeGlobalTxCache(event.globalTxId());

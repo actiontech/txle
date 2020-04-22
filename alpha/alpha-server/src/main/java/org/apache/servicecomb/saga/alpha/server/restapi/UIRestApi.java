@@ -274,13 +274,6 @@ public class UIRestApi {
                     }
                     TxEvent txEvent = new TxEvent(ipPort, ipPort, event.globalTxId(), event.localTxId(), event.parentTxId(), typeName, "", pausePeriod, "", 0, event.category(), null);
                     eventRepository.save(txEvent);
-                    if ("terminate".equals(operation)) {
-                        // Do not compensate after terminating.
-//                        TxEvent endedEvent = new TxEvent(event.serviceName(), event.instanceId(), event.globalTxId(), event.globalTxId(), null, SagaEndedEvent.name(), "", event.category(), null);
-//                        endedEvent.setSurrogateId(null);
-//                        eventRepository.save(endedEvent);
-                        consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Aborted.toString());
-                    }
                     // Set cache for global transaction status.
                     if ("pause".equals(operation)) {
                         // do not set expire

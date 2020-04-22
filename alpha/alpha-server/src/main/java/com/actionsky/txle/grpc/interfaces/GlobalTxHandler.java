@@ -185,7 +185,6 @@ public class GlobalTxHandler {
 
     public void compensateInStartingTx(TxleTransactionStart tx, TxleTxStartAck.Builder startAck, StreamObserver<TxleGrpcServerStream> serverStreamObserver) {
         try {
-            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), Aborted.toString());
             startAck.setStatus(TxleTxStartAck.TransactionStatus.ABORTED);
             // search ended sub-txs in reverse order
             List<TxEventAddition> eventAdditions = eventAdditionService.selectDescEventByGlobalTxId(tx.getGlobalTxId());
@@ -316,7 +315,6 @@ public class GlobalTxHandler {
 
                                 if (!tryAgainUntilSuccessOrOvertime(eventAddition.getLocalTxId(), subStartedEvent, serverStreamObserver, serverStream)) {
                                     endAck.setStatus(TxleTxEndAck.TransactionStatus.ABORTED);
-                                    consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), Aborted.toString());
                                     return false;
                                 }
                             }
@@ -330,7 +328,6 @@ public class GlobalTxHandler {
             }
         } catch (Exception e) {
             endAck.setStatus(TxleTxEndAck.TransactionStatus.ABORTED);
-            consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(tx.getGlobalTxId()), Aborted.toString());
             LOG.error("Failed to retry for global transaction. id = {}", tx.getGlobalTxId(), e);
         }
         return false;
@@ -400,7 +397,6 @@ public class GlobalTxHandler {
         if (new Date().compareTo(subStartedEvent.expiryTime()) > 0 && !isCanOver) {
             TxEvent endTxEvent = new TxEvent(subStartedEvent.serviceName(), subStartedEvent.instanceId(), subStartedEvent.globalTxId(), subStartedEvent.localTxId(), "", TxAbortedEvent.name(), "", 0, null, 0, subStartedEvent.category(), null);
             txConsistentService.registerGlobalTx(endTxEvent);
-            this.consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(endTxEvent.globalTxId()), GlobalTxStatus.Aborted.toString());
             throw new RuntimeException("Current global transaction was overtime. globalTxId = " + subStartedEvent.globalTxId());
         }
     }

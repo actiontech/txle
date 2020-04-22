@@ -19,8 +19,6 @@
 
 package org.apache.servicecomb.saga.alpha.core;
 
-import com.actionsky.txle.cache.ITxleConsistencyCache;
-import com.actionsky.txle.enums.GlobalTxStatus;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +53,6 @@ public class EventScanner implements Runnable {
   public static final String SCANNER_SQL = " /**scanner_sql**/";
 
   private TxleConsulClient consulClient;
-  private ITxleConsistencyCache consistencyCache;
 
   public EventScanner(ScheduledExecutorService scheduler,
                       TxEventRepository eventRepository,
@@ -63,8 +60,7 @@ public class EventScanner implements Runnable {
                       TxTimeoutRepository timeoutRepository,
                       OmegaCallback omegaCallback,
                       int eventPollingInterval,
-                      TxleConsulClient consulClient,
-                      ITxleConsistencyCache consistencyCache) {
+                      TxleConsulClient consulClient) {
     this.scheduler = scheduler;
     this.eventRepository = eventRepository;
     this.commandRepository = commandRepository;
@@ -72,7 +68,6 @@ public class EventScanner implements Runnable {
     this.omegaCallback = omegaCallback;
     this.eventPollingInterval = eventPollingInterval;
     this.consulClient = consulClient;
-    this.consistencyCache = consistencyCache;
   }
 
   @Override
@@ -155,7 +150,6 @@ public class EventScanner implements Runnable {
       txTimeoutList.forEach(timeout -> {
         log.info("Found timeout event {} to abort", timeout);
         // set cache for aborted tx as soon as possible so that next sub-transaction can get the aborted status when it verifies the aborted status.
-        consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(timeout.globalTxId()), GlobalTxStatus.Aborted.toString());
       });
 
       txTimeoutList.forEach(timeout -> {
