@@ -65,16 +65,12 @@ public final class TxleConstants {
         return TXLE_TX_KEY + globalTxId;
     }
 
-    public static String constructClientInfoCacheKey(String globalTxId) {
-        return TXLE_TX_KEY + globalTxId + "/client-info";
-    }
-
     public static String constructTxStatusCacheKey(String globalTxId) {
         return TXLE_TX_KEY + globalTxId + "/status";
     }
 
     public static String constructTxConfigCacheKey(String globalTxId) {
-        return TXLE_CONFIG_KEY + globalTxId + "/config";
+        return TXLE_TX_KEY + globalTxId + "/config";
     }
 
     public static String constructGlobalConfigValueKey(String instanceId, String category, ConfigCenterType type) {
