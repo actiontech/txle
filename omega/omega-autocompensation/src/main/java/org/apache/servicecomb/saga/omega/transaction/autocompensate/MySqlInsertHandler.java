@@ -13,10 +13,7 @@ import org.apache.servicecomb.saga.omega.transaction.monitor.AutoCompensableSqlM
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,11 +45,13 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
     @Override
     public boolean prepareCompensationAfterInserting(PreparedStatement delegate, SQLStatement sqlStatement,
                                             String executeSql, String globalTxId, String localTxId, String server, Map<String, Object> standbyParams) throws SQLException {
+        Connection connection;
         ResultSet rs = null;
         try {
             MySqlInsertStatement insertStatement = (MySqlInsertStatement) sqlStatement;
             // 1.take table's name out
             String tableName = insertStatement.getTableName().toString().toLowerCase();
+            String txleBackupTableName = "backup_new_" + tableName;
             standbyParams.put("tablename", tableName);
             standbyParams.put("operation", "insert");
 
@@ -70,19 +69,29 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
                 }
             });
             standbyParams.put("ids", ids);
-            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "The primary keys info is [" + primaryKeyName + " = " + ids.toString() + "] to table [" + tableName + "].");
+            String whereSql = primaryKeyName + " IN (" + ids + ")";
+            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "The primary keys info is [" + whereSql + "] to table [" + tableName + "].");
 
-            // 4.take the new data out
+            // 4.create backup table
+            connection = delegate.getConnection();
+            this.prepareBackupTable(connection, tableName, txleBackupTableName);
+
+            // 5.backup data, compare them with the latest data before compensating.
+            String backupDataSql = String.format("INSERT INTO " + this.schema() + "." + txleBackupTableName + " SELECT *, '%s', '%s' FROM %s WHERE %s FOR UPDATE " + TxleConstants.ACTION_SQL, globalTxId, localTxId, tableName, whereSql);
+            LOG.debug(TxleConstants.logDebugPrefixWithTime() + "currentThreadId: [{}] - backupDataSql: [{}].", Thread.currentThread().getId(), backupDataSql);
+            connection.prepareStatement(backupDataSql).executeUpdate();
+
+            // 6.take the new data out
             List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
 
-            // 5.construct compensate sql
+            // 7.construct compensate sql
 //			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + TxleConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
             String compensateSql = constructCompensateSql(delegate, tableName, newDataList);
 
             // start to mark duration for business sql By Gannalyo.
             ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
 
-            // 6.save txle_undo_log
+            // 8.save txle_undo_log
             boolean result = this.saveTxleUndoLog(delegate, globalTxId, localTxId, executeSql, compensateSql, server);
 
             // end mark duration for maintaining sql By Gannalyo.
