@@ -8,6 +8,7 @@ package org.apache.servicecomb.saga.alpha.core;
 import com.ecwid.consul.v1.ConsulClient;
 import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
+import com.ecwid.consul.v1.agent.model.Service;
 import com.ecwid.consul.v1.health.model.Check;
 import com.ecwid.consul.v1.session.model.NewSession;
 import com.ecwid.consul.v1.session.model.Session;
@@ -26,10 +27,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.lang.invoke.MethodHandles;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY;
 import static org.apache.servicecomb.saga.common.TxleConstants.CONSUL_LEADER_KEY_VALUE;
@@ -207,4 +205,18 @@ public class TxleConsulClient implements ApplicationRunner {
         }
     }
 
+    public Set<String> getServersIPAndPort() {
+        Set<String> serverIpPortSet = new HashSet<>();
+        Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
+        if (agentServices != null) {
+            Map<String, Service> serviceMap = agentServices.getValue();
+            if (serviceMap != null && !serviceMap.isEmpty()) {
+                serviceMap.keySet().forEach(key -> {
+                    Service service = serviceMap.get(key);
+                    serverIpPortSet.add(service.getAddress() + ":" + service.getPort());
+                });
+            }
+        }
+        return serverIpPortSet;
+    }
 }
