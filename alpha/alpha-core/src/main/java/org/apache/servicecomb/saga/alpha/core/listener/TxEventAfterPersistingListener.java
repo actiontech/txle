@@ -57,8 +57,6 @@ public class TxEventAfterPersistingListener implements Observer {
 
     private final Set<String> serverNameIdCategory = new HashSet<>();
 
-    private final Set<String> globalTxIdSet = new HashSet<>();
-
     private final ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     @Override
@@ -83,18 +81,14 @@ public class TxEventAfterPersistingListener implements Observer {
                         } else if (TxAbortedEvent.name().equals(event.type())) {
                             consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Aborted.toString());
                         } else if (SagaEndedEvent.name().equals(event.type())) {
-                            // remove local cache for current global tx
-                            txleEhCache.removeGlobalTxCache(event.globalTxId());
-                            // remove distribution cache for current global tx
-                            consistencyCache.deleteByKeyPrefix(TxleConstants.constructTxCacheKey(event.globalTxId()));
+                            executorService.execute(() -> {
+                                // remove local cache for current global tx
+                                txleEhCache.removeGlobalTxCache(event.globalTxId());
+                                // remove distribution cache for current global tx
+                                consistencyCache.deleteByKeyPrefix(TxleConstants.constructTxCacheKey(event.globalTxId()));
+                            });
 
-                            globalTxIdSet.add(event.globalTxId());
                             kafkaMessageProducer.send(event);
-
-                            // 1M = 1024 * 1024 = 1048576, 1048576 / 36 = 29172
-                            if (globalTxIdSet.size() > 20000) {
-                                removeDistributedTxStatusCache(globalTxIdSet);
-                            }
 
                             this.saveBusinessDBBackupInfo(event);
                         }
@@ -129,13 +123,6 @@ public class TxEventAfterPersistingListener implements Observer {
     private boolean checkIsExistsBackupTable(String serviceName, String instanceId, String dbNodeId, String database, String backupTableName) {
         String sql = "SELECT COUNT(1) FROM BusinessDBBackupInfo T WHERE T.servicename = ? AND T.instanceid = ? AND T.dbnodeid = ? AND T.dbschema = ? AND T.backuptablename = ? AND T.status = ?";
         return this.customRepository.count(sql, serviceName, instanceId, dbNodeId, database, backupTableName, 1) > 0;
-    }
-
-    private void removeDistributedTxStatusCache(Set<String> globalTxIdSet) {
-        // replace a new thread with a thread pool so that avoid to create too many new threads
-        executorService.execute(() -> {
-            globalTxIdSet.clear();
-        });
     }
 
     private void putServerNameIdCategory(TxEvent event) {
