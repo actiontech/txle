@@ -51,21 +51,18 @@ public class DBDegradationConfigService implements IConfigCenterService {
     }
 
     private void initializeConfigCache() {
-        // copy config from ConfigCenter to KeyValueCache
-        if (consistencyCache.getKeyValueCacheCount() > 0) {
-            // delete all
-//            consistencyCache.deleteAll();
-            // initialize configs from db
-            List<ConfigCenter> configCenterList = this.selectConfigCenterList();
-            if (configCenterList != null && !configCenterList.isEmpty()) {
-                configCenterList.forEach(cfg -> {
-                    String configKey = TxleConstants.constructGlobalConfigValueKey(cfg.getInstanceid(), cfg.getCategory(), ConfigCenterType.convertTypeFromValue(cfg.getType()));
-                    consistencyCache.setKeyValueCache(configKey, cfg.getAbility() == TxleConstants.YES ? cfg.getValue() : TxleConstants.DISABLED);
-                    if (cfg.getInstanceid() == null && cfg.getAbility() == TxleConstants.NO) {
-                        consistencyCache.setKeyValueCache(TxleConstants.constructGlobalConfigAbilityKey(cfg.getInstanceid(), cfg.getCategory(), ConfigCenterType.convertTypeFromValue(cfg.getType())), TxleConstants.NO + "");
-                    }
-                });
-            }
+        // delete all
+//        consistencyCache.deleteAll();
+        // initialize configs from db
+        List<ConfigCenter> configCenterList = this.selectConfigCenterList();
+        if (configCenterList != null && !configCenterList.isEmpty()) {
+            configCenterList.forEach(cfg -> {
+                String configKey = TxleConstants.constructGlobalConfigValueKey(cfg.getInstanceid(), cfg.getCategory(), ConfigCenterType.convertTypeFromValue(cfg.getType()));
+                consistencyCache.setKeyValueCache(configKey, cfg.getAbility() == TxleConstants.YES ? cfg.getValue() : TxleConstants.DISABLED);
+                if (cfg.getInstanceid() == null && cfg.getAbility() == TxleConstants.NO) {
+                    consistencyCache.setKeyValueCache(TxleConstants.constructGlobalConfigAbilityKey(cfg.getInstanceid(), cfg.getCategory(), ConfigCenterType.convertTypeFromValue(cfg.getType())), TxleConstants.NO + "");
+                }
+            });
         }
     }
 
