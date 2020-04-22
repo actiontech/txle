@@ -6,6 +6,7 @@
 package org.apache.servicecomb.saga.omega.transaction;
 
 import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlInsertStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlUpdateStatement;
 import com.alibaba.druid.sql.dialect.mysql.parser.MySqlStatementParser;
 import com.github.rholder.retry.Retryer;
@@ -98,7 +99,7 @@ public class AutoCompensateService implements IAutoCompensateService {
     private boolean checkDataConsistency(String compensateSql, String globalTxId, String localTxId) throws NoSuchAlgorithmException, IOException {
         MySqlStatementParser parser = new MySqlStatementParser(compensateSql);
         SQLStatement sqlStatement = parser.parseStatement();
-        if (sqlStatement instanceof MySqlUpdateStatement) {
+        if (sqlStatement instanceof MySqlUpdateStatement ||  sqlStatement instanceof MySqlInsertStatement) {
             MySqlUpdateStatement deleteStatement = (MySqlUpdateStatement) sqlStatement;
             String tableName = deleteStatement.getTableName().toString().toLowerCase();
             String schema = TxleConstants.APP_NAME;
