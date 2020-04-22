@@ -39,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import java.lang.invoke.MethodHandles;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class GrpcClientMessageSender implements MessageSender {
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -52,6 +54,7 @@ public class GrpcClientMessageSender implements MessageSender {
 
   private final GrpcCompensateStreamObserver compensateStreamObserver;
   private final GrpcServiceConfig serviceConfig;
+  private final ExecutorService executorService = Executors.newFixedThreadPool(2);
 
   public GrpcClientMessageSender(
       String address,
@@ -144,20 +147,23 @@ public class GrpcClientMessageSender implements MessageSender {
 
   @Override
   public String reportMessageToServer(KafkaMessage message) {
-    GrpcMessage grpcMessage = GrpcMessage.newBuilder()
-            .setCreatetime(message.getCreatetime().getTime())
-            .setStatus(message.getStatus())
-            .setVersion(message.getVersion())
-            .setDbdrivername(message.getDbdrivername())
-            .setDburl(message.getDburl())
-            .setDbusername(message.getDbusername())
-            .setTablename(message.getTablename())
-            .setOperation(message.getOperation())
-            .setIds(message.getIds())
-            .setGlobaltxid(message.getGlobaltxid())
-            .setLocaltxid(message.getLocaltxid())
-            .build();
-    return blockingEventService.onMessage(grpcMessage).getStatus() + "";
+    executorService.execute(() -> {
+      GrpcMessage grpcMessage = GrpcMessage.newBuilder()
+              .setCreatetime(message.getCreatetime().getTime())
+              .setStatus(message.getStatus())
+              .setVersion(message.getVersion())
+              .setDbdrivername(message.getDbdrivername())
+              .setDburl(message.getDburl())
+              .setDbusername(message.getDbusername())
+              .setTablename(message.getTablename())
+              .setOperation(message.getOperation())
+              .setIds(message.getIds())
+              .setGlobaltxid(message.getGlobaltxid())
+              .setLocaltxid(message.getLocaltxid())
+              .build();
+      blockingEventService.onMessage(grpcMessage).getStatus();
+    });
+    return null;
   }
 
   @Override
