@@ -6,7 +6,6 @@
 package org.apache.servicecomb.saga.alpha.server.configcenter;
 
 import com.actionsky.txle.cache.ITxleConsistencyCache;
-import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
@@ -42,9 +41,6 @@ public class DBDegradationConfigService implements IConfigCenterService {
     @Autowired
     private ITxleConsistencyCache consistencyCache;
 
-    @Autowired
-    private TxleConsulClient consulClient;
-
     public DBDegradationConfigService(ConfigCenterEntityRepository configCenterEntityRepository) {
         this.configCenterEntityRepository = configCenterEntityRepository;
     }
@@ -55,10 +51,10 @@ public class DBDegradationConfigService implements IConfigCenterService {
     }
 
     private void initializeConfigCache() {
-        // delete all
-        consistencyCache.deleteAll();
-
-        if (consulClient.isMaster()) {
+        // copy config from ConfigCenter to KeyValueCache
+        if (consistencyCache.getKeyValueCacheCount() > 0) {
+            // delete all
+//            consistencyCache.deleteAll();
             // initialize configs from db
             List<ConfigCenter> configCenterList = this.selectConfigCenterList();
             if (configCenterList != null && !configCenterList.isEmpty()) {
