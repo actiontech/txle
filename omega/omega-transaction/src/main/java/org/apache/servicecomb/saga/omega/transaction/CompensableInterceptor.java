@@ -38,7 +38,6 @@ class CompensableInterceptor implements EventAwareInterceptor {
     AlphaResponse response = sender.send(new TxStartedEvent(context.globalTxId(), context.localTxId(), parentTxId, compensationMethod,
             timeout, retriesMethod, retries, context.category(), message));
     // read 'sqlmonitor' config before executing business sql, the aim is to monitor business sql or not.
-    // TODO 是否可去掉？？
     readConfigFromServer();
     return response;
   }

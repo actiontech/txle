@@ -21,6 +21,7 @@ package org.apache.servicecomb.saga.omega.connector.grpc;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
+import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender.ErrorHandlerFactory;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
@@ -38,7 +39,9 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -55,6 +58,8 @@ public class GrpcClientMessageSender implements MessageSender {
   private final GrpcCompensateStreamObserver compensateStreamObserver;
   private final GrpcServiceConfig serviceConfig;
   private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+  // 存储当前业务类别对应的系统级配置，如是否开启SQL监控、是否上报Kafka等配置信息
+  private static final Map<String, Boolean> CATEGORY_SYSTEM_CONFIG = new ConcurrentHashMap<>();
 
   public GrpcClientMessageSender(
       String address,
@@ -147,6 +152,7 @@ public class GrpcClientMessageSender implements MessageSender {
 
   @Override
   public String reportMessageToServer(KafkaMessage message) {
+    final StringBuilder status = new StringBuilder(5);
     executorService.execute(() -> {
       GrpcMessage grpcMessage = GrpcMessage.newBuilder()
               .setCreatetime(message.getCreatetime().getTime())
@@ -161,9 +167,9 @@ public class GrpcClientMessageSender implements MessageSender {
               .setGlobaltxid(message.getGlobaltxid())
               .setLocaltxid(message.getLocaltxid())
               .build();
-      blockingEventService.onMessage(grpcMessage).getStatus();
+      status.append(blockingEventService.onMessage(grpcMessage).getStatus() + "");
     });
-    return null;
+    return status.toString();
   }
 
   @Override
@@ -186,7 +192,14 @@ public class GrpcClientMessageSender implements MessageSender {
     if (category == null) {
         category = "";
     }
-    return blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setCategory(category).setType(type).build());
+    String catoryTypeConfigKey = serviceConfig.getInstanceId() + TxleConstants.STRING_SEPARATOR + serviceConfig.getServiceName() + TxleConstants.STRING_SEPARATOR + category + TxleConstants.STRING_SEPARATOR + type;
+    if (CATEGORY_SYSTEM_CONFIG.get(catoryTypeConfigKey) == null) {
+      GrpcConfigAck grpcConfigAck = blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setCategory(category).setType(type).build());
+      CATEGORY_SYSTEM_CONFIG.put(catoryTypeConfigKey, grpcConfigAck.getStatus());
+      return grpcConfigAck;
+    } else {
+      return GrpcConfigAck.newBuilder().setStatus(CATEGORY_SYSTEM_CONFIG.get(catoryTypeConfigKey)).build();
+    }
   }
 
   private GrpcTxEvent convertEvent(TxEvent event) {
