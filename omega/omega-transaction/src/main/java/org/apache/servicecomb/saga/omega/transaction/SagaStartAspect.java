@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 @Aspect
 public class SagaStartAspect {
@@ -45,25 +47,30 @@ public class SagaStartAspect {
 
   @Around("execution(@org.apache.servicecomb.saga.omega.context.annotations.SagaStart * *(..)) && @annotation(sagaStart)")
   Object advise(ProceedingJoinPoint joinPoint, SagaStart sagaStart) throws Throwable {
+    long a = System.nanoTime();
     Method method = null;
     boolean isProceed = false;
     try {
       initializeOmegaContext(sagaStart);
+      LOG.info("\r\n---- [{}] starting SagaStartedEvent，globalTxId = [{}], initialized context time [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), context.globalTxId(), ((System.nanoTime() - a) / 1000));
       method = ((MethodSignature) joinPoint.getSignature()).getMethod();
 
       AlphaResponse alphaResponse = sagaStartAnnotationProcessor.preIntercept(context.globalTxId(), method.toString(), sagaStart.timeout(), "", 0);
-      LOG.debug("Initialized context {} before execution of method {}", context, method.toString());
+//      LOG.debug("Initialized context {} before execution of method {}", context, method.toString());
       if (!alphaResponse.enabledTx()) {
         CompensableSqlMetrics.setIsMonitorSql(ApplicationContextUtil.getApplicationContext().getBean(MessageSender.class).readConfigFromServer(ConfigCenterType.SqlMonitor.toInteger(), context.category()).getStatus());
       }
+      LOG.info("\r\n---- [{}] finished SagaStartedEvent，globalTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()));
 
       // no matter following result.
       isProceed = true;
       Object result = joinPoint.proceed();
 
       if (alphaResponse.enabledTx()) {
+        LOG.info("\r\n---- [{}] starting SagaEndedEvent，globalTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), context.globalTxId());
         sagaStartAnnotationProcessor.postIntercept(context.globalTxId(), method.toString());
-        LOG.debug("Transaction with context {} has finished.", context);
+//        LOG.debug("Transaction with context {} has finished.", context);
+        LOG.info("\r\n---- [{}] finished SagaEndedEvent，globalTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), context.globalTxId());
       }
 
       return result;
@@ -87,6 +94,7 @@ public class SagaStartAspect {
       throw throwable;
     } finally {
       context.clear();
+      LOG.info("\r\n---- [{}] exit cur request，globalTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), context.globalTxId());
     }
   }
 

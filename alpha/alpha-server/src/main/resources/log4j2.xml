@@ -14,6 +14,18 @@
       <PatternLayout pattern="%highlight{[ %p ] [%date{yyyy-MM-dd HH:mm:ss.SSS}][%thread][%level][%class][%line]:%message%n}"/>
     </Console>
 
+    <RollingRandomAccessFile name="debugLog" fileName="${log.dir}/${instance}.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-debug-%d{yyyy-MM-dd}-%i.log.gz" append="true">
+      <PatternLayout pattern="[%date{yyyy-MM-dd HH:mm:ss.SSS}][%thread][%level][%class][%line]:%message%n"/>
+      <Filters>
+        <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="NEUTRAL"/>
+      </Filters>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+        <SizeBasedTriggeringPolicy size="20 MB"/>
+      </Policies>
+      <DefaultRolloverStrategy max="20"/>
+    </RollingRandomAccessFile>
+
     <RollingRandomAccessFile name="infoLog" fileName="${log.dir}/${instance}.log" filePattern="${log.dir}/%d{yyyy-MM}/${instance}-info-%d{yyyy-MM-dd}-%i.log.gz" append="true">
       <PatternLayout pattern="[%date{yyyy-MM-dd HH:mm:ss.SSS}][%thread][%level][%class][%line]:%message%n"/>
       <Filters>
@@ -62,7 +74,7 @@
     </logger>-->
 
     <Root level="info" includeLocation="true">
-      <!--<AppenderRef ref="infoLog"/>-->
+      <AppenderRef ref="infoLog"/>
       <AppenderRef ref="errorLog"/>
       <AppenderRef ref="Console"/>
     </Root>

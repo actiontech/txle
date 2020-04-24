@@ -21,7 +21,6 @@ package org.apache.servicecomb.saga.omega.connector.grpc;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
-import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.TxleConstants;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender.ErrorHandlerFactory;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
@@ -38,6 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -114,7 +115,9 @@ public class GrpcClientMessageSender implements MessageSender {
     }
 
 //    blockingEventService.withDeadlineAfter(5, TimeUnit.SECONDS);// TODO set timeout for current communication
+    LOG.info("\r\n---- [{}] client sends rpc request [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
+    LOG.info("\r\n---- [{}] client received rpc return [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
     // It's a manual operation to pause transaction, so it can accept to pause for one minute.
     while (grpcAck.getPaused()) {
       try {
@@ -194,10 +197,12 @@ public class GrpcClientMessageSender implements MessageSender {
     }
     String catoryTypeConfigKey = serviceConfig.getInstanceId() + TxleConstants.STRING_SEPARATOR + serviceConfig.getServiceName() + TxleConstants.STRING_SEPARATOR + category + TxleConstants.STRING_SEPARATOR + type;
     if (CATEGORY_SYSTEM_CONFIG.get(catoryTypeConfigKey) == null) {
+      LOG.info("onreadconfig = dddddddddddddd");
       GrpcConfigAck grpcConfigAck = blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setCategory(category).setType(type).build());
       CATEGORY_SYSTEM_CONFIG.put(catoryTypeConfigKey, grpcConfigAck.getStatus());
       return grpcConfigAck;
     } else {
+      LOG.info("onreadconfig = ccccccccccccccc");
       return GrpcConfigAck.newBuilder().setStatus(CATEGORY_SYSTEM_CONFIG.get(catoryTypeConfigKey)).build();
     }
   }
