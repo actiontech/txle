@@ -66,10 +66,12 @@ public class TxEventAfterPersistingListener implements Observer {
             try {
                 if (event != null) {
                     if (event.id() == null || event.id() == -1) {
-                        txleMetrics.startMarkTxDuration(event);
-                        txleMetrics.countTxNumber(event);
+                        executorService.execute(() -> {
+                            txleMetrics.startMarkTxDuration(event);
+                            txleMetrics.countTxNumber(event);
+                        });
                     } else {
-                        txleMetrics.endMarkTxDuration(event);
+                        executorService.execute(() -> txleMetrics.endMarkTxDuration(event));
 
                         log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
                         if (SagaStartedEvent.name().equals(event.type())) {
@@ -86,11 +88,10 @@ public class TxEventAfterPersistingListener implements Observer {
                                 txleEhCache.removeGlobalTxCache(event.globalTxId());
                                 // remove distribution cache for current global tx
                                 consistencyCache.deleteByKeyPrefix(TxleConstants.constructTxCacheKey(event.globalTxId()));
+
+                                kafkaMessageProducer.send(event);
+                                this.saveBusinessDBBackupInfo(event);
                             });
-
-                            kafkaMessageProducer.send(event);
-
-                            this.saveBusinessDBBackupInfo(event);
                         }
                     }
                 }
@@ -126,16 +127,16 @@ public class TxEventAfterPersistingListener implements Observer {
     }
 
     private void putServerNameIdCategory(TxEvent event) {
-        final String globalTxServer = "global-tx-server-info";
-        final String serverNameInstanceCategory = event.serviceName() + "__" + event.instanceId() + "__" + event.category();
-        boolean result = serverNameIdCategory.add(serverNameInstanceCategory);
-        if (result) {
-            executorService.execute(() -> {
+        executorService.execute(() -> {
+            final String serverNameInstanceCategory = event.serviceName() + "__" + event.instanceId() + "__" + event.category();
+            if (!serverNameIdCategory.contains(serverNameInstanceCategory)) {
+                serverNameIdCategory.add(serverNameInstanceCategory);
+                final String globalTxServer = "global-tx-server-info";
                 int showOrder = dataDictionaryService.selectMaxShowOrder(globalTxServer);
                 final DataDictionaryItem ddItem = new DataDictionaryItem(globalTxServer, event.serviceName(), event.instanceId(), event.category(), showOrder + 1, 1, "");
                 dataDictionaryService.createDataDictionary(ddItem);
-            });
-        }
+            }
+        });
     }
 
 }
