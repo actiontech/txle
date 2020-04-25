@@ -46,7 +46,7 @@
 	</logger>
 
 	<!-- 仅将ERROR级别的日志输出到日志文件中 -->
-	<root level="INFO">
+	<root level="ERROR">
 		<appender-ref ref="FILE" />
 	</root>
 </configuration>
