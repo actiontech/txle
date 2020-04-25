@@ -73,8 +73,8 @@
       <AppenderRef ref="Console"/>
     </logger>-->
 
-    <Root level="info" includeLocation="true">
-      <AppenderRef ref="infoLog"/>
+    <Root level="error" includeLocation="true">
+      <!--<AppenderRef ref="infoLog"/>-->
       <AppenderRef ref="errorLog"/>
       <AppenderRef ref="Console"/>
     </Root>
