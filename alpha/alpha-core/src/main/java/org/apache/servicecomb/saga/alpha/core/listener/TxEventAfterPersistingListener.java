@@ -76,7 +76,7 @@ public class TxEventAfterPersistingListener implements Observer {
                         } else {
                             executorService.execute(() -> txleMetrics.endMarkTxDuration(event));
 
-                            log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
+//                            log.info("The listener [{}] observes the new event [" + event.toString() + "].", this.getClass());
                             if (SagaStartedEvent.name().equals(event.type())) {
                                 // increase 1 for the minimum identify of undone event when some global transaction starts.
                                 EventScanner.UNENDED_MIN_EVENT_ID_SELECT_COUNT.incrementAndGet();
@@ -97,7 +97,7 @@ public class TxEventAfterPersistingListener implements Observer {
                                 });
                             }
                         }
-                        log.info("\r\n---- [{}] listener after saving [{}]，globalTxId = [{}], localTxId = [{}], millisecond [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId(), (System.currentTimeMillis() - a));
+//                        log.info("\r\n---- [{}] listener after saving [{}]，globalTxId = [{}], localTxId = [{}], millisecond [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId(), (System.currentTimeMillis() - a));
                     }
                 } catch (Exception e) {
                     log.error("Failed to execute listener after persisting event. globalTxId = {}, localTxId = {}", event.globalTxId(), event.localTxId(), e);

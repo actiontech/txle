@@ -115,9 +115,9 @@ public class GrpcClientMessageSender implements MessageSender {
     }
 
 //    blockingEventService.withDeadlineAfter(5, TimeUnit.SECONDS);// TODO set timeout for current communication
-    LOG.info("\r\n---- [{}] client sends rpc request [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
+//    LOG.info("\r\n---- [{}] client sends rpc request [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
     GrpcAck grpcAck = blockingEventService.onTxEvent(convertEvent(event));
-    LOG.info("\r\n---- [{}] client received rpc return [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
+//    LOG.info("\r\n---- [{}] client received rpc return [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
     // It's a manual operation to pause transaction, so it can accept to pause for one minute.
     while (grpcAck.getPaused()) {
       try {

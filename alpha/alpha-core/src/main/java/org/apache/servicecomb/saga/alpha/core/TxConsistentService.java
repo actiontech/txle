@@ -105,10 +105,10 @@ public class TxConsistentService {
 			// We could intercept this method or use the Observer Design model on it, the aim is to handle some operations around it, but apparently, it is not easy to maintain code, so we reserved this idea.
 			// 保存事件前，检查是否已经存在某子事务的某种事件，如果存在则不再保存。如：检测某事务超时后，若在下次检测时做出补偿处理，则会保存多条超时事件信息，为避免则先检测是否存在
 			try {
-				LOG.info("\r\n---- [{}] before server saves [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
+//				LOG.info("\r\n---- [{}] before server saves [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
 				eventRepository.save(event);
 
-				LOG.info("\r\n---- [{}] checking timeout/abort after server saves [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
+//				LOG.info("\r\n---- [{}] checking timeout/abort after server saves [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
 				// 此处继续检测超时的意义是，如果超时，则不再继续执行全局事务中此子事务后面其它子事务
 				if (TxEndedEvent.name().equals(type)) {
 					// 若定时器检测超时后结束了当前全局事务，但超时子事务的才刚刚完成，此时检测全局事务是否已经终止，如果终止，则补偿当前刚刚完成的子事务
@@ -160,13 +160,13 @@ public class TxConsistentService {
 						}
 					}
 				}
+//				LOG.info("\r\n ---- [{}] finished checking timeout/abort [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
 			} catch (Exception e) {
 				LOG.error("Failed to save event globalTxId {} localTxId {} type {}", globalTxId, localTxId, type, e);
 			}
 
 			return 1;
 		}
-		LOG.info("\r\n ---- [{}] finished checking timeout/abort [{}]，globalTxId = [{}], localTxId = [{}].", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), event.type(), event.globalTxId(), event.localTxId());
 
 		return 0;
 	}

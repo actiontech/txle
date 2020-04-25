@@ -101,7 +101,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
 
     @Override
     public void onTxEvent(GrpcTxEvent message, StreamObserver<GrpcAck> responseObserver) {
-        LOG.info("\r\n---- [{}] server received rpc request [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), message.getType(), message.getGlobalTxId(), message.getLocalTxId());
+//        LOG.info("\r\n---- [{}] server received rpc request [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), message.getType(), message.getGlobalTxId(), message.getLocalTxId());
         if (TxleConstants.SPECIAL_KEY.equals(message.getCategory())) {
             fetchLocalTxIdOfEndedGlobalTx(message, responseObserver);
             return;
@@ -180,7 +180,7 @@ class GrpcTxEventEndpointImpl extends TxEventServiceImplBase {
             // 保证下面两行代码被执行，若grpc服务端程序执行完成却没有执行下面两行代码，则将会报错误【io.grpc.StatusRuntimeException: UNKNOWN】 By Gannalyo
             responseObserver.onNext(grpcAck);
             responseObserver.onCompleted();
-            LOG.info("\r\n---- [{}] server returns rpc request [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), message.getType(), message.getGlobalTxId(), message.getLocalTxId());
+//            LOG.info("\r\n---- [{}] server returns rpc request [{}]，globalTxId = [{}], localTxId = [{}].\r\n", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date()), message.getType(), message.getGlobalTxId(), message.getLocalTxId());
         }
     }
 
