@@ -23,6 +23,7 @@ import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandling
 import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.apache.servicecomb.saga.common.EventType;
 import org.apache.servicecomb.saga.common.TxleConstants;
+import org.apache.servicecomb.saga.common.TxleDefaultTheadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +62,7 @@ public class GlobalTxHandler {
     @Autowired
     private ITxleConsistencyCache consistencyCache;
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool(3);
+    private final ExecutorService executorService = Executors.newFixedThreadPool(3, new TxleDefaultTheadFactory("txle-rpc-txhandler-"));
 
     public boolean checkIsExistsGlobalTx(String globalTxId) {
         return this.getGlobalTxCache(globalTxId) != null;

@@ -22,6 +22,7 @@ package org.apache.servicecomb.saga.omega.connector.grpc;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import org.apache.servicecomb.saga.common.TxleConstants;
+import org.apache.servicecomb.saga.common.TxleDefaultTheadFactory;
 import org.apache.servicecomb.saga.omega.connector.grpc.LoadBalancedClusterMessageSender.ErrorHandlerFactory;
 import org.apache.servicecomb.saga.omega.context.CurrentThreadOmegaContext;
 import org.apache.servicecomb.saga.omega.context.OmegaContextServiceConfig;
@@ -37,8 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -58,7 +57,7 @@ public class GrpcClientMessageSender implements MessageSender {
 
   private final GrpcCompensateStreamObserver compensateStreamObserver;
   private final GrpcServiceConfig serviceConfig;
-  private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+  private final ExecutorService executorService = Executors.newFixedThreadPool(2, new TxleDefaultTheadFactory("txle-client-sender-"));
   // 存储当前业务类别对应的系统级配置，如是否开启SQL监控、是否上报Kafka等配置信息
   private static final Map<String, Boolean> CATEGORY_SYSTEM_CONFIG = new ConcurrentHashMap<>();
 
@@ -197,12 +196,10 @@ public class GrpcClientMessageSender implements MessageSender {
     }
     String catoryTypeConfigKey = serviceConfig.getInstanceId() + TxleConstants.STRING_SEPARATOR + serviceConfig.getServiceName() + TxleConstants.STRING_SEPARATOR + category + TxleConstants.STRING_SEPARATOR + type;
     if (CATEGORY_SYSTEM_CONFIG.get(catoryTypeConfigKey) == null) {
-      LOG.info("onreadconfig = dddddddddddddd");
       GrpcConfigAck grpcConfigAck = blockingEventService.onReadConfig(GrpcConfig.newBuilder().setInstanceId(serviceConfig.getInstanceId()).setServiceName(serviceConfig.getServiceName()).setCategory(category).setType(type).build());
       CATEGORY_SYSTEM_CONFIG.put(catoryTypeConfigKey, grpcConfigAck.getStatus());
       return grpcConfigAck;
     } else {
-      LOG.info("onreadconfig = ccccccccccccccc");
       return GrpcConfigAck.newBuilder().setStatus(CATEGORY_SYSTEM_CONFIG.get(catoryTypeConfigKey)).build();
     }
   }

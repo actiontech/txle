@@ -17,6 +17,7 @@ import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
 import org.apache.servicecomb.saga.alpha.core.kafka.IKafkaMessageProducer;
 import org.apache.servicecomb.saga.common.TxleConstants;
+import org.apache.servicecomb.saga.common.TxleDefaultTheadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +59,7 @@ public class TxEventAfterPersistingListener implements Observer {
 
     private final Set<String> serverNameIdCategory = new HashSet<>();
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
+    private final ExecutorService executorService = Executors.newFixedThreadPool(1, new TxleDefaultTheadFactory("txle-listener-"));
 
     @Override
     public void update(Observable arg0, Object arg1) {
