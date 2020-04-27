@@ -6,7 +6,7 @@
 
 <Configuration status="WARN" monitorInterval="30">
   <Properties>
-    <Property name="instance">stdout</Property>
+    <Property name="instance">txle</Property>
     <Property name="log.dir">log</Property>
   </Properties>
   <Appenders>

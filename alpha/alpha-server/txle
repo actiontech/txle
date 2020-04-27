@@ -23,8 +23,9 @@ PROJECT_VERSION=9.9.9.9
 LATEST_COMMIT_ID=""
 LIB_DIR=$DEPLOY_DIR/lib
 CONF_DIR=$DEPLOY_DIR/conf
-LOG_FILE="$DEPLOY_DIR/log/stdout.log"
-GC_LOG_FILE="$DEPLOY_DIR/log/gc-stdout.log"
+LOG_FILE="$DEPLOY_DIR/log/txle.log"
+JVM_LOG_FILE="$DEPLOY_DIR/log/hs_err_%p.log"
+GC_LOG_FILE="$DEPLOY_DIR/log/gc_%t_%p.log"
 SERVER_PORT=""
 ONLY_PORT=""
 RPC_PORT=""
@@ -94,7 +95,7 @@ start() {
 
     JAVA_JMX_OPTS=""
 
-    JAVA_MEM_OPTS=" -server -Xms3g -Xmx3g -Xmn512m -Xloggc:$GC_LOG_FILE -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=2g -XX:+DisableExplicitGC -XX:LargePageSizeInBytes=32m -Djava.rmi.server.hostname=10.186.61.3 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+    JAVA_MEM_OPTS=" -server -Xms3g -Xmx3g -Xmn512m -XX:ErrorFile=$JVM_LOG_FILE -Xloggc:$GC_LOG_FILE -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=2g -XX:+DisableExplicitGC -XX:LargePageSizeInBytes=32m -Djava.rmi.server.hostname=10.186.61.3 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.rmi.port=1099 -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
 
     echo -e "Starting the $SERVER_NAME server...."
 
