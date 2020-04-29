@@ -25,7 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.Resource;
 import java.lang.invoke.MethodHandles;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -90,7 +89,7 @@ public class TxEventAfterPersistingListener implements Observer {
                                 this.setServerNameIdCategory(event);
                             } else if (TxAbortedEvent.name().equals(event.type())) {
                                 // verify if the retries > 0
-                                if (eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId())) {
+                                if (event.globalTxId().equals(event.localTxId()) || eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId())) {
                                     consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Aborted.toString());
                                 }
                             } else if (SagaEndedEvent.name().equals(event.type())) {

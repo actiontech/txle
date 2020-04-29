@@ -79,9 +79,8 @@ public class TxConsistentService {
 	public int handleSupportTxPause(TxEvent event) {
 		String globalTxId = event.globalTxId(), localTxId = event.localTxId(), type = event.type();
 		StringBuilder globalTxStatusCache = new StringBuilder();
-		boolean isAborted = false;
-		if (!types.contains(type)) {
-			isAborted = isGlobalTxAborted(event, globalTxStatusCache);
+		boolean isAborted = isGlobalTxAborted(event, globalTxStatusCache);
+        if (!types.contains(type)) {
 			if (isAborted) {
 				LOG.info("Transaction event {} rejected, because its parent with globalTxId {} was already aborted", type, globalTxId);
 				// Should return wrong result in case of aborted transaction, even though all of businesses were completed.
