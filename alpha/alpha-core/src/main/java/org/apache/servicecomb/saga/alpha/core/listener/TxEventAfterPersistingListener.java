@@ -12,6 +12,7 @@ import com.actionsky.txle.enums.GlobalTxStatus;
 import com.actionsky.txle.grpc.interfaces.ICustomRepository;
 import org.apache.servicecomb.saga.alpha.core.EventScanner;
 import org.apache.servicecomb.saga.alpha.core.TxEvent;
+import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
 import org.apache.servicecomb.saga.alpha.core.TxleMetrics;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.DataDictionaryItem;
 import org.apache.servicecomb.saga.alpha.core.datadictionary.IDataDictionaryService;
@@ -57,13 +58,16 @@ public class TxEventAfterPersistingListener implements Observer {
     @Autowired
     private TxleMetrics txleMetrics;
 
+    @Autowired
+    private TxEventRepository eventRepository;
+
     private final Set<String> serverNameIdCategory = new HashSet<>();
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(1, new TxleDefaultTheadFactory("txle-listener-"));
 
     @Override
     public void update(Observable arg0, Object arg1) {
-        long a = System.currentTimeMillis();
+//        long a = System.currentTimeMillis();
         if (arg0 != null) {
             if (arg0 instanceof GlobalTxListener) {
                 TxEvent event = ((GlobalTxListener) arg0).getEvent();
@@ -85,7 +89,10 @@ public class TxEventAfterPersistingListener implements Observer {
                             } else if (TxStartedEvent.name().equals(event.type())) {
                                 this.setServerNameIdCategory(event);
                             } else if (TxAbortedEvent.name().equals(event.type())) {
-                                consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Aborted.toString());
+                                // verify if the retries > 0
+                                if (eventRepository.checkTxIsAborted(event.globalTxId(), event.localTxId())) {
+                                    consistencyCache.setKeyValueCache(TxleConstants.constructTxStatusCacheKey(event.globalTxId()), GlobalTxStatus.Aborted.toString());
+                                }
                             } else if (SagaEndedEvent.name().equals(event.type())) {
                                 executorService.execute(() -> {
                                     // remove local cache for current global tx
