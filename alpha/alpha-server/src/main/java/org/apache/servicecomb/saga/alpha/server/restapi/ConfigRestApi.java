@@ -42,9 +42,8 @@ public class ConfigRestApi {
     @GetMapping("/reloadConfig/kafka")
     public String reloadKafkaConfig() {
         Map<String, Object> kafkaProperties = ConfigLoading.loadKafkaProperties();
-        KafkaProducer<String, String> kafkaProducer = null;
         try {
-            kafkaProducer = new KafkaProducer<>(kafkaProperties);
+            KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(kafkaProperties);
             LOG.info("Successfully to construct kafka producer, bootstrap.servers = {}.", kafkaProperties.get("bootstrap.servers"));
             return reInjectPropertyToBean("kafkaMessageProducer", KafkaMessageProducer.class, "kafkaProducer", kafkaProducer);
         } catch (Exception e) {

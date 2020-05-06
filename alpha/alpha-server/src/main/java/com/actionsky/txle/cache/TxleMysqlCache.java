@@ -224,25 +224,27 @@ public class TxleMysqlCache implements ITxleConsistencyCache {
     @Override
     public boolean deleteByKeyPrefix(String keyPrefix) {
         Map<String, String> caches = this.getValueListByCacheKey(keyPrefix);
-        boolean result = this.customRepository.executeUpdate("DELETE FROM KeyValueCache WHERE cachekey LIKE CONCAT('', ?, '%')", keyPrefix) > 0;
-        if (result) {
-            if (caches != null && !caches.isEmpty()) {
+        if (caches != null && !caches.isEmpty()) {
+            boolean result = this.customRepository.executeUpdate("DELETE FROM KeyValueCache WHERE cachekey LIKE CONCAT('', ?, '%')", keyPrefix) > 0;
+            if (result) {
                 caches.keySet().forEach(key -> this.remove(key));
             }
+            return result;
         }
-        return result;
+        return true;
     }
 
     @Override
     public boolean deleteByKeyPrefix(String keyPrefix, String value) {
         Map<String, String> caches = this.getValueListByCacheKeyValue(keyPrefix, value);
-        boolean result = this.customRepository.executeUpdate("DELETE FROM KeyValueCache WHERE cachekey LIKE CONCAT('', ?, '%') AND cachevalue = ?", keyPrefix, value) > 0;
-        if (result && isSystemConfigKey(keyPrefix)) {
-            if (caches != null && !caches.isEmpty()) {
+        if (caches != null && !caches.isEmpty()) {
+            boolean result = this.customRepository.executeUpdate("DELETE FROM KeyValueCache WHERE cachekey LIKE CONCAT('', ?, '%') AND cachevalue = ?", keyPrefix, value) > 0;
+            if (result && isSystemConfigKey(keyPrefix)) {
                 caches.keySet().forEach(key -> this.remove(key));
             }
+            return result;
         }
-        return result;
+        return true;
     }
 
     private boolean isSystemConfigKey(String key) {
