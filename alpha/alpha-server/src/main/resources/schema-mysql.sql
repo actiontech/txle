@@ -218,6 +218,6 @@ CREATE TABLE IF NOT EXISTS BusinessDBBackupInfo (
 CREATE TABLE IF NOT EXISTS KeyValueCache (
   cachekey varchar(255) NOT NULL,
   cachevalue varchar(255) NOT NULL,
-  expire datetime,
+  expire datetime NOT NULL,
   PRIMARY KEY (cachekey)
 ) DEFAULT CHARSET=utf8mb4 $$

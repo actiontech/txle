@@ -26,7 +26,7 @@ public class TxleRedisCache implements ITxleConsistencyCache {
     }
 
     @Override
-    public boolean setKeyValueCache(String key, String value, int expire) {
+    public boolean setKeyValueCache(String key, String value, long expire) {
         return false;
     }
 
@@ -73,5 +73,9 @@ public class TxleRedisCache implements ITxleConsistencyCache {
     @Override
     public boolean deleteByKeyPrefix(String keyPrefix, String value) {
         return false;
+    }
+
+    @Override
+    public void clearExpiredAndOverTxCache() {
     }
 }

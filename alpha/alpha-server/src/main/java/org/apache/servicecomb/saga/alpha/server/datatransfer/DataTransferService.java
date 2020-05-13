@@ -6,7 +6,6 @@
 package org.apache.servicecomb.saga.alpha.server.datatransfer;
 
 import org.apache.servicecomb.saga.alpha.core.TxEventRepository;
-import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenter;
 import org.apache.servicecomb.saga.alpha.core.configcenter.ConfigCenterStatus;
 import org.apache.servicecomb.saga.alpha.core.configcenter.IConfigCenterService;
@@ -15,7 +14,6 @@ import org.apache.servicecomb.saga.common.ConfigCenterType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import javax.annotation.Resource;
 import java.text.SimpleDateFormat;
@@ -39,27 +37,15 @@ public class DataTransferService implements IDataTransferService {
     @Autowired
     private IConfigCenterService configCenterService;
 
-    @Autowired
-    private TxleConsulClient txleConsulClient;
-
     public DataTransferService(DataTransferRepository dataTransferRepository, TxEventRepository txEventRepository) {
         this.dataTransferRepository = dataTransferRepository;
         this.txEventRepository = txEventRepository;
     }
 
-    @Scheduled(cron = "0 0 0 * * ?")
-    public void scheduledTask() {
-        // To transfer data on master node only.
-        if (txleConsulClient.isMaster()) {
-            LOG.info("Triggered data transfer task on current master node.");
-            dataTransfer("TxEvent");
-        } else {
-            LOG.info("Could not trigger data transfer task, because current node had been not master yet.");
-        }
-    }
-
     @Override
     public void dataTransfer(String srcTable) {
+        LOG.info("Triggered data transfer task on current master node.");
+
         /**
          * 数据转储逻辑
          * 0.支持按日/月/季/年生成历史数据存储表的规则，默认按月

@@ -4,6 +4,7 @@
  */
 package com.actionsky.txle.cache;
 
+import com.actionsky.txle.enums.GlobalTxStatus;
 import com.actionsky.txle.grpc.interfaces.ICustomRepository;
 import org.apache.servicecomb.saga.alpha.core.TxleConsulClient;
 import org.apache.servicecomb.saga.common.ConfigCenterType;
@@ -38,6 +39,9 @@ public class TxleMysqlCache implements ITxleConsistencyCache {
 
     @Value("${server.port:8090}")
     private int serverPort;
+
+    private int sevenDaysSeconds = 604800;
+    private long thirtyCenturySeconds = 32503654861000L;
 
     @PostConstruct
     void init() {
@@ -86,19 +90,20 @@ public class TxleMysqlCache implements ITxleConsistencyCache {
 
     @Override
     public boolean setKeyValueCache(String key, String value) {
-        this.delete(key);
-        boolean result = this.customRepository.executeUpdate("INSERT INTO KeyValueCache(cachekey, cachevalue) VALUES(?, ?)", key, value) > 0;
-        if (result) {
-            this.put(key, value);
-        }
-        return result;
+        return this.setKeyValueCache(key, value, 0);
     }
 
     @Override
-    public boolean setKeyValueCache(String key, String value, int expire) {
-        Date expireDate = null;
+    public boolean setKeyValueCache(String key, String value, long expire) {
+        Date expireDate;
         if (expire > 0) {
             expireDate = new Date(System.currentTimeMillis() + expire * 1000);
+        } else {
+            if (key.startsWith(TxleConstants.TXLE_TX_KEY)) {
+                expireDate = new Date(System.currentTimeMillis() + sevenDaysSeconds * 1000);
+            } else {
+                expireDate = new Date(thirtyCenturySeconds);
+            }
         }
         this.delete(key);
         boolean result = this.customRepository.executeUpdate("INSERT INTO KeyValueCache VALUES(?, ?, ?)", key, value, expireDate) > 0;
@@ -265,6 +270,10 @@ public class TxleMysqlCache implements ITxleConsistencyCache {
             return this.systemConfigCache.remove(key);
         }
         return null;
+    }
+
+    public void clearExpiredAndOverTxCache() {
+        this.customRepository.executeUpdate("DELETE FROM KeyValueCache WHERE expire < now() AND cachekey LIKE CONCAT('', ?, '%') AND cachevalue <> ?", TxleConstants.TXLE_TX_KEY, GlobalTxStatus.Paused.toString());
     }
 
 }

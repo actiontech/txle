@@ -23,6 +23,7 @@ import com.actionsky.txle.grpc.interfaces.CompensateService;
 import com.actionsky.txle.grpc.interfaces.GlobalTxHandler;
 import com.actionsky.txle.grpc.interfaces.GrpcTransactionEndpoint;
 import com.actionsky.txle.grpc.interfaces.bizdbinfo.IBusinessDBLatestDetailService;
+import com.actionsky.txle.util.SchedulerUtil;
 import org.apache.servicecomb.saga.alpha.core.*;
 import org.apache.servicecomb.saga.alpha.core.accidenthandling.IAccidentHandlingService;
 import org.apache.servicecomb.saga.alpha.core.configcenter.DegradationConfigAspect;
@@ -219,6 +220,11 @@ class AlphaConfig {
   @Bean
   public TxleConsulClient txleConsulClient() {
     return new TxleConsulClient();
+  }
+
+  @Bean
+  public SchedulerUtil schedulerUtil() {
+    return new SchedulerUtil();
   }
 
   @PostConstruct

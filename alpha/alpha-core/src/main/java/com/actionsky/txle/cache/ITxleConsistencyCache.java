@@ -26,7 +26,7 @@ public interface ITxleConsistencyCache {
     boolean setKeyValueCache(String key, String value);
 
     // unit is second for field 'expire'
-    boolean setKeyValueCache(String key, String value, int expire);
+    boolean setKeyValueCache(String key, String value, long expire);
 
     int getKeyValueCacheCount();
 
@@ -45,4 +45,7 @@ public interface ITxleConsistencyCache {
     boolean deleteByKeyPrefix(String keyPrefix);
 
     boolean deleteByKeyPrefix(String keyPrefix, String value);
+
+    void clearExpiredAndOverTxCache();
+
 }
