@@ -82,11 +82,12 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
             connection.prepareStatement(backupDataSql).executeUpdate();
 
             // 6.take the new data out
-            List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
+//            List<Map<String, Object>> newDataList = selectNewData(delegate, tableName, primaryKeyName, primaryKeyValues);
 
             // 7.construct compensate sql
 //			String compensateSql = String.format("DELETE FROM %s WHERE %s = %s" + TxleConstants.ACTION_SQL, tableName, primaryKeyColumnName, primaryKeyColumnValue);
-            String compensateSql = constructCompensateSql(delegate, tableName, newDataList);
+//            String compensateSql = constructCompensateSql(delegate, tableName, newDataList);
+            String compensateSql = String.format("DELETE T FROM %s T INNER JOIN %s T1 ON T.%s = T1.%s WHERE T1.globalTxId = '%s' AND T1.localTxId = '%s' " + TxleConstants.ACTION_SQL, tableName, this.schema() + "." + txleBackupTableName, primaryKeyName, primaryKeyName, globalTxId, localTxId);
 
             // start to mark duration for business sql By Gannalyo.
             ApplicationContextUtil.getApplicationContext().getBean(AutoCompensableSqlMetrics.class).startMarkSQLDurationAndCount(compensateSql, false);
