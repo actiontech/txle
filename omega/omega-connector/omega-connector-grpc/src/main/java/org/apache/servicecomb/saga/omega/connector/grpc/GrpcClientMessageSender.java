@@ -59,7 +59,7 @@ public class GrpcClientMessageSender implements MessageSender {
   private final GrpcServiceConfig serviceConfig;
   private final ExecutorService executorService = Executors.newFixedThreadPool(2, new TxleDefaultTheadFactory("txle-client-sender-"));
   // 存储当前业务类别对应的系统级配置，如是否开启SQL监控、是否上报Kafka等配置信息
-  private static final Map<String, Boolean> CATEGORY_SYSTEM_CONFIG = new ConcurrentHashMap<>();
+  private static final Map<String, Boolean> CATEGORY_SYSTEM_CONFIG = new ConcurrentHashMap<>(8);
 
   public GrpcClientMessageSender(
       String address,

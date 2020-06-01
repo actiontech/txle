@@ -139,13 +139,13 @@ public class AccidentHandlingService implements IAccidentHandlingService {
         if (accidentList != null && !accidentList.isEmpty()) {
             List<Map<String, Object>> resultAccidentList = new LinkedList<>();
 
-            Map<String, String> typeValueName = new HashMap<>();
+            Map<String, String> typeValueName = new HashMap<>(8);
             List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("accident-handle-type");
             if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
                 dataDictionaryItemList.forEach(dd -> typeValueName.put(dd.getValue(), dd.getName()));
             }
 
-            Map<String, String> statusValueName = new HashMap<>();
+            Map<String, String> statusValueName = new HashMap<>(8);
             dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("accident-handle-status");
             if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
                 dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));

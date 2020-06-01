@@ -25,7 +25,7 @@ import java.util.Properties;
  * @since 2019/4/16
  */
 public final class TxleStaticConfig {
-    private static final Map<String, Object> TXLE_STATIC_CONFIG = new HashMap<>();
+    private static final Map<String, Object> TXLE_STATIC_CONFIG = new HashMap<>(32);
     private static final Logger LOG = LoggerFactory.getLogger(TxleStaticConfig.class);
 
     private TxleStaticConfig() {

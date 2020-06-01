@@ -46,7 +46,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class LoadBalancedClusterMessageSender implements MessageSender {
 
   private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private final Map<MessageSender, Long> senders = new ConcurrentHashMap<>();
+  private final Map<MessageSender, Long> senders = new ConcurrentHashMap<>(8);
   private final Collection<ManagedChannel> channels;
 
   private final BlockingQueue<Runnable> pendingTasks = new LinkedBlockingQueue<>();

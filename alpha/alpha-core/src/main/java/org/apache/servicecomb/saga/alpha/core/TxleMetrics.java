@@ -131,7 +131,7 @@ public class TxleMetrics extends Collector {
         try {
             Set<String> eventTypesOfCurrentTx = globalTxIdAndTypes.get(event.globalTxId());
             if (eventTypesOfCurrentTx == null) {
-                eventTypesOfCurrentTx = new HashSet<>();
+                eventTypesOfCurrentTx = new HashSet<>(8);
             }
             if (globalTxIdAndTypes.isEmpty()) {
                 // release memory

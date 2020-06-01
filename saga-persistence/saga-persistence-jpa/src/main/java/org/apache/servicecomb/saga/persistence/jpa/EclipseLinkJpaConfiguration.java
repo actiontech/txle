@@ -44,7 +44,7 @@ public class EclipseLinkJpaConfiguration extends JpaBaseConfiguration {
 
   @Override
   protected Map<String, Object> getVendorProperties() {
-    Map<String, Object> props = new HashMap<>();
+    Map<String, Object> props = new HashMap<>(4);
     props.put("eclipselink.weaving", "false");
     props.put("eclipselink.logging.logger", "JavaLogger");
     return props;

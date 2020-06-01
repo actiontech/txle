@@ -107,7 +107,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
         try {
             if (CurrentThreadOmegaContext.isAutoCompensate()) {
                 // before advise for executing SQL By Gannalyo.
-                Map<String, Object> standbyParams = new HashMap<>();
+                Map<String, Object> standbyParams = new HashMap<>(8);
                 if (CurrentThreadOmegaContext.isEnabledAutoCompensateTx()) {
                     AutoCompensateHandler.newInstance().prepareCompensationBeforeExecuting(preparedStatement, preparedStatementInformation.getSqlWithValues(), standbyParams);
                 }
@@ -151,7 +151,7 @@ public class DefaultJdbcEventListener extends JdbcEventListener {
                         }
                     }
                     if (standbyParams == null) {
-                        standbyParams = new HashMap<>();
+                        standbyParams = new HashMap<>(8);
                     }
 
                     AutoCompensateHandler.newInstance().prepareCompensationAfterExecuting(preparedStatement, preparedStatementInformation.getSqlWithValues(), standbyParams);

@@ -136,7 +136,7 @@ public class MySqlInsertHandler extends AutoCompensateInsertHandler {
     }
 
     private Set<Object> getGeneratedKey(PreparedStatement preparedStatement) throws SQLException {
-        Set<Object> primaryKeyValue = new HashSet<>();
+        Set<Object> primaryKeyValue = new HashSet<>(4);
         ResultSet rs = null;
         try {
             rs = preparedStatement.getGeneratedKeys();
