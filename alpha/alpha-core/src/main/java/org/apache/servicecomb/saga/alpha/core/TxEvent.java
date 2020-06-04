@@ -314,7 +314,7 @@ public class TxEvent/* extends TxEventExtension*/ {
 
   public Map<String, Object> toMap() {
       SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-      Map<String, Object> map = new HashMap<>();
+      Map<String, Object> map = new HashMap<>(32);
       map.put("surrogateId", this.surrogateId);
       map.put("serviceName", this.serviceName);
       map.put("instanceId", this.instanceId);

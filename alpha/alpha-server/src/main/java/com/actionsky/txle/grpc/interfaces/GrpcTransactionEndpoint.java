@@ -105,11 +105,11 @@ public class GrpcTransactionEndpoint extends TxleTransactionServiceGrpc.TxleTran
             // delete sqls: create db, create table, alter table, normal backup old data and formal business
             // update sqls: create db, create table, alter table, normal backup old data, formal business and backup new data
             // append sub-tx to current global transaction
-            final Map<String, String> localTxBackupSql = new HashMap<>();
+            final Map<String, String> localTxBackupSql = new HashMap<>(8);
             compensateService.prepareBackupSql(tx, startAck, isExistsGlobalTx, localTxBackupSql);
 
             // prepare compensation sql
-            final Map<String, String> localTxCompensateSql = new HashMap<>();
+            final Map<String, String> localTxCompensateSql = new HashMap<>(8);
             compensateService.constructCompensateSql(tx, startAck, localTxCompensateSql);
 
             // register global and subsidiary transactions

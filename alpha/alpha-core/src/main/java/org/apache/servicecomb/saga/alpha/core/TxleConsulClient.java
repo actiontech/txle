@@ -206,7 +206,7 @@ public class TxleConsulClient implements ApplicationRunner {
     }
 
     public Set<String> getServersIPAndPort() {
-        Set<String> serverIpPortSet = new HashSet<>();
+        Set<String> serverIpPortSet = new HashSet<>(8);
         Response<Map<String, Service>> agentServices = consulClient.getAgentServices();
         if (agentServices != null) {
             Map<String, Service> serviceMap = agentServices.getValue();

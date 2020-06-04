@@ -111,7 +111,7 @@ public class CompoundJdbcEventListener extends JdbcEventListener {
 
     @Override
     public Object onBeforeExecuteUpdateWithReturnValue(PreparedStatement preparedStatement, PreparedStatementInformation statementInformation) throws SQLException {
-        Map<JdbcEventListener, Object> listenerParams = new ConcurrentHashMap<>();
+        Map<JdbcEventListener, Object> listenerParams = new ConcurrentHashMap<>(8);
         for (JdbcEventListener eventListener : eventListeners) {
             listenerParams.put(eventListener, eventListener.onBeforeExecuteUpdateWithReturnValue(preparedStatement, statementInformation));
         }

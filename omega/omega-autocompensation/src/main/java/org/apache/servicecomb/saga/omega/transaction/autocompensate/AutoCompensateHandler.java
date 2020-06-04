@@ -66,7 +66,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         }
 
         if (standbyParams == null) {
-            standbyParams = new HashMap<>();
+            standbyParams = new HashMap<>(8);
         }
 
         String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();
@@ -117,7 +117,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         }
 
         if (standbyParams == null) {
-            standbyParams = new HashMap<>();
+            standbyParams = new HashMap<>(8);
         }
 
         String server = CurrentThreadOmegaContext.getServiceNameFromCurThread();

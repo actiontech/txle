@@ -203,19 +203,19 @@ public class DBDegradationConfigService implements IConfigCenterService {
         if (configList != null && !configList.isEmpty()) {
             List<Map<String, Object>> resultAccidentList = new LinkedList<>();
 
-            Map<String, String> typeValueName = new HashMap<>();
+            Map<String, String> typeValueName = new HashMap<>(32);
             List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("config-center-type");
             if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
                 dataDictionaryItemList.forEach(dd -> typeValueName.put(dd.getValue(), dd.getName()));
             }
 
-            Map<String, String> statusValueName = new HashMap<>();
+            Map<String, String> statusValueName = new HashMap<>(8);
             dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("config-center-status");
             if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
                 dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));
             }
 
-            Map<String, String> abilityValueName = new HashMap<>();
+            Map<String, String> abilityValueName = new HashMap<>(4);
             dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("config-center-ability");
             if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
                 dataDictionaryItemList.forEach(dd -> abilityValueName.put(dd.getValue(), dd.getName()));

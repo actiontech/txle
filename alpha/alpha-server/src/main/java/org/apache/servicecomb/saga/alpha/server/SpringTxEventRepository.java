@@ -1,3 +1,4 @@
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -233,7 +234,7 @@ class SpringTxEventRepository implements TxEventRepository {
 
   // 计算全局事务的状态
   private void computeGlobalTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
-    Map<String, String> statusValueName = new HashMap<>();
+    Map<String, String> statusValueName = new HashMap<>(8);
     List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("global-tx-status");
     if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
       dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));
@@ -302,7 +303,7 @@ class SpringTxEventRepository implements TxEventRepository {
 
   // 计算子事务的状态
   private void computeSubTxStatus(List<TxEvent> txEventList, List<Map<String, Object>> resultTxEventList) {
-    Map<String, String> statusValueName = new HashMap<>();
+    Map<String, String> statusValueName = new HashMap<>(8);
     List<DataDictionaryItem> dataDictionaryItemList = dataDictionaryService.selectDataDictionaryList("global-tx-status");
     if (dataDictionaryItemList != null && !dataDictionaryItemList.isEmpty()) {
       dataDictionaryItemList.forEach(dd -> statusValueName.put(dd.getValue(), dd.getName()));

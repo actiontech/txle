@@ -34,7 +34,7 @@ public final class ConfigLoading {
             if (properties.isEmpty()) {
                 LOG.info("No property in kafka.properties.");
             }
-            Map<String, Object> kafkaConfigMap = new HashMap<>();
+            Map<String, Object> kafkaConfigMap = new HashMap<>(32);
             properties.keySet().forEach(key -> {
                 kafkaConfigMap.put(key + "", properties.get(key));
             });
@@ -50,6 +50,6 @@ public final class ConfigLoading {
                 }
             }
         }
-        return new HashMap<>();
+        return new HashMap<>(2);
     }
 }
