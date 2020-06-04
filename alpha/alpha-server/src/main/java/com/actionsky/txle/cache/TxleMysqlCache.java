@@ -115,7 +115,7 @@ public class TxleMysqlCache implements ITxleConsistencyCache {
 
     @Override
     public int getKeyValueCacheCount() {
-        List list = this.customRepository.executeQuery("SELECT COUNT(1) FROM KeyValueCache");
+        List list = this.customRepository.executeQuery("SELECT count(*) FROM KeyValueCache");
         if (list != null && !list.isEmpty()) {
             Object value = list.get(0);
             if (value != null) {

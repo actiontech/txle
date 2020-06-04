@@ -104,10 +104,10 @@ public class AutoCompensateService implements IAutoCompensateService {
             String tableName = deleteStatement.getTableName().toString().toLowerCase();
             String schema = TxleConstants.APP_NAME;
             String txleBackupTableName = "backup_new_" + tableName;
-            int backupDataCount = autoCompensateDao.executeQueryCount("SELECT COUNT(1) FROM " + schema + "." + txleBackupTableName + " T WHERE T.globalTxId = ? AND T.localTxId = ? FOR UPDATE", globalTxId, localTxId);
+            int backupDataCount = autoCompensateDao.executeQueryCount("SELECT count(*) FROM " + schema + "." + txleBackupTableName + " T WHERE T.globalTxId = ? AND T.localTxId = ? FOR UPDATE", globalTxId, localTxId);
             if (backupDataCount > 0) {
                 String pkName = this.parsePrimaryKeyColumnName(tableName);
-                int currentDataCount = autoCompensateDao.executeQueryCount("SELECT COUNT(1) FROM " + tableName + " T WHERE T.id IN (SELECT T1.id FROM " + schema + "." + txleBackupTableName + " T1 WHERE T1.globalTxId = ? AND T1.localTxId = ?)", globalTxId, localTxId);
+                int currentDataCount = autoCompensateDao.executeQueryCount("SELECT count(*) FROM " + tableName + " T WHERE T.id IN (SELECT T1.id FROM " + schema + "." + txleBackupTableName + " T1 WHERE T1.globalTxId = ? AND T1.localTxId = ?)", globalTxId, localTxId);
                 // in case of updating many times for some same data, to delete the previous changes, so it only has one backup for any data.
                 if (backupDataCount == currentDataCount) {
                     List<Map<String, Object>> columnList = autoCompensateDao.executeQuery(

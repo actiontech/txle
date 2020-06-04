@@ -100,10 +100,10 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query(value = "SELECT DISTINCT T2.localTxId FROM TxEvent T2 WHERE T2.globalTxId IN (SELECT T1.globalTxId FROM TxEvent T1 WHERE T1.type = 'SagaEndedEvent' AND T1.globalTxId IN (SELECT T.globalTxId FROM TxEvent T WHERE T.localTxId IN ?1)) AND T2.localTxId IN ?1")
   Set<String> selectEndedGlobalTx(Set<String> localTxIdSet);
 
-  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = ?3) T1", nativeQuery = true)
+  @Query(value = "SELECT * FROM (SELECT count(*) FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = ?3) T1", nativeQuery = true)
   long checkIsExistsEventType(String globalTxId, String localTxId, String type);
 
-  @Query(value = "SELECT * FROM (SELECT count(1) FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = 'TxStartedEvent' AND T.retries = 0) T1", nativeQuery = true)
+  @Query(value = "SELECT * FROM (SELECT count(*) FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = 'TxStartedEvent' AND T.retries = 0) T1", nativeQuery = true)
   long checkTxIsAborted(String globalTxId, String localTxId);
 
   @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.serviceName, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime)" +
@@ -118,10 +118,10 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
           " FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND FUNCTION('CONCAT_WS', ',', T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
   List<TxEvent> findTxList(Pageable pageable, String searchText);
 
-  @Query("SELECT COUNT(1) FROM TxEvent T WHERE T.type = 'SagaStartedEvent'")
+  @Query("SELECT count(*) FROM TxEvent T WHERE T.type = 'SagaStartedEvent'")
   long findTxListCount();
 
-  @Query("SELECT COUNT(1) FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND FUNCTION('CONCAT_WS', ',', T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
+  @Query("SELECT count(*) FROM TxEvent T WHERE T.type = 'SagaStartedEvent' AND FUNCTION('CONCAT_WS', ',', T.globalTxId, T.instanceId, T.category, T.expiryTime, T.retries, T.creationTime) LIKE CONCAT('%', ?1, '%')")
   long findTxListCount(String searchText);
 
   @Query("SELECT new org.apache.servicecomb.saga.alpha.core.TxEvent(T.surrogateId, T.globalTxId, T.localTxId, T.serviceName, T.instanceId, T.type, T.category, T.expiryTime, T.retries, T.creationTime)" +
@@ -146,7 +146,7 @@ interface TxEventEnvelopeRepository extends CrudRepository<TxEvent, Long> {
   @Query(value = "SELECT * FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2 AND T.type = ?3 ORDER BY T.retries LIMIT 1", nativeQuery = true)
   TxEvent selectMinRetriesEventByTxIdType(String globalTxId, String localTxId, String type);
 
-  @Query(value = "SELECT COUNT(1) % 2 FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2", nativeQuery = true)
+  @Query(value = "SELECT count(*) % 2 FROM TxEvent T WHERE T.globalTxId = ?1 AND T.localTxId = ?2", nativeQuery = true)
   int selectStartedAndAbortedEndRate(String globalTxId, String localTxId);
 
 }

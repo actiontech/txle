@@ -182,7 +182,7 @@ public class AutoCompensateHandler implements IAutoCompensateHandler {
         ResultSet resultSet = null;
         try {
             boolean isExistsBackupTable = false;
-            preparedStatement = connection.prepareStatement("SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + schema + "' AND TABLE_NAME = '" + txleBackupTableName + "'");
+            preparedStatement = connection.prepareStatement("SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + schema + "' AND TABLE_NAME = '" + txleBackupTableName + "'");
             resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 isExistsBackupTable = resultSet.getInt(1) > 0;
