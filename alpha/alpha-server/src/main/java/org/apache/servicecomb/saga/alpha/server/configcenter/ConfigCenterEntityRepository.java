@@ -39,10 +39,10 @@ public interface ConfigCenterEntityRepository extends CrudRepository<ConfigCente
             " FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
     List<ConfigCenter> findConfigList(Pageable pageable, int status, String searchText);
 
-    @Query("SELECT count(*) FROM ConfigCenter T")
+    @Query("SELECT count(T) FROM ConfigCenter T")
     long findConfigCount();
 
-    @Query("SELECT count(*) FROM ConfigCenter T WHERE FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status)," +
+    @Query("SELECT count(T) FROM ConfigCenter T WHERE FUNCTION('CONCAT_WS', ',', T.servicename, T.instanceid, FUNCTION('TXLE_DECODE', 'config-center-type', T.type), FUNCTION('TXLE_DECODE', 'config-center-status', T.status)," +
             " FUNCTION('TXLE_DECODE', 'config-center-ability', T.ability), FUNCTION('TXLE_DECODE', 'config-center-value', T.value), T.remark, T.updatetime) LIKE CONCAT('%', ?1, '%')")
     long findConfigCount(String searchText);
 

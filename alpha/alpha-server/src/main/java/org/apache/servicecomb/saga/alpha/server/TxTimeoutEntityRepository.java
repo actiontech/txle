@@ -77,6 +77,6 @@ interface TxTimeoutEntityRepository extends CrudRepository<TxTimeout, Long> {
   @Query(value = "SELECT t.surrogateId FROM TxTimeout t, TxEvent t1 WHERE t.status != 'DONE' AND t1.globalTxId = t.globalTxId AND t1.localTxId = t.localTxId AND t1.type != t.type" + EventScanner.SCANNER_SQL, nativeQuery = true)
   List<Long> selectTimeoutIdList();
 
-  @Query(value = "SELECT * FROM (SELECT count(*) FROM TxTimeout t WHERE t.eventId = ?1) T1", nativeQuery = true)
+  @Query(value = "SELECT * FROM (SELECT count(T) FROM TxTimeout t WHERE t.eventId = ?1) T1", nativeQuery = true)
   long findTxTimeoutByEventId(long eventId);
 }
