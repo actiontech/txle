@@ -893,11 +893,11 @@
 			<distributionManagement>
 				<snapshotRepository>
 					<id>maven-snapshots</id>
-					<url>http://10.186.62.70:8081/repository/maven-snapshots/</url>
+					<url>http://10.186.19.52:8081/nexus/content/repositories/snapshots/</url>
 				</snapshotRepository>
 				<repository>
 					<id>maven-releases</id>
-					<url>http://10.186.62.70:8081/repository/maven-releases/</url>
+					<url>http://10.186.19.52:8081/nexus/content/repositories/releases/</url>
 				</repository>
 			</distributionManagement>
 			<build>
